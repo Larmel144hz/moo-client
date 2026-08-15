@@ -345,41 +345,37 @@ function setupIPC() {
                 sendToRenderer('client-update-progress', { status: `Kod klienta: ${status}`, percent: Math.round(percent * 0.9) });
             });
 
-            // 2. If launcher UI/code has an update, perform fast Hot-ASAR delta update (~1.5 MB!)
+            // 2. If launcher binary has an update, download installer and run silent update
             if (app.isPackaged && launcherNeedsUpdate) {
-                sendToRenderer('client-update-progress', { status: 'Pobieranie nowej paczki wyglądu launchera...', percent: 60 });
+                sendToRenderer('client-update-progress', { status: 'Pobieranie aktualizacji launchera...', percent: 50 });
                 const latestVer = remote.version;
-                const asarUrl = `https://github.com/Larmel144hz/moo-client/releases/download/v${latestVer}/app.asar`;
-                const tempAsar = path.join(os.tmpdir(), `app-update-${latestVer}.asar`);
-                const targetAsar = path.join(process.resourcesPath, 'app.asar');
+                const installerUrl = `https://github.com/Larmel144hz/moo-client/releases/download/v${latestVer}/Moo-Client-Setup-${latestVer}.exe`;
+                const tempInstaller = path.join(os.tmpdir(), `Moo-Client-Setup-${latestVer}.exe`);
 
-                try {
-                    await downloadFile(asarUrl, tempAsar, (percent) => {
-                        sendToRenderer('client-update-progress', { 
-                            status: `Pobieranie wyglądu launchera: ${percent}%`, 
-                            percent: 60 + Math.round(percent * 0.35) 
-                        });
+                await downloadFile(installerUrl, tempInstaller, (percent) => {
+                    sendToRenderer('client-update-progress', { 
+                        status: `Pobieranie instalatora launchera: ${percent}%`, 
+                        percent: 50 + Math.round(percent * 0.45) 
                     });
+                });
 
-                    sendToRenderer('client-update-progress', { status: 'Restartowanie launchera...', percent: 98 });
-                    const { spawn } = require('child_process');
-                    const targetExe = process.execPath;
-                    const updateScript = `Start-Sleep -Milliseconds 600; Move-Item -Path '${tempAsar.replace(/'/g, "''")}' -Destination '${targetAsar.replace(/'/g, "''")}' -Force; Start-Process -FilePath '${targetExe.replace(/'/g, "''")}'`;
-                    
-                    const child = spawn('powershell.exe', ['-WindowStyle', 'Hidden', '-NoProfile', '-Command', updateScript], {
-                        detached: true,
-                        stdio: 'ignore'
-                    });
-                    child.unref();
+                sendToRenderer('client-update-progress', { status: 'Instalowanie i ponowne uruchamianie...', percent: 98 });
+                
+                const { spawn } = require('child_process');
+                const targetExe = process.execPath;
+                const updateScript = `Start-Sleep -Seconds 1; Get-Process 'Moo Client' -ErrorAction SilentlyContinue | Stop-Process -Force; Start-Sleep -Milliseconds 600; Start-Process -FilePath '${tempInstaller.replace(/'/g, "''")}' -ArgumentList '/S' -Wait; $exePath = Join-Path $env:LOCALAPPDATA 'Programs\\moo-client-launcher\\Moo Client.exe'; if (-not (Test-Path $exePath)) { $exePath = '${targetExe.replace(/'/g, "''")}' }; Start-Process -FilePath $exePath`;
+                
+                const child = spawn('powershell.exe', ['-WindowStyle', 'Hidden', '-NoProfile', '-Command', updateScript], {
+                    detached: true,
+                    stdio: 'ignore'
+                });
+                child.unref();
 
-                    setTimeout(() => {
-                        app.quit();
-                    }, 500);
+                setTimeout(() => {
+                    app.exit(0);
+                }, 300);
 
-                    return { success: true, updated: true, restarting: true };
-                } catch (e) {
-                    console.warn('Fast ASAR update fallback to full installer:', e.message);
-                }
+                return { success: true, updated: true, restarting: true };
             }
 
             sendToRenderer('client-update-progress', { status: 'Zaktualizowano pomyślnie!', percent: 100 });
