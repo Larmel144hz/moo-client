@@ -3,15 +3,15 @@ package com.mooclient.module.modules;
 import com.mooclient.module.Module;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.network.PlayerListEntry;
+import net.minecraft.entity.Entity;
 import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.text.MutableText;
 import net.minecraft.text.Text;
 import net.minecraft.util.Formatting;
 
 /**
  * Nametags Module.
  * Always shows own nametag in 3rd person / Freelook.
- * Displays colorful latency (ping) indicators above player heads.
+ * Displays colorful latency (ping) indicators (BESIDE or ABOVE player heads).
  * Displays authentic Lunar/Badlion style Moo Client logo badge before nicknames (always active).
  * Option to remove background behind nametags.
  * Option to enable text shadow.
@@ -129,28 +129,45 @@ public class NametagsModule extends Module {
     }
 
     /**
-     * Retrieves colored latency Text indicator for the given entity ID.
+     * Retrieves colored latency Text indicator for the given entity ID and playerName.
      */
-    public static Text getPingText(int entityId) {
+    public static Text getPingText(int entityId, String playerName) {
         if (!enabled || !showPing) {
             return null;
         }
 
         MinecraftClient client = MinecraftClient.getInstance();
-        if (client.world == null || client.getNetworkHandler() == null) {
+        if (client.getNetworkHandler() == null) {
             return null;
         }
 
-        if (!(client.world.getEntityById(entityId) instanceof PlayerEntity player)) {
+        int ping = -1;
+
+        // 1. Try by entityId in world -> player UUID
+        if (client.world != null) {
+            Entity entity = client.world.getEntityById(entityId);
+            if (entity instanceof PlayerEntity player && player.getUuid() != null) {
+                PlayerListEntry entry = client.getNetworkHandler().getPlayerListEntry(player.getUuid());
+                if (entry != null) {
+                    ping = entry.getLatency();
+                }
+            }
+        }
+
+        // 2. Fallback: Search player list by username
+        if (ping < 0 && playerName != null && !playerName.trim().isEmpty()) {
+            for (PlayerListEntry entry : client.getNetworkHandler().getPlayerList()) {
+                if (entry.getProfile() != null && playerName.equalsIgnoreCase(entry.getProfile().getName())) {
+                    ping = entry.getLatency();
+                    break;
+                }
+            }
+        }
+
+        if (ping < 0) {
             return null;
         }
 
-        PlayerListEntry entry = client.getNetworkHandler().getPlayerListEntry(player.getUuid());
-        if (entry == null) {
-            return null;
-        }
-
-        int ping = entry.getLatency();
         Formatting pingColor;
         if (ping <= 50) {
             pingColor = Formatting.GREEN;      // §a (0-50ms)
@@ -167,21 +184,29 @@ public class NametagsModule extends Module {
         return Text.literal("[" + ping + "ms]").formatted(pingColor);
     }
 
+    public static Text getPingText(int entityId) {
+        return getPingText(entityId, null);
+    }
+
     /**
-     * Formats player nametag with colorful latency indicator.
+     * Formats player nametag with colorful latency indicator when in BESIDE mode.
      */
-    public static Text formatNametag(Text originalText, int entityId) {
+    public static Text formatNametag(Text originalText, int entityId, String playerName) {
         if (!enabled || originalText == null) {
             return originalText;
         }
 
         if (showPing && pingPosition == PingPosition.BESIDE) {
-            Text pingText = getPingText(entityId);
+            Text pingText = getPingText(entityId, playerName);
             if (pingText != null) {
                 return originalText.copy().append(Text.literal(" ")).append(pingText);
             }
         }
 
         return originalText;
+    }
+
+    public static Text formatNametag(Text originalText, int entityId) {
+        return formatNametag(originalText, entityId, null);
     }
 }

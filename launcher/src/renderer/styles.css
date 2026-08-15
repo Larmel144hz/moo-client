@@ -1997,6 +1997,10 @@ html, body {
     font-size: 13px;
     font-weight: 600;
     cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
     transition: all var(--transition-fast);
 }
 
@@ -2721,19 +2725,22 @@ html, body {
     color: var(--text-muted);
 }
 
+#btn-update-now,
 .btn-update-confirm {
     background: linear-gradient(135deg, #38bdf8, #6366f1) !important;
     color: #ffffff !important;
     border: none !important;
     box-shadow: 0 4px 14px rgba(56, 189, 248, 0.4);
-    display: inline-flex !important;
+    display: flex !important;
     align-items: center !important;
     justify-content: center !important;
     text-align: center !important;
     gap: 8px !important;
     padding: 0 20px !important;
+    flex: 1 !important;
 }
 
+#btn-update-now:hover,
 .btn-update-confirm:hover {
     box-shadow: 0 6px 20px rgba(56, 189, 248, 0.6);
     transform: translateY(-1px);

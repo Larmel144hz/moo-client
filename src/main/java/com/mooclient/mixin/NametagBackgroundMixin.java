@@ -23,8 +23,8 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 /**
  * Mixin into EntityRenderer to render authentic Lunar/Badlion style Moo Client logo badge
- * before player nicknames (always active for brand recognition), remove nametag background,
- * and apply text shadow.
+ * before player nicknames for Moo Client users, render Ping ABOVE nicknames when selected,
+ * remove nametag background, and apply text shadow.
  */
 @Mixin(EntityRenderer.class)
 public abstract class NametagBackgroundMixin {
@@ -86,50 +86,52 @@ public abstract class NametagBackgroundMixin {
         method = "renderLabelIfPresent",
         at = @At(value = "INVOKE", target = "Lnet/minecraft/client/util/math/MatrixStack;pop()V")
     )
-    private void mooClient$renderClientLogoBadge(EntityRenderState state, Text text, MatrixStack matrices, VertexConsumerProvider vertexConsumers, int light, CallbackInfo ci) {
-        if (state instanceof PlayerEntityRenderState playerState && com.mooclient.util.MooUserManager.isMooUser(playerState.name, playerState.id)) {
+    private void mooClient$renderNametagAddons(EntityRenderState state, Text text, MatrixStack matrices, VertexConsumerProvider vertexConsumers, int light, CallbackInfo ci) {
+        if (!(state instanceof PlayerEntityRenderState playerState)) {
+            return;
+        }
+
+        Matrix4f matrix = matrices.peek().getPositionMatrix();
+
+        // 1. Clean crisp logo badge rendering for Moo Client users
+        if (com.mooclient.util.MooUserManager.isMooUser(playerState.name, playerState.id)) {
             float textWidth = this.getTextRenderer().getWidth(text);
             float badgeTotalWidth = 11.0f;
             float iconSize = 8.5f;
 
-            // Total visual element is centered at x = 0.0
             float totalWidth = textWidth + badgeTotalWidth;
             float iconX = -totalWidth / 2.0f;
-            float textStartX = iconX + badgeTotalWidth;
             float iconY = 0.0f;
 
-            Matrix4f matrix = matrices.peek().getPositionMatrix();
-
-            // 1. Clean crisp logo badge rendering (no shadow / no background box behind icon)
             VertexConsumer buffer = vertexConsumers.getBuffer(RenderLayer.getText(MOO_LOGO));
             buffer.vertex(matrix, iconX, iconY, 0.0f).color(255, 255, 255, 255).texture(0.0f, 0.0f).light(light);
             buffer.vertex(matrix, iconX, iconY + iconSize, 0.0f).color(255, 255, 255, 255).texture(0.0f, 1.0f).light(light);
             buffer.vertex(matrix, iconX + iconSize, iconY + iconSize, 0.0f).color(255, 255, 255, 255).texture(1.0f, 1.0f).light(light);
             buffer.vertex(matrix, iconX + iconSize, iconY, 0.0f).color(255, 255, 255, 255).texture(1.0f, 0.0f).light(light);
+        }
 
-            // 2. Render Ping above nickname if configured as ABOVE
-            if (NametagsModule.isNametagsEnabled() && NametagsModule.isShowPing() && NametagsModule.getPingPosition() == NametagsModule.PingPosition.ABOVE) {
-                Text pingText = NametagsModule.getPingText(playerState.id);
-                if (pingText != null) {
-                    float pingWidth = this.getTextRenderer().getWidth(pingText);
-                    float pingX = -pingWidth / 2.0f;
-                    float pingY = -10.0f;
-                    int bgAlpha = NametagsModule.isRemoveBackground() ? 0 : (int)(net.minecraft.client.MinecraftClient.getInstance().options.getTextBackgroundOpacity(0.25F) * 255.0F);
-                    int bgColor = bgAlpha << 24;
+        // 2. Render Ping ABOVE nickname for all players when ABOVE mode is active
+        if (NametagsModule.isNametagsEnabled() && NametagsModule.isShowPing() && NametagsModule.getPingPosition() == NametagsModule.PingPosition.ABOVE) {
+            Text pingText = NametagsModule.getPingText(playerState.id, playerState.name);
+            if (pingText != null) {
+                float pingWidth = this.getTextRenderer().getWidth(pingText);
+                float pingX = -pingWidth / 2.0f;
+                float pingY = -10.0f;
+                int bgAlpha = NametagsModule.isRemoveBackground() ? 0 : (int)(net.minecraft.client.MinecraftClient.getInstance().options.getTextBackgroundOpacity(0.25F) * 255.0F);
+                int bgColor = bgAlpha << 24;
 
-                    this.getTextRenderer().draw(
-                        pingText,
-                        pingX,
-                        pingY,
-                        -1,
-                        NametagsModule.isTextShadow(),
-                        matrix,
-                        vertexConsumers,
-                        TextRenderer.TextLayerType.NORMAL,
-                        bgColor,
-                        light
-                    );
-                }
+                this.getTextRenderer().draw(
+                    pingText,
+                    pingX,
+                    pingY,
+                    -1,
+                    NametagsModule.isTextShadow(),
+                    matrix,
+                    vertexConsumers,
+                    TextRenderer.TextLayerType.NORMAL,
+                    bgColor,
+                    light
+                );
             }
         }
     }

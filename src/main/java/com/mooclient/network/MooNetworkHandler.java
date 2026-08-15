@@ -1,5 +1,7 @@
 package com.mooclient.network;
 
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
 import com.mooclient.MooClient;
 import com.mooclient.util.MooUserManager;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
@@ -16,7 +18,7 @@ import java.util.concurrent.TimeUnit;
 
 /**
  * Handles ultra-fast cross-server Moo Client player discovery and presence.
- * Broadcasts presence and fetches active players on the same server every 2.5 seconds.
+ * Broadcasts presence and parses active players using robust Gson JSON parser.
  */
 public class MooNetworkHandler {
 
@@ -33,10 +35,8 @@ public class MooNetworkHandler {
     private static volatile boolean isRunning = false;
 
     public static void init() {
-        // Clear on join/disconnect and trigger instant discovery
         ClientPlayConnectionEvents.JOIN.register((handler, sender, client) -> {
             MooUserManager.clear();
-            // Immediate instant broadcast on join
             SCHEDULER.schedule(MooNetworkHandler::sendHeartbeatAndFetch, 0, TimeUnit.MILLISECONDS);
             SCHEDULER.schedule(MooNetworkHandler::sendHeartbeatAndFetch, 1000, TimeUnit.MILLISECONDS);
         });
@@ -45,7 +45,7 @@ public class MooNetworkHandler {
             MooUserManager.clear();
         });
 
-        // Run ultra-fast heartbeat every 2.5 seconds for instant badge updates
+        // Run heartbeat every 2.5 seconds
         SCHEDULER.scheduleAtFixedRate(MooNetworkHandler::sendHeartbeatAndFetch, 500, 2500, TimeUnit.MILLISECONDS);
     }
 
@@ -76,19 +76,22 @@ public class MooNetworkHandler {
             }
 
             long now = System.currentTimeMillis();
-            String payload = String.format("{\"u\":\"%s\",\"s\":\"%s\",\"t\":%d}", username.trim(), server, now);
+            JsonObject payload = new JsonObject();
+            payload.addProperty("u", username.trim());
+            payload.addProperty("s", server);
+            payload.addProperty("t", now);
 
             // 1. Send heartbeat
             HttpRequest postReq = HttpRequest.newBuilder()
                     .uri(URI.create("https://ntfy.sh/" + PRESENCE_TOPIC))
                     .timeout(Duration.ofSeconds(3))
                     .header("Content-Type", "application/json")
-                    .POST(HttpRequest.BodyPublishers.ofString(payload))
+                    .POST(HttpRequest.BodyPublishers.ofString(payload.toString()))
                     .build();
 
             HTTP_CLIENT.sendAsync(postReq, HttpResponse.BodyHandlers.discarding());
 
-            // 2. Fetch active players in last 90s (query last 90s so we instantly see existing players)
+            // 2. Query active players in last 90 seconds
             HttpRequest getReq = HttpRequest.newBuilder()
                     .uri(URI.create("https://ntfy.sh/" + PRESENCE_TOPIC + "/json?poll=1&since=90s"))
                     .timeout(Duration.ofSeconds(3))
@@ -110,14 +113,19 @@ public class MooNetworkHandler {
                                 for (String line : lines) {
                                     if (line == null || line.isBlank()) continue;
                                     try {
-                                        int msgIdx = line.indexOf("\"message\":\"");
-                                        if (msgIdx != -1) {
-                                            String unescaped = line.substring(msgIdx + 11);
-                                            int endIdx = unescaped.indexOf("\"}");
-                                            if (endIdx == -1) endIdx = unescaped.indexOf("\"");
-                                            if (endIdx != -1) {
-                                                String jsonMsg = unescaped.substring(0, endIdx).replace("\\\"", "\"");
-                                                parseAndRegisterPlayer(jsonMsg, finalServer, finalUsername, current);
+                                        JsonObject eventObj = JsonParser.parseString(line).getAsJsonObject();
+                                        if (eventObj.has("message")) {
+                                            String msgRaw = eventObj.get("message").getAsString();
+                                            JsonObject data = JsonParser.parseString(msgRaw).getAsJsonObject();
+
+                                            String u = data.has("u") ? data.get("u").getAsString() : null;
+                                            String s = data.has("s") ? data.get("s").getAsString() : null;
+                                            long t = data.has("t") ? data.get("t").getAsLong() : 0;
+
+                                            if (u != null && !u.equalsIgnoreCase(finalUsername) && s != null && s.equalsIgnoreCase(finalServer)) {
+                                                if (current - t < 90000 || t == 0) {
+                                                    MooUserManager.registerUser(u, null);
+                                                }
                                             }
                                         }
                                     } catch (Exception ignored) {}
@@ -136,42 +144,5 @@ public class MooNetworkHandler {
             isRunning = false;
             MooClient.LOGGER.debug("Presence error: {}", e.getMessage());
         }
-    }
-
-    private static void parseAndRegisterPlayer(String json, String myServer, String myUsername, long now) {
-        try {
-            String u = extractJsonField(json, "u");
-            String s = extractJsonField(json, "s");
-            String tStr = extractJsonField(json, "t");
-
-            if (u != null && !u.equalsIgnoreCase(myUsername) && s != null && s.equalsIgnoreCase(myServer)) {
-                long t = tStr != null ? Long.parseLong(tStr) : 0;
-                // Cache for 90 seconds so badges appear instantly and never flicker
-                if (now - t < 90000 || t == 0) {
-                    MooUserManager.registerUser(u, null);
-                }
-            }
-        } catch (Exception ignored) {}
-    }
-
-    private static String extractJsonField(String json, String field) {
-        String key = "\"" + field + "\":\"";
-        int start = json.indexOf(key);
-        if (start != -1) {
-            int end = json.indexOf("\"", start + key.length());
-            if (end != -1) {
-                return json.substring(start + key.length(), end);
-            }
-        }
-        String numKey = "\"" + field + "\":";
-        int numStart = json.indexOf(numKey);
-        if (numStart != -1) {
-            int end = json.indexOf(",", numStart + numKey.length());
-            if (end == -1) end = json.indexOf("}", numStart + numKey.length());
-            if (end != -1) {
-                return json.substring(numStart + numKey.length(), end).trim();
-            }
-        }
-        return null;
     }
 }
