@@ -44,6 +44,9 @@ public class MooUserManager {
 
     /**
      * Checks if the given player is a confirmed Moo Client user.
+     * Only returns true for:
+     *  1. The local player (always a Moo Client user)
+     *  2. Remote players who completed the Moo Client handshake
      */
     public static boolean isMooUser(String playerName, int entityId) {
         if (!com.mooclient.module.modules.NametagsModule.isNametagsEnabled() || !com.mooclient.module.modules.NametagsModule.isShowLogo()) {
@@ -52,7 +55,7 @@ public class MooUserManager {
 
         MinecraftClient client = MinecraftClient.getInstance();
 
-        // 1. Local Player is always a Moo Client user
+        // 1. Local Player — check by entity ID or session username
         if (client.player != null) {
             if (client.player.getId() == entityId) {
                 return true;
@@ -60,24 +63,18 @@ public class MooUserManager {
             if (playerName != null && client.getSession() != null && playerName.equalsIgnoreCase(client.getSession().getUsername())) {
                 return true;
             }
-            if (client.player.getUuid() != null && MOO_USERS_UUIDS.contains(client.player.getUuid())) {
-                return true;
-            }
         }
 
-        // 2. Check registered Moo Client usernames from handshake
+        // 2. Check registered Moo Client usernames from handshake (remote players only)
         if (playerName != null && MOO_USERS_NAMES.contains(playerName.trim().toLowerCase())) {
             return true;
         }
 
-        // 3. Check registered Moo Client UUIDs in world
+        // 3. Check registered Moo Client UUIDs from handshake (remote players only)
         if (client.world != null) {
             Entity entity = client.world.getEntityById(entityId);
             if (entity instanceof PlayerEntity player) {
-                if (MOO_USERS_UUIDS.contains(player.getUuid())) {
-                    return true;
-                }
-                if (player.getName() != null && MOO_USERS_NAMES.contains(player.getName().getString().trim().toLowerCase())) {
+                if (player.getUuid() != null && MOO_USERS_UUIDS.contains(player.getUuid())) {
                     return true;
                 }
             }

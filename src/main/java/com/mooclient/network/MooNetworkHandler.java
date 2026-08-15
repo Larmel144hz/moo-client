@@ -52,9 +52,8 @@ public class MooNetworkHandler {
             // When connecting to a world or server, clear old users and send handshake
             ClientPlayConnectionEvents.JOIN.register((handler, sender, client) -> {
                 MooUserManager.clear();
-                if (client.player != null) {
-                    MooUserManager.registerUser(client.player.getName().getString(), client.player.getUuid());
-                }
+                // Local player is NOT registered here — isMooUser handles it via entity ID / session username.
+                // Only remote players who complete the handshake get registered.
                 sendBroadcast();
             });
 
