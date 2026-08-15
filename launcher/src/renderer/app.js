@@ -1560,44 +1560,37 @@ window.addEventListener('drop', async (e) => {
     const files = Array.from(e.dataTransfer?.files || []);
     if (files.length === 0) return;
 
-    const jarPaths = [];
+    let installedCount = 0;
     for (const file of files) {
-        let p = '';
-        if (window.mooAPI?.getFilePath) {
-            p = window.mooAPI.getFilePath(file);
-        } else {
-            p = file.path;
-        }
-        if (p && p.toLowerCase().endsWith('.jar')) {
-            jarPaths.push(p);
+        const name = file.name || '';
+        if (name.toLowerCase().endsWith('.jar')) {
+            try {
+                const arrayBuffer = await file.arrayBuffer();
+                const res = await window.mooAPI?.saveModFile(name, arrayBuffer);
+                if (res?.success) {
+                    installedCount++;
+                }
+            } catch (err) {
+                console.error('Error saving dropped mod:', err);
+            }
         }
     }
 
-    if (jarPaths.length > 0) {
-        try {
-            const res = await window.mooAPI?.installLocalMods(jarPaths);
-            if (res?.success && res.count > 0) {
-                // Switch to mods tab and installed subtab
-                document.querySelectorAll('.nav-item').forEach(i => i.classList.toggle('active', i.dataset.page === 'mods'));
-                document.querySelectorAll('.page').forEach(p => p.classList.toggle('active', p.id === 'page-mods'));
+    if (installedCount > 0) {
+        // Switch to mods tab and installed subtab
+        document.querySelectorAll('.nav-item').forEach(i => i.classList.toggle('active', i.dataset.page === 'mods'));
+        document.querySelectorAll('.page').forEach(p => p.classList.toggle('active', p.id === 'page-mods'));
 
-                currentModsTab = 'installed';
-                tabInstalledMods?.classList.add('active');
-                tabBrowseMods?.classList.remove('active');
-                if (modsSearchInput) {
-                    modsSearchInput.placeholder = t('search_installed_placeholder');
-                    modsSearchInput.value = '';
-                }
-                await refreshInstalledMods();
-                renderInstalledModsView('');
-                showToast(`Pomyślnie dodano ${res.count} modów!`, 'success');
-            } else if (res && !res.success) {
-                showToast(`Błąd dodawania modów: ${res.error}`, 'error');
-            }
-        } catch (err) {
-            console.error('Drag and drop error:', err);
-            showToast(`Błąd: ${err.message}`, 'error');
+        currentModsTab = 'installed';
+        tabInstalledMods?.classList.add('active');
+        tabBrowseMods?.classList.remove('active');
+        if (modsSearchInput) {
+            modsSearchInput.placeholder = t('search_installed_placeholder');
+            modsSearchInput.value = '';
         }
+        await refreshInstalledMods();
+        renderInstalledModsView('');
+        showToast(`Pomyślnie dodano ${installedCount} modów!`, 'success');
     } else {
         showToast('Upuszczone pliki muszą mieć rozszerzenie .jar', 'error');
     }

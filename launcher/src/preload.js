@@ -34,6 +34,7 @@ contextBridge.exposeInMainWorld('mooAPI', {
     uninstallMod: (filename) => ipcRenderer.invoke('uninstall-mod', filename),
     toggleMod: (filename, enabled) => ipcRenderer.invoke('toggle-mod', { filename, enabled }),
     installLocalMods: (filePaths) => ipcRenderer.invoke('install-local-mods', filePaths),
+    saveModFile: (filename, buffer) => ipcRenderer.invoke('save-mod-file', { filename, buffer }),
     getModVersions: (projectId, allVersions = false) => ipcRenderer.invoke('get-mod-versions', { projectId, allVersions }),
     installModVersion: (versionId, oldFilename) => ipcRenderer.invoke('install-mod-version', { versionId, oldFilename }),
     checkModUpdates: () => ipcRenderer.invoke('check-mod-updates'),

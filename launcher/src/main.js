@@ -353,11 +353,11 @@ function setupIPC() {
                     });
                 });
 
-                sendToRenderer('client-update-progress', { status: 'Uruchamianie instalatora i aktualizacja...', percent: 98 });
+                sendToRenderer('client-update-progress', { status: 'Aktualizowanie launchera w tle...', percent: 98 });
                 
-                // Launch installer and quit current app
+                // Launch installer silently (/S) and quit current app
                 const { spawn } = require('child_process');
-                const child = spawn(tempInstaller, [], {
+                const child = spawn(tempInstaller, ['/S'], {
                     detached: true,
                     stdio: 'ignore'
                 });
@@ -365,7 +365,7 @@ function setupIPC() {
 
                 setTimeout(() => {
                     app.quit();
-                }, 1200);
+                }, 1000);
 
                 return { success: true, updated: true, restarting: true };
             }
@@ -374,6 +374,23 @@ function setupIPC() {
             return { success: true, updated: modUpdated, version: newLocal.version };
         } catch (e) {
             console.error('Update error:', e);
+            return { success: false, error: e.message };
+        }
+    });
+
+    // --- Direct Drag & Drop Save Mod File ---
+    ipcMain.handle('save-mod-file', async (event, { filename, buffer }) => {
+        try {
+            if (!filename || !filename.toLowerCase().endsWith('.jar')) {
+                return { success: false, error: 'Plik musi mieć rozszerzenie .jar' };
+            }
+            modManager.ensureDir(modManager.modsDir);
+            const destPath = path.join(modManager.modsDir, filename);
+            fs.writeFileSync(destPath, Buffer.from(buffer));
+            console.log(`Saved dropped mod: ${filename}`);
+            return { success: true, filename };
+        } catch (e) {
+            console.error('Error saving dropped mod:', e);
             return { success: false, error: e.message };
         }
     });

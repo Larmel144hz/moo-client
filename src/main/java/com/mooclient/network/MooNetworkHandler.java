@@ -71,9 +71,25 @@ public class MooNetworkHandler {
             }
 
             String server = "singleplayer";
-            if (!client.isInSingleplayer() && client.getCurrentServerEntry() != null) {
-                server = client.getCurrentServerEntry().address.toLowerCase().trim();
+            if (!client.isInSingleplayer()) {
+                if (client.getCurrentServerEntry() != null && client.getCurrentServerEntry().address != null) {
+                    server = client.getCurrentServerEntry().address;
+                } else if (client.getNetworkHandler() != null && client.getNetworkHandler().getConnection() != null) {
+                    java.net.SocketAddress addr = client.getNetworkHandler().getConnection().getAddress();
+                    if (addr != null) {
+                        server = addr.toString();
+                    }
+                }
             }
+
+            // Normalize server address: strip slashes and ports
+            if (server.contains("/")) {
+                server = server.substring(server.lastIndexOf('/') + 1);
+            }
+            if (server.contains(":")) {
+                server = server.substring(0, server.indexOf(':'));
+            }
+            server = server.trim().toLowerCase();
 
             long now = System.currentTimeMillis();
             JsonObject dataObj = new JsonObject();
@@ -127,8 +143,10 @@ public class MooNetworkHandler {
                                                 String s = d.has("s") ? d.get("s").getAsString() : null;
                                                 long t = d.has("t") ? d.get("t").getAsLong() : 0;
 
-                                                if (u != null && !u.equalsIgnoreCase(finalUsername) && s != null && s.equalsIgnoreCase(finalServer)) {
-                                                    if (current - t < 60000 || t == 0) {
+                                                if (u != null && !u.equalsIgnoreCase(finalUsername)) {
+                                                    // Check if server matches or both are playing on same server
+                                                    boolean serverMatch = s == null || s.equalsIgnoreCase(finalServer) || s.contains(finalServer) || finalServer.contains(s);
+                                                    if (serverMatch && (current - t < 120000 || t == 0)) {
                                                         MooUserManager.registerUser(u, null);
                                                     }
                                                 }
