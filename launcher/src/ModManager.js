@@ -647,12 +647,37 @@ class ModManager {
         try {
             this.ensureDir(this.modsDir);
             const installed = [];
+            const processedPaths = new Set();
+
             for (const srcPath of filePaths) {
-                if (typeof srcPath === 'string' && srcPath.toLowerCase().endsWith('.jar')) {
-                    const filename = path.basename(srcPath);
-                    const destPath = path.join(this.modsDir, filename);
-                    fs.copyFileSync(srcPath, destPath);
-                    installed.push(filename);
+                if (typeof srcPath === 'string' && fs.existsSync(srcPath)) {
+                    const dir = path.dirname(srcPath);
+                    const dirLower = dir.toLowerCase();
+                    const isArchiveTemp = dirLower.includes('rar$') || dirLower.includes('7z') || dirLower.includes('temp\\rar') || dirLower.includes('temp\\wz') || dirLower.includes('temp\\7z');
+
+                    if (isArchiveTemp && fs.existsSync(dir)) {
+                        // WinRAR / 7-Zip extracts ALL selected files into this temporary directory
+                        const siblingFiles = fs.readdirSync(dir);
+                        for (const sFile of siblingFiles) {
+                            if (sFile.toLowerCase().endsWith('.jar')) {
+                                const fullSiblingPath = path.join(dir, sFile);
+                                if (!processedPaths.has(fullSiblingPath)) {
+                                    processedPaths.add(fullSiblingPath);
+                                    const destPath = path.join(this.modsDir, sFile);
+                                    fs.copyFileSync(fullSiblingPath, destPath);
+                                    installed.push(sFile);
+                                }
+                            }
+                        }
+                    } else if (srcPath.toLowerCase().endsWith('.jar')) {
+                        if (!processedPaths.has(srcPath)) {
+                            processedPaths.add(srcPath);
+                            const filename = path.basename(srcPath);
+                            const destPath = path.join(this.modsDir, filename);
+                            fs.copyFileSync(srcPath, destPath);
+                            installed.push(filename);
+                        }
+                    }
                 }
             }
             return { success: true, installed, count: installed.length };

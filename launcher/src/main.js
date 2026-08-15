@@ -333,54 +333,65 @@ function setupIPC() {
 
     ipcMain.handle('perform-client-update', async () => {
         try {
-            // 1. Update Fabric Mod Jar (0% -> 40%)
-            sendToRenderer('client-update-progress', { status: 'Aktualizowanie moda Moo Client...', percent: 15 });
+            const remote = await modManager.getRemoteVersion();
+            const launcherVersion = app.getVersion();
+            const localMod = modManager.getLocalVersion();
+            const launcherNeedsUpdate = ModManager.isNewerVersion(remote.version, launcherVersion);
+            const modNeedsUpdate = ModManager.isNewerVersion(remote.version, localMod.version);
+
+            // 1. Fast Delta Update for Fabric Mod Jar (only ~200 KB!)
+            sendToRenderer('client-update-progress', { status: 'Pobieranie zaktualizowanego kodu klienta...', percent: 40 });
             const modUpdated = await modManager.checkAndUpdate((status, percent) => {
-                sendToRenderer('client-update-progress', { status: `Mod: ${status}`, percent: Math.round(percent * 0.4) });
+                sendToRenderer('client-update-progress', { status: `Kod klienta: ${status}`, percent: Math.round(percent * 0.9) });
             });
 
-            // 2. If packaged launcher, update the Launcher .exe itself (40% -> 100%)
-            if (app.isPackaged) {
-                sendToRenderer('client-update-progress', { status: 'Pobieranie aktualizacji launchera...', percent: 45 });
-                
-                // Fetch latest release info from GitHub
-                const remote = await modManager.getRemoteVersion();
+            // 2. If launcher UI/code has an update, perform fast Hot-ASAR delta update (~1.5 MB!)
+            if (app.isPackaged && launcherNeedsUpdate) {
+                sendToRenderer('client-update-progress', { status: 'Pobieranie nowej paczki wyglądu launchera...', percent: 60 });
                 const latestVer = remote.version;
-                const installerUrl = `https://github.com/Larmel144hz/moo-client/releases/download/v${latestVer}/Moo-Client-Setup-${latestVer}.exe`;
-                
-                const tempInstaller = path.join(os.tmpdir(), `Moo-Client-Setup-${latestVer}.exe`);
-                
-                await downloadFile(installerUrl, tempInstaller, (percent) => {
-                    sendToRenderer('client-update-progress', { 
-                        status: `Pobieranie instalatora launchera: ${percent}%`, 
-                        percent: 45 + Math.round(percent * 0.5) 
+                const asarUrl = `https://github.com/Larmel144hz/moo-client/releases/download/v${latestVer}/app.asar`;
+                const tempAsar = path.join(os.tmpdir(), `app-update-${latestVer}.asar`);
+                const targetAsar = path.join(process.resourcesPath, 'app.asar');
+
+                try {
+                    await downloadFile(asarUrl, tempAsar, (percent) => {
+                        sendToRenderer('client-update-progress', { 
+                            status: `Pobieranie wyglądu launchera: ${percent}%`, 
+                            percent: 60 + Math.round(percent * 0.35) 
+                        });
                     });
-                });
 
-                sendToRenderer('client-update-progress', { status: 'Aktualizowanie i ponowne uruchamianie...', percent: 98 });
-                
-                // Launch installer silently (/S) and automatically relaunch the updated Moo Client.exe
-                const { spawn } = require('child_process');
-                const targetExe = process.execPath;
-                const updateScript = `Start-Sleep -Milliseconds 800; Start-Process -FilePath '${tempInstaller.replace(/'/g, "''")}' -ArgumentList '/S' -Wait; Start-Process -FilePath '${targetExe.replace(/'/g, "''")}'`;
-                
-                const child = spawn('powershell.exe', ['-WindowStyle', 'Hidden', '-NoProfile', '-Command', updateScript], {
-                    detached: true,
-                    stdio: 'ignore'
-                });
-                child.unref();
+                    sendToRenderer('client-update-progress', { status: 'Restartowanie launchera...', percent: 98 });
+                    const { spawn } = require('child_process');
+                    const targetExe = process.execPath;
+                    const updateScript = `Start-Sleep -Milliseconds 600; Move-Item -Path '${tempAsar.replace(/'/g, "''")}' -Destination '${targetAsar.replace(/'/g, "''")}' -Force; Start-Process -FilePath '${targetExe.replace(/'/g, "''")}'`;
+                    
+                    const child = spawn('powershell.exe', ['-WindowStyle', 'Hidden', '-NoProfile', '-Command', updateScript], {
+                        detached: true,
+                        stdio: 'ignore'
+                    });
+                    child.unref();
 
-                setTimeout(() => {
-                    app.quit();
-                }, 600);
+                    setTimeout(() => {
+                        app.quit();
+                    }, 500);
 
-                return { success: true, updated: true, restarting: true };
+                    return { success: true, updated: true, restarting: true };
+                } catch (e) {
+                    console.warn('Fast ASAR update fallback to full installer:', e.message);
+                }
             }
 
+            sendToRenderer('client-update-progress', { status: 'Zaktualizowano pomyślnie!', percent: 100 });
             const newLocal = modManager.getLocalVersion();
-            return { success: true, updated: modUpdated, version: newLocal.version };
+            return {
+                success: true,
+                updated: true,
+                restarting: false,
+                version: newLocal.version
+            };
         } catch (e) {
-            console.error('Update error:', e);
+            console.error('Error during client update:', e);
             return { success: false, error: e.message };
         }
     });

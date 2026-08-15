@@ -1,6 +1,7 @@
 package com.mooclient.util;
 
 import net.minecraft.client.MinecraftClient;
+import net.minecraft.client.network.PlayerListEntry;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.player.PlayerEntity;
 
@@ -12,7 +13,7 @@ import java.util.UUID;
 /**
  * Tracks which players on the current server are confirmed Moo Client users.
  * The local player is always recognized as a Moo Client user.
- * Other players are recognized when they complete the Moo Client handshake.
+ * Remote players are recognized in real-time when broadcasting on Moo Client.
  */
 public class MooUserManager {
 
@@ -21,7 +22,7 @@ public class MooUserManager {
 
     public static void registerUser(String username, UUID uuid) {
         if (username != null && !username.trim().isEmpty()) {
-            MOO_USERS_NAMES.add(username.trim().toLowerCase());
+            MOO_USERS_NAMES.add(cleanName(username));
         }
         if (uuid != null) {
             MOO_USERS_UUIDS.add(uuid);
@@ -30,7 +31,7 @@ public class MooUserManager {
 
     public static void unregisterUser(String username, UUID uuid) {
         if (username != null) {
-            MOO_USERS_NAMES.remove(username.trim().toLowerCase());
+            MOO_USERS_NAMES.remove(cleanName(username));
         }
         if (uuid != null) {
             MOO_USERS_UUIDS.remove(uuid);
@@ -42,11 +43,14 @@ public class MooUserManager {
         MOO_USERS_UUIDS.clear();
     }
 
+    private static String cleanName(String name) {
+        if (name == null) return "";
+        // Strip Minecraft color codes (§a, §f, etc.) and trim
+        return name.replaceAll("(?i)§[0-9a-fk-or]", "").trim().toLowerCase();
+    }
+
     /**
      * Checks if the given player is a confirmed Moo Client user.
-     * Only returns true for:
-     *  1. The local player (always a Moo Client user)
-     *  2. Remote players who completed the Moo Client handshake
      */
     public static boolean isMooUser(String playerName, int entityId) {
         if (!com.mooclient.module.modules.NametagsModule.isNametagsEnabled() || !com.mooclient.module.modules.NametagsModule.isShowLogo()) {
@@ -55,27 +59,65 @@ public class MooUserManager {
 
         MinecraftClient client = MinecraftClient.getInstance();
 
-        // 1. Local Player — check by entity ID or session username
+        // 1. Local Player
         if (client.player != null) {
             if (client.player.getId() == entityId) {
                 return true;
             }
-            if (playerName != null && client.getSession() != null && playerName.equalsIgnoreCase(client.getSession().getUsername())) {
-                return true;
+            if (playerName != null && client.getSession() != null) {
+                String myClean = cleanName(client.getSession().getUsername());
+                String targetClean = cleanName(playerName);
+                if (!myClean.isEmpty() && (targetClean.equals(myClean) || targetClean.contains(myClean))) {
+                    return true;
+                }
             }
         }
 
-        // 2. Check registered Moo Client usernames from handshake (remote players only)
-        if (playerName != null && MOO_USERS_NAMES.contains(playerName.trim().toLowerCase())) {
-            return true;
+        String targetClean = cleanName(playerName);
+
+        // 2. Direct username match in registered Moo users
+        if (!targetClean.isEmpty()) {
+            if (MOO_USERS_NAMES.contains(targetClean)) {
+                return true;
+            }
+            // Check if nametag contains rank like "[VIP] Steve" or "Steve [12ms]"
+            for (String registered : MOO_USERS_NAMES) {
+                if (targetClean.contains(registered) || registered.contains(targetClean)) {
+                    return true;
+                }
+            }
         }
 
-        // 3. Check registered Moo Client UUIDs from handshake (remote players only)
+        // 3. Check entity in world
         if (client.world != null) {
             Entity entity = client.world.getEntityById(entityId);
             if (entity instanceof PlayerEntity player) {
                 if (player.getUuid() != null && MOO_USERS_UUIDS.contains(player.getUuid())) {
                     return true;
+                }
+                String entityClean = cleanName(player.getNameForScoreboard());
+                if (!entityClean.isEmpty() && MOO_USERS_NAMES.contains(entityClean)) {
+                    return true;
+                }
+            }
+        }
+
+        // 4. Tab list entry match
+        if (client.getNetworkHandler() != null) {
+            for (PlayerListEntry entry : client.getNetworkHandler().getPlayerList()) {
+                if (entry.getProfile() != null) {
+                    if (MOO_USERS_UUIDS.contains(entry.getProfile().getId())) {
+                        String profileClean = cleanName(entry.getProfile().getName());
+                        if (targetClean.contains(profileClean) || profileClean.contains(targetClean)) {
+                            return true;
+                        }
+                    }
+                    String profileClean = cleanName(entry.getProfile().getName());
+                    if (MOO_USERS_NAMES.contains(profileClean)) {
+                        if (targetClean.contains(profileClean) || profileClean.contains(targetClean)) {
+                            return true;
+                        }
+                    }
                 }
             }
         }

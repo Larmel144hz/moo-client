@@ -1579,21 +1579,36 @@ window.addEventListener('drop', async (e) => {
         return; // Drag & drop is allowed exclusively on Installed mods tab
     }
 
-    let files = Array.from(e.dataTransfer?.files || []);
-    if (files.length === 0 && e.dataTransfer?.items) {
-        for (const item of Array.from(e.dataTransfer.items)) {
-            if (item.kind === 'file') {
-                const f = item.getAsFile();
-                if (f) files.push(f);
+    const fileList = [];
+    const seenNames = new Set();
+
+    if (e.dataTransfer?.files) {
+        for (const file of Array.from(e.dataTransfer.files)) {
+            if (file) {
+                fileList.push(file);
+                seenNames.add(file.name);
             }
         }
     }
-    if (files.length === 0) return;
+
+    if (e.dataTransfer?.items) {
+        for (const item of Array.from(e.dataTransfer.items)) {
+            if (item.kind === 'file') {
+                const f = item.getAsFile();
+                if (f && !seenNames.has(f.name)) {
+                    fileList.push(f);
+                    seenNames.add(f.name);
+                }
+            }
+        }
+    }
+
+    if (fileList.length === 0) return;
 
     let installedCount = 0;
     const pathList = [];
 
-    for (const file of files) {
+    for (const file of fileList) {
         const name = file.name || '';
         const fullPath = window.mooAPI?.getFilePath ? window.mooAPI.getFilePath(file) : (file.path || '');
 
