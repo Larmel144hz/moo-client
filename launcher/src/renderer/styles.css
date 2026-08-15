@@ -2726,9 +2726,12 @@ html, body {
     color: #ffffff !important;
     border: none !important;
     box-shadow: 0 4px 14px rgba(56, 189, 248, 0.4);
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    text-align: center !important;
+    gap: 8px !important;
+    padding: 0 20px !important;
 }
 
 .btn-update-confirm:hover {
