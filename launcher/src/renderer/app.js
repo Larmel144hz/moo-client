@@ -1518,18 +1518,12 @@ navMods?.addEventListener('click', () => {
 // =============================================
 // Drag & Drop Mod Installation (.jar)
 // =============================================
-const pageMods = document.getElementById('page-mods');
 const modsDropzone = document.getElementById('mods-dropzone');
 let dragCounter = 0;
 
-['dragenter', 'dragover', 'dragleave', 'drop'].forEach((eventName) => {
-    document.addEventListener(eventName, (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-    });
-});
-
-pageMods?.addEventListener('dragenter', () => {
+window.addEventListener('dragenter', (e) => {
+    e.preventDefault();
+    e.stopPropagation();
     dragCounter++;
     if (modsDropzone) {
         modsDropzone.classList.remove('hidden');
@@ -1537,7 +1531,17 @@ pageMods?.addEventListener('dragenter', () => {
     }
 });
 
-pageMods?.addEventListener('dragleave', () => {
+window.addEventListener('dragover', (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.dataTransfer) {
+        e.dataTransfer.dropEffect = 'copy';
+    }
+});
+
+window.addEventListener('dragleave', (e) => {
+    e.preventDefault();
+    e.stopPropagation();
     dragCounter--;
     if (dragCounter <= 0) {
         dragCounter = 0;
@@ -1546,18 +1550,26 @@ pageMods?.addEventListener('dragleave', () => {
     }
 });
 
-pageMods?.addEventListener('drop', async (e) => {
+window.addEventListener('drop', async (e) => {
+    e.preventDefault();
+    e.stopPropagation();
     dragCounter = 0;
     modsDropzone?.classList.add('hidden');
     modsDropzone?.classList.remove('active');
 
     const files = Array.from(e.dataTransfer?.files || []);
-    const jarPaths = [];
+    if (files.length === 0) return;
 
+    const jarPaths = [];
     for (const file of files) {
-        const path = window.mooAPI?.getFilePath ? window.mooAPI.getFilePath(file) : file.path;
-        if (path && path.toLowerCase().endsWith('.jar')) {
-            jarPaths.push(path);
+        let p = '';
+        if (window.mooAPI?.getFilePath) {
+            p = window.mooAPI.getFilePath(file);
+        } else {
+            p = file.path;
+        }
+        if (p && p.toLowerCase().endsWith('.jar')) {
+            jarPaths.push(p);
         }
     }
 
@@ -1565,7 +1577,10 @@ pageMods?.addEventListener('drop', async (e) => {
         try {
             const res = await window.mooAPI?.installLocalMods(jarPaths);
             if (res?.success && res.count > 0) {
-                // Automatically switch to installed tab and refresh list
+                // Switch to mods tab and installed subtab
+                document.querySelectorAll('.nav-item').forEach(i => i.classList.toggle('active', i.dataset.page === 'mods'));
+                document.querySelectorAll('.page').forEach(p => p.classList.toggle('active', p.id === 'page-mods'));
+
                 currentModsTab = 'installed';
                 tabInstalledMods?.classList.add('active');
                 tabBrowseMods?.classList.remove('active');
@@ -1580,8 +1595,11 @@ pageMods?.addEventListener('drop', async (e) => {
                 showToast(`Błąd dodawania modów: ${res.error}`, 'error');
             }
         } catch (err) {
+            console.error('Drag and drop error:', err);
             showToast(`Błąd: ${err.message}`, 'error');
         }
+    } else {
+        showToast('Upuszczone pliki muszą mieć rozszerzenie .jar', 'error');
     }
 });
 

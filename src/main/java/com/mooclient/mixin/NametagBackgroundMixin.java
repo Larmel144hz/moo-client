@@ -59,20 +59,6 @@ public abstract class NametagBackgroundMixin {
     @ModifyArg(
         method = "renderLabelIfPresent",
         at = @At(value = "INVOKE", target = "Lnet/minecraft/client/font/TextRenderer;draw(Lnet/minecraft/text/Text;FFIZLorg/joml/Matrix4f;Lnet/minecraft/client/render/VertexConsumerProvider;Lnet/minecraft/client/font/TextRenderer$TextLayerType;II)I"),
-        index = 1
-    )
-    private float mooClient$centerNametagWithBadge(float originalX) {
-        EntityRenderState state = this.mooClient$currentState.get();
-        if (state instanceof PlayerEntityRenderState playerState && com.mooclient.util.MooUserManager.isMooUser(playerState.name, playerState.id)) {
-            float badgeTotalWidth = 11.0f; // iconSize (8.5f) + gap (2.5f)
-            return originalX + (badgeTotalWidth / 2.0f);
-        }
-        return originalX;
-    }
-
-    @ModifyArg(
-        method = "renderLabelIfPresent",
-        at = @At(value = "INVOKE", target = "Lnet/minecraft/client/font/TextRenderer;draw(Lnet/minecraft/text/Text;FFIZLorg/joml/Matrix4f;Lnet/minecraft/client/render/VertexConsumerProvider;Lnet/minecraft/client/font/TextRenderer$TextLayerType;II)I"),
         index = 4
     )
     private boolean mooClient$modifyNametagShadow(boolean originalShadow) {
@@ -92,23 +78,6 @@ public abstract class NametagBackgroundMixin {
         }
 
         Matrix4f matrix = matrices.peek().getPositionMatrix();
-
-        // 1. Clean crisp logo badge rendering for Moo Client users
-        if (com.mooclient.util.MooUserManager.isMooUser(playerState.name, playerState.id)) {
-            float textWidth = this.getTextRenderer().getWidth(text);
-            float badgeTotalWidth = 11.0f;
-            float iconSize = 8.5f;
-
-            float totalWidth = textWidth + badgeTotalWidth;
-            float iconX = -totalWidth / 2.0f;
-            float iconY = 0.0f;
-
-            VertexConsumer buffer = vertexConsumers.getBuffer(RenderLayer.getText(MOO_LOGO));
-            buffer.vertex(matrix, iconX, iconY, 0.0f).color(255, 255, 255, 255).texture(0.0f, 0.0f).light(light);
-            buffer.vertex(matrix, iconX, iconY + iconSize, 0.0f).color(255, 255, 255, 255).texture(0.0f, 1.0f).light(light);
-            buffer.vertex(matrix, iconX + iconSize, iconY + iconSize, 0.0f).color(255, 255, 255, 255).texture(1.0f, 1.0f).light(light);
-            buffer.vertex(matrix, iconX + iconSize, iconY, 0.0f).color(255, 255, 255, 255).texture(1.0f, 0.0f).light(light);
-        }
 
         // 2. Render Ping ABOVE nickname for all players when ABOVE mode is active
         if (NametagsModule.isNametagsEnabled() && NametagsModule.isShowPing() && NametagsModule.getPingPosition() == NametagsModule.PingPosition.ABOVE) {

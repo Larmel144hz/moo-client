@@ -40,9 +40,11 @@ contextBridge.exposeInMainWorld('mooAPI', {
     getFilePath: (file) => {
         try {
             const { webUtils } = require('electron');
-            if (webUtils && webUtils.getPathForFile) return webUtils.getPathForFile(file);
+            if (webUtils && typeof webUtils.getPathForFile === 'function') {
+                return webUtils.getPathForFile(file);
+            }
         } catch (e) {}
-        return file.path;
+        return file && file.path ? file.path : '';
     },
     openModsFolder: () => ipcRenderer.invoke('open-mods-folder'),
 

@@ -196,14 +196,22 @@ public class NametagsModule extends Module {
             return originalText;
         }
 
+        Text result = originalText.copy();
+
+        // 1. Prefix with distinct Moo Client Cow Badge for confirmed Moo Client users
+        if (showLogo && com.mooclient.util.MooUserManager.isMooUser(playerName, entityId)) {
+            result = Text.literal("🐮 ").formatted(Formatting.WHITE).append(result);
+        }
+
+        // 2. Append Ping indicator in BESIDE mode
         if (showPing && pingPosition == PingPosition.BESIDE) {
             Text pingText = getPingText(entityId, playerName);
             if (pingText != null) {
-                return originalText.copy().append(Text.literal(" ")).append(pingText);
+                result = result.copy().append(Text.literal(" ")).append(pingText);
             }
         }
 
-        return originalText;
+        return result;
     }
 
     public static Text formatNametag(Text originalText, int entityId) {
