@@ -76,25 +76,31 @@ public class MooNetworkHandler {
             }
 
             long now = System.currentTimeMillis();
-            JsonObject payload = new JsonObject();
-            payload.addProperty("u", username.trim());
-            payload.addProperty("s", server);
-            payload.addProperty("t", now);
+            JsonObject dataObj = new JsonObject();
+            dataObj.addProperty("u", username.trim());
+            dataObj.addProperty("s", server);
+            dataObj.addProperty("t", now);
+
+            JsonObject postPayload = new JsonObject();
+            postPayload.addProperty("name", "mooclient_presence");
+            postPayload.add("data", dataObj);
 
             // 1. Send heartbeat
             HttpRequest postReq = HttpRequest.newBuilder()
-                    .uri(URI.create("https://ntfy.sh/" + PRESENCE_TOPIC))
+                    .uri(URI.create("https://api.restful-api.dev/objects"))
                     .timeout(Duration.ofSeconds(3))
                     .header("Content-Type", "application/json")
-                    .POST(HttpRequest.BodyPublishers.ofString(payload.toString()))
+                    .header("User-Agent", "MooClient")
+                    .POST(HttpRequest.BodyPublishers.ofString(postPayload.toString()))
                     .build();
 
             HTTP_CLIENT.sendAsync(postReq, HttpResponse.BodyHandlers.discarding());
 
-            // 2. Query active players in last 90 seconds
+            // 2. Query active players on the same server
             HttpRequest getReq = HttpRequest.newBuilder()
-                    .uri(URI.create("https://ntfy.sh/" + PRESENCE_TOPIC + "/json?poll=1&since=90s"))
+                    .uri(URI.create("https://api.restful-api.dev/objects"))
                     .timeout(Duration.ofSeconds(3))
+                    .header("User-Agent", "MooClient")
                     .GET()
                     .build();
 
@@ -107,30 +113,31 @@ public class MooNetworkHandler {
                                 String body = res.body();
                                 if (body == null || body.isEmpty()) return;
 
-                                String[] lines = body.split("\n");
-                                long current = System.currentTimeMillis();
+                                com.google.gson.JsonElement parsed = JsonParser.parseString(body);
+                                if (parsed.isJsonArray()) {
+                                    com.google.gson.JsonArray arr = parsed.getAsJsonArray();
+                                    long current = System.currentTimeMillis();
+                                    for (com.google.gson.JsonElement elem : arr) {
+                                        if (!elem.isJsonObject()) continue;
+                                        JsonObject obj = elem.getAsJsonObject();
+                                        if (obj.has("name") && "mooclient_presence".equals(obj.get("name").getAsString())) {
+                                            if (obj.has("data") && obj.get("data").isJsonObject()) {
+                                                JsonObject d = obj.getAsJsonObject("data");
+                                                String u = d.has("u") ? d.get("u").getAsString() : null;
+                                                String s = d.has("s") ? d.get("s").getAsString() : null;
+                                                long t = d.has("t") ? d.get("t").getAsLong() : 0;
 
-                                for (String line : lines) {
-                                    if (line == null || line.isBlank()) continue;
-                                    try {
-                                        JsonObject eventObj = JsonParser.parseString(line).getAsJsonObject();
-                                        if (eventObj.has("message")) {
-                                            String msgRaw = eventObj.get("message").getAsString();
-                                            JsonObject data = JsonParser.parseString(msgRaw).getAsJsonObject();
-
-                                            String u = data.has("u") ? data.get("u").getAsString() : null;
-                                            String s = data.has("s") ? data.get("s").getAsString() : null;
-                                            long t = data.has("t") ? data.get("t").getAsLong() : 0;
-
-                                            if (u != null && !u.equalsIgnoreCase(finalUsername) && s != null && s.equalsIgnoreCase(finalServer)) {
-                                                if (current - t < 90000 || t == 0) {
-                                                    MooUserManager.registerUser(u, null);
+                                                if (u != null && !u.equalsIgnoreCase(finalUsername) && s != null && s.equalsIgnoreCase(finalServer)) {
+                                                    if (current - t < 60000 || t == 0) {
+                                                        MooUserManager.registerUser(u, null);
+                                                    }
                                                 }
                                             }
                                         }
-                                    } catch (Exception ignored) {}
+                                    }
                                 }
                             }
+                        } catch (Exception ignored) {
                         } finally {
                             isRunning = false;
                         }

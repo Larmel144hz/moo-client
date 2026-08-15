@@ -301,27 +301,27 @@ function setupIPC() {
 
     // --- Moo Client Core Version & Update Check ---
     ipcMain.handle('check-client-update', async () => {
-        const pkg = require('../package.json');
-        const defaultVer = pkg.version || '1.0.2';
+        const launcherVersion = app.getVersion();
         try {
-            const local = modManager.getLocalVersion();
             const remote = await modManager.getRemoteVersion();
-            const localVer = (local.version && local.version !== 'none') ? local.version : defaultVer;
-            const hasUpdate = ModManager.isNewerVersion(remote.version, localVer);
+            const localMod = modManager.getLocalVersion();
+            const launcherNeedsUpdate = ModManager.isNewerVersion(remote.version, launcherVersion);
+            const modNeedsUpdate = ModManager.isNewerVersion(remote.version, localMod.version);
+            const hasUpdate = launcherNeedsUpdate || modNeedsUpdate;
+
             return {
                 success: true,
                 hasUpdate,
-                currentVersion: localVer,
+                currentVersion: launcherVersion,
                 latestVersion: remote.version,
                 changelog: remote.changelog || '',
                 downloadUrl: remote.download_url
             };
         } catch (e) {
-            const local = modManager.getLocalVersion();
             return {
                 success: false,
                 hasUpdate: false,
-                currentVersion: (local.version && local.version !== 'none') ? local.version : defaultVer,
+                currentVersion: launcherVersion,
                 error: e.message
             };
         }
@@ -393,39 +393,49 @@ const launcherClientId = 'moo_launcher_' + crypto.randomBytes(6).toString('hex')
 function setupLauncherPresence() {
     function pingAndFetch() {
         try {
+            const postPayload = JSON.stringify({
+                name: "mooclient_launcher_presence",
+                data: { id: launcherClientId, t: Date.now() }
+            });
+
             const postReq = https.request({
-                hostname: 'ntfy.sh',
-                path: `/${LAUNCHER_PRESENCE_TOPIC}`,
+                hostname: 'api.restful-api.dev',
+                path: '/objects',
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' }
+                headers: {
+                    'Content-Type': 'application/json',
+                    'User-Agent': 'MooClient'
+                },
+                timeout: 4000
             });
             postReq.on('error', () => {});
-            postReq.write(JSON.stringify({ id: launcherClientId, t: Date.now() }));
+            postReq.write(postPayload);
             postReq.end();
 
             const getReq = https.request({
-                hostname: 'ntfy.sh',
-                path: `/${LAUNCHER_PRESENCE_TOPIC}/json?poll=1&since=45s`,
-                method: 'GET'
+                hostname: 'api.restful-api.dev',
+                path: '/objects',
+                method: 'GET',
+                headers: {
+                    'User-Agent': 'MooClient'
+                },
+                timeout: 4000
             }, (res) => {
                 let data = '';
                 res.on('data', chunk => data += chunk);
                 res.on('end', () => {
                     try {
-                        const lines = data.trim().split('\n');
+                        const list = JSON.parse(data);
                         const active = new Set();
                         const now = Date.now();
-                        for (const line of lines) {
-                            if (!line.trim()) continue;
-                            try {
-                                const msg = JSON.parse(line);
-                                if (msg.message) {
-                                    const parsed = JSON.parse(msg.message);
-                                    if (parsed.id && (now - parsed.t < 45000 || !parsed.t)) {
-                                        active.add(parsed.id);
+                        if (Array.isArray(list)) {
+                            for (const item of list) {
+                                if (item.name === "mooclient_launcher_presence" && item.data && item.data.id) {
+                                    if (now - (item.data.t || 0) < 60000) {
+                                        active.add(item.data.id);
                                     }
                                 }
-                            } catch (e) {}
+                            }
                         }
                         active.add(launcherClientId);
                         launcherOnlineCount = Math.max(1, active.size);
@@ -439,7 +449,7 @@ function setupLauncherPresence() {
     }
 
     pingAndFetch();
-    setInterval(pingAndFetch, 12000);
+    setInterval(pingAndFetch, 8000);
 }
 
 // Helper: send message to renderer

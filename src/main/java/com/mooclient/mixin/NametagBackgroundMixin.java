@@ -32,7 +32,7 @@ public abstract class NametagBackgroundMixin {
     @Shadow
     public abstract TextRenderer getTextRenderer();
 
-    private static final Identifier MOO_LOGO = Identifier.of("minecraft", "icons/icon_128x128.png");
+    private static final Identifier MOO_LOGO = Identifier.of("mooclient", "textures/gui/icon.png");
     private final ThreadLocal<EntityRenderState> mooClient$currentState = new ThreadLocal<>();
 
     @Inject(method = "renderLabelIfPresent", at = @At("HEAD"))
