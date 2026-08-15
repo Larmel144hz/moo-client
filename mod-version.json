@@ -1,6 +1,6 @@
 {
-  "version": "1.0.3",
+  "version": "1.1.0",
   "minecraft": "1.21.4",
-  "download_url": "https://github.com/Larmel144hz/moo-client/releases/download/v1.0.3/moo-client-1.0.3.jar",
-  "changelog": "• GUI Stability: Fixed random/accidental GUI screen auto-closing\n• FPS Module: Customizable background & shadow options in Moo Client style\n• Zoom Module: Instant unzoom upon key release (smooth animation only on start)\n• Nametags: Symmetrical centering above player head\n• Installer: Assisted installer with Desktop Shortcut checkbox selection"
+  "download_url": "https://github.com/Larmel144hz/moo-client/releases/download/v1.1.0/moo-client-1.1.0.jar",
+  "changelog": "👤 Multi-Account: Zarządzanie wieloma kontami Premium — przełączanie 1-kliknięciem\n🎬 Video Background: Animowane tło wideo Momomo z przełącznikiem Classic/Momomo\n💬 Chat Module: Przezroczyste tło czatu, nielimitowana historia (16384 linii)\n🏷️ Nametags: Logo krowy wyłącznie dla graczy Moo Client (handshake), pozycja pingu\n🟢 Online Counter: Badge aktywności graczy online w prawym górnym rogu\n🚀 Launcher: Poprawki przycisku GRAJ, Discord RPC, reset po zamknięciu gry"
 }
