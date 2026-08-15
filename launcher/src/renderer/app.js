@@ -1516,14 +1516,20 @@ navMods?.addEventListener('click', () => {
 });
 
 // =============================================
-// Drag & Drop Mod Installation (.jar)
+// Drag & Drop Mod Installation (.jar) — ONLY on Installed Tab
 // =============================================
 const modsDropzone = document.getElementById('mods-dropzone');
 let dragCounter = 0;
 
+function isInstalledModsTabActive() {
+    const pageMods = document.getElementById('page-mods');
+    return pageMods && pageMods.classList.contains('active') && currentModsTab === 'installed';
+}
+
 window.addEventListener('dragenter', (e) => {
     e.preventDefault();
     e.stopPropagation();
+    if (!isInstalledModsTabActive()) return;
     dragCounter++;
     if (modsDropzone) {
         modsDropzone.classList.remove('hidden');
@@ -1534,6 +1540,10 @@ window.addEventListener('dragenter', (e) => {
 window.addEventListener('dragover', (e) => {
     e.preventDefault();
     e.stopPropagation();
+    if (!isInstalledModsTabActive()) {
+        if (e.dataTransfer) e.dataTransfer.dropEffect = 'none';
+        return;
+    }
     if (e.dataTransfer) {
         e.dataTransfer.dropEffect = 'copy';
     }
@@ -1542,6 +1552,7 @@ window.addEventListener('dragover', (e) => {
 window.addEventListener('dragleave', (e) => {
     e.preventDefault();
     e.stopPropagation();
+    if (!isInstalledModsTabActive()) return;
     dragCounter--;
     if (dragCounter <= 0) {
         dragCounter = 0;
@@ -1557,13 +1568,23 @@ window.addEventListener('drop', async (e) => {
     modsDropzone?.classList.add('hidden');
     modsDropzone?.classList.remove('active');
 
+    if (!isInstalledModsTabActive()) {
+        return; // Drag & drop is allowed exclusively on Installed mods tab
+    }
+
     const files = Array.from(e.dataTransfer?.files || []);
     if (files.length === 0) return;
 
     let installedCount = 0;
+    const pathList = [];
+
     for (const file of files) {
         const name = file.name || '';
-        if (name.toLowerCase().endsWith('.jar')) {
+        const fullPath = window.mooAPI?.getFilePath ? window.mooAPI.getFilePath(file) : (file.path || '');
+
+        if (fullPath && fullPath.toLowerCase().endsWith('.jar')) {
+            pathList.push(fullPath);
+        } else if (name.toLowerCase().endsWith('.jar')) {
             try {
                 const arrayBuffer = await file.arrayBuffer();
                 const res = await window.mooAPI?.saveModFile(name, arrayBuffer);
@@ -1571,25 +1592,25 @@ window.addEventListener('drop', async (e) => {
                     installedCount++;
                 }
             } catch (err) {
-                console.error('Error saving dropped mod:', err);
+                console.error('Error saving dropped mod buffer:', err);
             }
         }
     }
 
-    if (installedCount > 0) {
-        // Switch to mods tab and installed subtab
-        document.querySelectorAll('.nav-item').forEach(i => i.classList.toggle('active', i.dataset.page === 'mods'));
-        document.querySelectorAll('.page').forEach(p => p.classList.toggle('active', p.id === 'page-mods'));
-
-        currentModsTab = 'installed';
-        tabInstalledMods?.classList.add('active');
-        tabBrowseMods?.classList.remove('active');
-        if (modsSearchInput) {
-            modsSearchInput.placeholder = t('search_installed_placeholder');
-            modsSearchInput.value = '';
+    if (pathList.length > 0) {
+        try {
+            const res = await window.mooAPI?.installLocalMods(pathList);
+            if (res?.success && res.count > 0) {
+                installedCount += res.count;
+            }
+        } catch (err) {
+            console.error('Error installing local mod paths:', err);
         }
+    }
+
+    if (installedCount > 0) {
         await refreshInstalledMods();
-        renderInstalledModsView('');
+        renderInstalledModsView(modsSearchInput ? modsSearchInput.value : '');
         showToast(`Pomyślnie dodano ${installedCount} modów!`, 'success');
     } else {
         showToast('Upuszczone pliki muszą mieć rozszerzenie .jar', 'error');

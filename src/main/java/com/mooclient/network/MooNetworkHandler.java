@@ -91,9 +91,17 @@ public class MooNetworkHandler {
             }
             server = server.trim().toLowerCase();
 
+            String uuidStr = "";
+            if (client.player != null && client.player.getUuid() != null) {
+                uuidStr = client.player.getUuid().toString();
+            } else if (client.getSession() != null && client.getSession().getUuidOrNull() != null) {
+                uuidStr = client.getSession().getUuidOrNull().toString();
+            }
+
             long now = System.currentTimeMillis();
             JsonObject dataObj = new JsonObject();
             dataObj.addProperty("u", username.trim());
+            dataObj.addProperty("uuid", uuidStr);
             dataObj.addProperty("s", server);
             dataObj.addProperty("t", now);
 
@@ -122,6 +130,8 @@ public class MooNetworkHandler {
 
             String finalServer = server;
             String finalUsername = username.trim();
+            String finalUuid = uuidStr;
+
             HTTP_CLIENT.sendAsync(getReq, HttpResponse.BodyHandlers.ofString())
                     .thenAccept(res -> {
                         try {
@@ -140,14 +150,22 @@ public class MooNetworkHandler {
                                             if (obj.has("data") && obj.get("data").isJsonObject()) {
                                                 JsonObject d = obj.getAsJsonObject("data");
                                                 String u = d.has("u") ? d.get("u").getAsString() : null;
+                                                String pUuidStr = d.has("uuid") ? d.get("uuid").getAsString() : null;
                                                 String s = d.has("s") ? d.get("s").getAsString() : null;
                                                 long t = d.has("t") ? d.get("t").getAsLong() : 0;
 
-                                                if (u != null && !u.equalsIgnoreCase(finalUsername)) {
-                                                    // Check if server matches or both are playing on same server
+                                                boolean isSelf = (u != null && u.equalsIgnoreCase(finalUsername)) || (pUuidStr != null && !finalUuid.isEmpty() && pUuidStr.equalsIgnoreCase(finalUuid));
+
+                                                if (!isSelf && u != null) {
                                                     boolean serverMatch = s == null || s.equalsIgnoreCase(finalServer) || s.contains(finalServer) || finalServer.contains(s);
                                                     if (serverMatch && (current - t < 120000 || t == 0)) {
-                                                        MooUserManager.registerUser(u, null);
+                                                        java.util.UUID parsedUuid = null;
+                                                        if (pUuidStr != null && !pUuidStr.isBlank()) {
+                                                            try {
+                                                                parsedUuid = java.util.UUID.fromString(pUuidStr);
+                                                            } catch (Exception ignored) {}
+                                                        }
+                                                        MooUserManager.registerUser(u, parsedUuid);
                                                     }
                                                 }
                                             }

@@ -1,4 +1,4 @@
-const { contextBridge, ipcRenderer } = require('electron');
+const { contextBridge, ipcRenderer, webUtils } = require('electron');
 
 /**
  * Preload script — exposes a safe API to the renderer process.
@@ -40,7 +40,6 @@ contextBridge.exposeInMainWorld('mooAPI', {
     checkModUpdates: () => ipcRenderer.invoke('check-mod-updates'),
     getFilePath: (file) => {
         try {
-            const { webUtils } = require('electron');
             if (webUtils && typeof webUtils.getPathForFile === 'function') {
                 return webUtils.getPathForFile(file);
             }
