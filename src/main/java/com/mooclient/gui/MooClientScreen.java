@@ -33,6 +33,8 @@ public class MooClientScreen extends Screen {
     private View currentView = View.HUB;
     private Module selectedModule = null;
     private boolean listeningForKeybind = false;
+    private int listeningMacroIndex = -1;
+    private int editingMacroIndex = -1;
     private double scrollY = 0;
 
     // Draggable HUD widget state
@@ -296,8 +298,10 @@ public class MooClientScreen extends Screen {
                 icon = "🧪";
             } else if (module.getName().equalsIgnoreCase("Nametags")) {
                 icon = "🏷";
-            } else {
+            } else if (module.getName().equalsIgnoreCase("Zoom")) {
                 icon = "🔍";
+            } else {
+                icon = "⌨";
             }
             drawCenteredText(context, icon, cardX + cardW / 2, cardY + 16, COLOR_TEXT_WHITE);
             drawCenteredText(context, module.getName(), cardX + cardW / 2, cardY + 38, COLOR_TEXT_WHITE);
@@ -316,11 +320,13 @@ public class MooClientScreen extends Screen {
                 desc = MooLanguage.get("potions_desc");
             } else if (module.getName().equalsIgnoreCase("Nametags")) {
                 desc = MooLanguage.get("nametags_desc");
-            } else {
+            } else if (module.getName().equalsIgnoreCase("Zoom")) {
                 desc = MooLanguage.get("zoom_desc");
+            } else {
+                desc = MooLanguage.get("macro_desc");
             }
             if (this.textRenderer.getWidth(desc) > cardW - 12) {
-                desc = module.getName().equalsIgnoreCase("Gamma") ? "Jasność w jaskiniach" : (module.getName().equalsIgnoreCase("FPS") ? "Licznik klatek" : (module.getName().equalsIgnoreCase("Sprint") ? "Ciągły bieg" : (module.getName().equalsIgnoreCase("Freelook") ? "Widok 360°" : (module.getName().equalsIgnoreCase("Potion Effects") ? "Aktywne mikstury" : (module.getName().equalsIgnoreCase("Nametags") ? "Nick i ping" : "Przybliżenie widoku")))));
+                desc = module.getName().equalsIgnoreCase("Gamma") ? "Jasność w jaskiniach" : (module.getName().equalsIgnoreCase("FPS") ? "Licznik klatek" : (module.getName().equalsIgnoreCase("Sprint") ? "Ciągły bieg" : (module.getName().equalsIgnoreCase("Freelook") ? "Widok 360°" : (module.getName().equalsIgnoreCase("Potion Effects") ? "Aktywne mikstury" : (module.getName().equalsIgnoreCase("Nametags") ? "Nick i ping" : (module.getName().equalsIgnoreCase("Zoom") ? "Przybliżenie widoku" : "Skróty komend"))))));
             }
             context.drawTextWithShadow(this.textRenderer, desc, cardX + (cardW - this.textRenderer.getWidth(desc)) / 2, cardY + 54, COLOR_TEXT_MUTED);
 
@@ -561,6 +567,62 @@ public class MooClientScreen extends Screen {
             rowY += rowH + 6;
             drawOptionRow(context, rowX, rowY, rowW, rowH, MooLanguage.get("smooth_zoom_label"));
             drawOptionToggle(context, rowX + rowW - 44, rowY + 8, mouseX, mouseY, com.mooclient.module.modules.ZoomModule.isSmoothZoom());
+
+        } else if (modName.equalsIgnoreCase("Macro")) {
+            java.util.List<com.mooclient.module.modules.MacroModule.MacroEntry> macroList = com.mooclient.module.modules.MacroModule.getMacros();
+            int mRowH = 28;
+            int curY = panelY + headerH + 10;
+
+            for (int i = 0; i < Math.min(5, macroList.size()); i++) {
+                com.mooclient.module.modules.MacroModule.MacroEntry m = macroList.get(i);
+                context.fill(rowX, curY, rowX + rowW, curY + mRowH, 0x5515151E);
+                drawBorder(context, rowX, curY, rowW, mRowH, 0x22FFFFFF);
+
+                // Slot title
+                String slotName = "Slot " + (i + 1);
+                context.drawTextWithShadow(this.textRenderer, slotName, rowX + 8, curY + (mRowH - 8) / 2, m.isEnabled() ? COLOR_TEXT_WHITE : COLOR_TEXT_MUTED);
+
+                // Command Box (Editable)
+                int cmdBoxX = rowX + 54;
+                int cmdBoxW = rowW - 54 - 110 - 44;
+                int cmdBoxY = curY + 4;
+                int cmdBoxH = mRowH - 8;
+                boolean isEditingCmd = (this.editingMacroIndex == i);
+                boolean cmdHover = mouseX >= cmdBoxX && mouseX <= cmdBoxX + cmdBoxW && mouseY >= cmdBoxY && mouseY <= cmdBoxY + cmdBoxH;
+
+                context.fill(cmdBoxX, cmdBoxY, cmdBoxX + cmdBoxW, cmdBoxY + cmdBoxH, isEditingCmd ? 0xEE1E293B : (cmdHover ? 0xCC252535 : 0x88181824));
+                drawBorder(context, cmdBoxX, cmdBoxY, cmdBoxW, cmdBoxH, isEditingCmd ? 0xFF38BDF8 : (cmdHover ? 0xAAFFFFFF : 0x33FFFFFF));
+
+                String cmdDisplay = m.getCommand().isEmpty() ? "(kliknij by wpisać)" : m.getCommand();
+                if (isEditingCmd) {
+                    cmdDisplay = "> " + m.getCommand() + (System.currentTimeMillis() % 1000 > 500 ? "_" : "");
+                }
+                if (this.textRenderer.getWidth(cmdDisplay) > cmdBoxW - 8) {
+                    cmdDisplay = this.textRenderer.trimToWidth(cmdDisplay, cmdBoxW - 14) + "..";
+                }
+                context.drawTextWithShadow(this.textRenderer, cmdDisplay, cmdBoxX + 6, cmdBoxY + (cmdBoxH - 8) / 2, isEditingCmd ? 0xFF38BDF8 : (m.isEnabled() ? 0xFF55FFFF : COLOR_TEXT_MUTED));
+
+                // Keybind Button
+                int kBtnX = cmdBoxX + cmdBoxW + 6;
+                int kBtnW = 96;
+                int kBtnY = curY + 4;
+                int kBtnH = mRowH - 8;
+                boolean isListeningKey = (this.listeningMacroIndex == i);
+                boolean kBtnHover = mouseX >= kBtnX && mouseX <= kBtnX + kBtnW && mouseY >= kBtnY && mouseY <= kBtnY + kBtnH;
+
+                context.fill(kBtnX, kBtnY, kBtnX + kBtnW, kBtnY + kBtnH, isListeningKey ? 0xEE334466 : (kBtnHover ? 0xCC252535 : 0x88181824));
+                drawBorder(context, kBtnX, kBtnY, kBtnW, kBtnH, isListeningKey ? 0xFF55FFFF : (kBtnHover ? 0xAAFFFFFF : 0x33FFFFFF));
+
+                String kText = isListeningKey ? "> KLAWISZ <" : "[ " + m.getKeyName() + " ]";
+                drawCenteredText(context, kText, kBtnX + kBtnW / 2, kBtnY + (kBtnH - 8) / 2, isListeningKey ? 0xFFFFFF55 : (m.isEnabled() ? 0xFF55FFFF : COLOR_TEXT_MUTED));
+
+                // Enable / Disable toggle
+                int tX = rowX + rowW - 40;
+                int tY = curY + 5;
+                drawOptionToggle(context, tX, tY, mouseX, mouseY, m.isEnabled());
+
+                curY += mRowH + 4;
+            }
 
         } else {
             // Gamma Options
@@ -1180,6 +1242,64 @@ public class MooClientScreen extends Screen {
                         com.mooclient.module.modules.ZoomModule.toggleSmoothZoom();
                         return true;
                     }
+                } else if (modName.equalsIgnoreCase("Macro")) {
+                    java.util.List<com.mooclient.module.modules.MacroModule.MacroEntry> macroList = com.mooclient.module.modules.MacroModule.getMacros();
+                    int mRowH = 28;
+                    int curY = panelY + headerH + 10;
+
+                    // If listening for mouse button keybind
+                    if (button != 0 && this.listeningMacroIndex >= 0 && this.listeningMacroIndex < macroList.size()) {
+                        com.mooclient.module.modules.MacroModule.MacroEntry m = macroList.get(this.listeningMacroIndex);
+                        m.setKeyCode(button);
+                        m.setKeyName(button == 2 ? "SCROLL" : (button == 1 ? "RMB" : "MOUSE " + (button + 1)));
+                        m.setMouseButton(true);
+                        this.listeningMacroIndex = -1;
+                        com.mooclient.util.MooConfig.save();
+                        playClickSound();
+                        return true;
+                    }
+
+                    for (int i = 0; i < Math.min(5, macroList.size()); i++) {
+                        com.mooclient.module.modules.MacroModule.MacroEntry m = macroList.get(i);
+                        int cmdBoxX = rowX + 54;
+                        int cmdBoxW = rowW - 54 - 110 - 44;
+                        int cmdBoxY = curY + 4;
+                        int cmdBoxH = mRowH - 8;
+
+                        int kBtnX = cmdBoxX + cmdBoxW + 6;
+                        int kBtnW = 96;
+                        int kBtnY = curY + 4;
+                        int kBtnH = mRowH - 8;
+
+                        int tX = rowX + rowW - 40;
+                        int tY = curY + 5;
+
+                        // Click Command Box
+                        if (mouseX >= cmdBoxX && mouseX <= cmdBoxX + cmdBoxW && mouseY >= cmdBoxY && mouseY <= cmdBoxY + cmdBoxH) {
+                            playClickSound();
+                            this.editingMacroIndex = (this.editingMacroIndex == i ? -1 : i);
+                            this.listeningMacroIndex = -1;
+                            return true;
+                        }
+
+                        // Click Keybind Button
+                        if (mouseX >= kBtnX && mouseX <= kBtnX + kBtnW && mouseY >= kBtnY && mouseY <= kBtnY + kBtnH) {
+                            playClickSound();
+                            this.listeningMacroIndex = (this.listeningMacroIndex == i ? -1 : i);
+                            this.editingMacroIndex = -1;
+                            return true;
+                        }
+
+                        // Click Enable Toggle
+                        if (mouseX >= tX && mouseX <= tX + 34 && mouseY >= tY && mouseY <= tY + 18) {
+                            playClickSound();
+                            m.setEnabled(!m.isEnabled());
+                            com.mooclient.util.MooConfig.save();
+                            return true;
+                        }
+
+                        curY += mRowH + 4;
+                    }
                 } else {
                     if (mouseX >= rowX + rowW - 44 && mouseX <= rowX + rowW - 10 && mouseY >= rowY + 8 && mouseY <= rowY + 26) {
                         playClickSound();
@@ -1190,6 +1310,22 @@ public class MooClientScreen extends Screen {
             }
         }
         return super.mouseClicked(mouseX, mouseY, button);
+    }
+
+    @Override
+    public boolean charTyped(char chr, int modifiers) {
+        if (currentView == View.OPTIONS && editingMacroIndex >= 0) {
+            java.util.List<com.mooclient.module.modules.MacroModule.MacroEntry> macroList = com.mooclient.module.modules.MacroModule.getMacros();
+            if (editingMacroIndex < macroList.size()) {
+                com.mooclient.module.modules.MacroModule.MacroEntry m = macroList.get(editingMacroIndex);
+                if (chr >= 32 && chr != 127) { // printable character
+                    m.setCommand(m.getCommand() + chr);
+                    com.mooclient.util.MooConfig.save();
+                    return true;
+                }
+            }
+        }
+        return super.charTyped(chr, modifiers);
     }
 
     @Override
@@ -1220,7 +1356,57 @@ public class MooClientScreen extends Screen {
 
     @Override
     public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
-        // If listening for new keybind in Sprint or Freelook options
+        // If editing macro command text
+        if (currentView == View.OPTIONS && editingMacroIndex >= 0) {
+            java.util.List<com.mooclient.module.modules.MacroModule.MacroEntry> macroList = com.mooclient.module.modules.MacroModule.getMacros();
+            if (editingMacroIndex < macroList.size()) {
+                com.mooclient.module.modules.MacroModule.MacroEntry m = macroList.get(editingMacroIndex);
+                if (keyCode == org.lwjgl.glfw.GLFW.GLFW_KEY_BACKSPACE) {
+                    String cmd = m.getCommand();
+                    if (cmd != null && !cmd.isEmpty()) {
+                        m.setCommand(cmd.substring(0, cmd.length() - 1));
+                        com.mooclient.util.MooConfig.save();
+                    }
+                    return true;
+                } else if (keyCode == org.lwjgl.glfw.GLFW.GLFW_KEY_ENTER || keyCode == org.lwjgl.glfw.GLFW.GLFW_KEY_KP_ENTER || keyCode == org.lwjgl.glfw.GLFW.GLFW_KEY_ESCAPE) {
+                    editingMacroIndex = -1;
+                    com.mooclient.util.MooConfig.save();
+                    playClickSound();
+                    return true;
+                }
+            }
+        }
+
+        // If listening for macro keybind
+        if (currentView == View.OPTIONS && listeningMacroIndex >= 0) {
+            if (keyCode == org.lwjgl.glfw.GLFW.GLFW_KEY_ESCAPE) {
+                listeningMacroIndex = -1;
+                return true;
+            }
+
+            java.util.List<com.mooclient.module.modules.MacroModule.MacroEntry> macroList = com.mooclient.module.modules.MacroModule.getMacros();
+            if (listeningMacroIndex < macroList.size()) {
+                com.mooclient.module.modules.MacroModule.MacroEntry m = macroList.get(listeningMacroIndex);
+                String kName;
+                try {
+                    kName = net.minecraft.client.util.InputUtil.fromKeyCode(keyCode, scanCode).getLocalizedText().getString().toUpperCase();
+                } catch (Exception e) {
+                    kName = "KEY " + keyCode;
+                }
+                if (kName == null || kName.isEmpty() || kName.startsWith("KEY.")) {
+                    kName = "KEY " + keyCode;
+                }
+                m.setKeyCode(keyCode);
+                m.setKeyName(kName);
+                m.setMouseButton(false);
+                com.mooclient.util.MooConfig.save();
+                listeningMacroIndex = -1;
+                playClickSound();
+                return true;
+            }
+        }
+
+        // If listening for new keybind in Sprint, Freelook, Zoom options
         if (currentView == View.OPTIONS && listeningForKeybind) {
             if (keyCode == GLFW.GLFW_KEY_ESCAPE) {
                 listeningForKeybind = false;

@@ -128,6 +128,9 @@ public class MooClient implements ClientModInitializer {
                     }
                     zoomKeyWasDown = isKeyDown;
                 }
+
+                // In-game Macro execution detection
+                com.mooclient.module.modules.MacroModule.onTick(client);
             }
 
             // Always tick Zoom animation

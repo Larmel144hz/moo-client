@@ -97,6 +97,23 @@ public class MooConfig {
             zoom.addProperty("isMouseButton", com.mooclient.module.modules.ZoomModule.isMouseButton());
             root.add("zoom", zoom);
 
+            // Macro Module
+            JsonObject macroJson = new JsonObject();
+            macroJson.addProperty("enabled", com.mooclient.module.modules.MacroModule.isMacroEnabled());
+            com.google.gson.JsonArray macrosArray = new com.google.gson.JsonArray();
+            for (com.mooclient.module.modules.MacroModule.MacroEntry m : com.mooclient.module.modules.MacroModule.getMacros()) {
+                JsonObject mObj = new JsonObject();
+                mObj.addProperty("id", m.getId());
+                mObj.addProperty("command", m.getCommand());
+                mObj.addProperty("keyCode", m.getKeyCode());
+                mObj.addProperty("keyName", m.getKeyName());
+                mObj.addProperty("isMouseButton", m.isMouseButton());
+                mObj.addProperty("enabled", m.isEnabled());
+                macrosArray.add(mObj);
+            }
+            macroJson.add("list", macrosArray);
+            root.add("macro", macroJson);
+
             Files.writeString(CONFIG_PATH, GSON.toJson(root));
             MooClient.LOGGER.info("Saved config to {}", CONFIG_PATH);
         } catch (IOException e) {
@@ -256,6 +273,40 @@ public class MooConfig {
                 if (zoom.has("keyCode") && zoom.has("keyName")) {
                     boolean isMouse = zoom.has("isMouseButton") && zoom.get("isMouseButton").getAsBoolean();
                     com.mooclient.module.modules.ZoomModule.setKeybind(zoom.get("keyCode").getAsInt(), zoom.get("keyName").getAsString(), isMouse);
+                }
+            }
+
+            // Macro Module
+            if (root.has("macro")) {
+                JsonObject macroJson = root.getAsJsonObject("macro");
+                if (macroJson.has("enabled")) {
+                    boolean state = macroJson.get("enabled").getAsBoolean();
+                    com.mooclient.module.modules.MacroModule.getMacros();
+                    ModuleManager.getInstance().getModule("Macro").ifPresent(m -> m.setEnabled(state));
+                }
+                if (macroJson.has("list")) {
+                    com.google.gson.JsonArray list = macroJson.getAsJsonArray("list");
+                    java.util.List<com.mooclient.module.modules.MacroModule.MacroEntry> existing = com.mooclient.module.modules.MacroModule.getMacros();
+                    for (int i = 0; i < list.size(); i++) {
+                        JsonObject mObj = list.get(i).getAsJsonObject();
+                        String id = mObj.has("id") ? mObj.get("id").getAsString() : ("macro_" + (i + 1));
+                        String cmd = mObj.has("command") ? mObj.get("command").getAsString() : "";
+                        int kCode = mObj.has("keyCode") ? mObj.get("keyCode").getAsInt() : 0;
+                        String kName = mObj.has("keyName") ? mObj.get("keyName").getAsString() : "[NONE]";
+                        boolean isMouse = mObj.has("isMouseButton") && mObj.get("isMouseButton").getAsBoolean();
+                        boolean mEnabled = mObj.has("enabled") && mObj.get("enabled").getAsBoolean();
+
+                        if (i < existing.size()) {
+                            com.mooclient.module.modules.MacroModule.MacroEntry e = existing.get(i);
+                            e.setCommand(cmd);
+                            e.setKeyCode(kCode);
+                            e.setKeyName(kName);
+                            e.setMouseButton(isMouse);
+                            e.setEnabled(mEnabled);
+                        } else {
+                            existing.add(new com.mooclient.module.modules.MacroModule.MacroEntry(id, cmd, kCode, kName, isMouse, mEnabled));
+                        }
+                    }
                 }
             }
 

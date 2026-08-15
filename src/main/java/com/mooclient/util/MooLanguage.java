@@ -21,6 +21,7 @@ public enum MooLanguage {
                 case "potions_desc" -> "Aktywne mikstury i czas trwania";
                 case "nametags_desc" -> "Informacje i ping nad głową";
                 case "zoom_desc" -> "Płynne przybliżenie widoku (Zoom)";
+                case "macro_desc" -> "Automatyczne komendy pod klawiszami";
                 case "esc_hint" -> "Naciśnij ESC lub PRAWY SHIFT, aby zamknąć";
                 case "singleplayer" -> "TRYB JEDNOOSOBOWY";
                 case "multiplayer" -> "TRYB WIELOOSOBOWY";
@@ -38,6 +39,8 @@ public enum MooLanguage {
                 case "nametags_opt_subtitle" -> "Wyświetlanie nicków i kolorowego pingu nad graczami";
                 case "zoom_opt_title" -> "ZOOM";
                 case "zoom_opt_subtitle" -> "Konfiguracja przybliżenia i stopnia powiększenia";
+                case "macro_opt_title" -> "MACRO / AUTOTEXT";
+                case "macro_opt_subtitle" -> "Wykonywanie komend i wiadomości pod wybranymi klawiszami";
                 case "style_label" -> "Styl wyglądu";
                 case "bg_label" -> "Pokaż tło (Show Background)";
                 case "shadow_label" -> "Cień tekstu (Text Shadow)";
@@ -66,6 +69,7 @@ public enum MooLanguage {
                 case "potions_desc" -> "Active potions and duration timer";
                 case "nametags_desc" -> "Player info and ping above head";
                 case "zoom_desc" -> "Smooth camera zoom magnification";
+                case "macro_desc" -> "Execute chat commands with keybinds";
                 case "esc_hint" -> "Press ESC or RIGHT SHIFT to close";
                 case "singleplayer" -> "SINGLEPLAYER";
                 case "multiplayer" -> "MULTIPLAYER";
@@ -83,6 +87,8 @@ public enum MooLanguage {
                 case "nametags_opt_subtitle" -> "Customize player nametags and colored ping latency.";
                 case "zoom_opt_title" -> "ZOOM";
                 case "zoom_opt_subtitle" -> "Customize zoom keybind and magnification factor.";
+                case "macro_opt_title" -> "MACRO / AUTOTEXT";
+                case "macro_opt_subtitle" -> "Execute commands & messages using custom keybinds.";
                 case "style_label" -> "Appearance Style";
                 case "bg_label" -> "Show Background";
                 case "shadow_label" -> "Text Shadow";

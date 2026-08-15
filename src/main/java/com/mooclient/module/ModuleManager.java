@@ -36,6 +36,7 @@ public class ModuleManager {
         register(new com.mooclient.module.modules.PotionEffectsModule()); // "Potion Effects"
         register(new com.mooclient.module.modules.NametagsModule());      // "Nametags"
         register(new com.mooclient.module.modules.ZoomModule());          // "Zoom"
+        register(new com.mooclient.module.modules.MacroModule());         // "Macro"
     }
 
     public void register(Module module) {
