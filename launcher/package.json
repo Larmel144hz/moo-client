@@ -6,7 +6,7 @@
   "scripts": {
     "start": "electron .",
     "dev": "electron .",
-    "build": "electron-builder --win",
+    "build": "electron-builder --dir && node patch-icon.js && electron-builder --win nsis --prepackaged dist/win-unpacked",
     "publish": "electron-builder --win --publish always"
   },
   "author": "MooTeam",
@@ -21,7 +21,8 @@
     "minecraft-launcher-core": "^3.18.1",
     "msmc": "^5.0.5",
     "node-fetch": "^2.7.0",
-    "pngjs": "^7.0.0"
+    "pngjs": "^7.0.0",
+    "rcedit": "^5.0.2"
   },
   "build": {
     "appId": "com.mooclient.launcher",
