@@ -1764,15 +1764,20 @@ async function performClientCoreUpdate() {
         const res = await window.mooAPI?.performClientUpdate();
         if (res && res.success) {
             if (progressBar) progressBar.style.width = '100%';
-            if (progressMsg) progressMsg.textContent = t('update_success_msg');
             if (progressPct) progressPct.textContent = '100%';
 
-            showToast(t('update_success_msg'), 'success');
+            if (res.restarting) {
+                if (progressMsg) progressMsg.textContent = 'Aktualizacja ukończona! Ponowne uruchamianie...';
+                showToast('Aktualizacja ukończona! Uruchamianie nowej wersji...', 'success');
+            } else {
+                if (progressMsg) progressMsg.textContent = t('update_success_msg');
+                showToast(t('update_success_msg'), 'success');
 
-            setTimeout(() => {
-                closeClientUpdateModal();
-                checkClientCoreUpdate(false);
-            }, 1200);
+                setTimeout(() => {
+                    closeClientUpdateModal();
+                    checkClientCoreUpdate(false);
+                }, 1200);
+            }
         } else {
             showToast(`Błąd aktualizacji: ${res?.error || 'Nieznany błąd'}`, 'error');
             if (actions) actions.style.display = 'flex';

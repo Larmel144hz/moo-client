@@ -1,7 +1,51 @@
 const { app, BrowserWindow, ipcMain, dialog, shell } = require('electron');
 const { autoUpdater } = require('electron-updater');
 const path = require('path');
+const fs = require('fs');
+const os = require('os');
+const https = require('https');
+const http = require('http');
 const discordRPC = require('./DiscordRPC');
+
+function downloadFile(url, destPath, onProgress) {
+    return new Promise((resolve, reject) => {
+        const client = url.startsWith('https') ? https : http;
+        client.get(url, { headers: { 'User-Agent': 'MooClient-Launcher' } }, (res) => {
+            if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
+                return downloadFile(res.headers.location, destPath, onProgress).then(resolve).catch(reject);
+            }
+            if (res.statusCode !== 200) {
+                return reject(new Error(`Pobieranie nie powiodło się: HTTP ${res.statusCode}`));
+            }
+
+            const totalBytes = parseInt(res.headers['content-length'] || '0', 10);
+            let receivedBytes = 0;
+            const fileStream = fs.createWriteStream(destPath);
+
+            res.on('data', (chunk) => {
+                receivedBytes += chunk.length;
+                if (totalBytes > 0 && onProgress) {
+                    const pct = Math.min(100, Math.round((receivedBytes / totalBytes) * 100));
+                    onProgress(pct);
+                }
+            });
+
+            res.pipe(fileStream);
+
+            fileStream.on('finish', () => {
+                fileStream.close(() => resolve(destPath));
+            });
+
+            fileStream.on('error', (err) => {
+                fs.unlink(destPath, () => {});
+                reject(err);
+            });
+        }).on('error', (err) => {
+            fs.unlink(destPath, () => {});
+            reject(err);
+        });
+    });
+}
 
 let mainWindow;
 let gameManager;
@@ -285,12 +329,51 @@ function setupIPC() {
 
     ipcMain.handle('perform-client-update', async () => {
         try {
-            const updated = await modManager.checkAndUpdate((status, percent) => {
-                sendToRenderer('client-update-progress', { status, percent });
+            // 1. Update Fabric Mod Jar (0% -> 40%)
+            sendToRenderer('client-update-progress', { status: 'Aktualizowanie moda Moo Client...', percent: 15 });
+            const modUpdated = await modManager.checkAndUpdate((status, percent) => {
+                sendToRenderer('client-update-progress', { status: `Mod: ${status}`, percent: Math.round(percent * 0.4) });
             });
+
+            // 2. If packaged launcher, update the Launcher .exe itself (40% -> 100%)
+            if (app.isPackaged) {
+                sendToRenderer('client-update-progress', { status: 'Pobieranie aktualizacji launchera...', percent: 45 });
+                
+                // Fetch latest release info from GitHub
+                const remote = await modManager.getRemoteVersion();
+                const latestVer = remote.version;
+                const installerUrl = `https://github.com/Larmel144hz/moo-client/releases/download/v${latestVer}/Moo-Client-Setup-${latestVer}.exe`;
+                
+                const tempInstaller = path.join(os.tmpdir(), `Moo-Client-Setup-${latestVer}.exe`);
+                
+                await downloadFile(installerUrl, tempInstaller, (percent) => {
+                    sendToRenderer('client-update-progress', { 
+                        status: `Pobieranie instalatora launchera: ${percent}%`, 
+                        percent: 45 + Math.round(percent * 0.5) 
+                    });
+                });
+
+                sendToRenderer('client-update-progress', { status: 'Uruchamianie instalatora i aktualizacja...', percent: 98 });
+                
+                // Launch installer and quit current app
+                const { spawn } = require('child_process');
+                const child = spawn(tempInstaller, [], {
+                    detached: true,
+                    stdio: 'ignore'
+                });
+                child.unref();
+
+                setTimeout(() => {
+                    app.quit();
+                }, 1200);
+
+                return { success: true, updated: true, restarting: true };
+            }
+
             const newLocal = modManager.getLocalVersion();
-            return { success: true, updated, version: newLocal.version };
+            return { success: true, updated: modUpdated, version: newLocal.version };
         } catch (e) {
+            console.error('Update error:', e);
             return { success: false, error: e.message };
         }
     });
