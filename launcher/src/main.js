@@ -189,6 +189,18 @@ function setupIPC() {
         return gameManager.getAccount();
     });
 
+    ipcMain.handle('get-accounts', async () => {
+        return gameManager.getAllAccounts();
+    });
+
+    ipcMain.handle('select-account', async (event, uuid) => {
+        return gameManager.selectAccount(uuid);
+    });
+
+    ipcMain.handle('remove-account', async (event, uuid) => {
+        return gameManager.removeAccount(uuid);
+    });
+
     // --- Modrinth & Mod Management ---
     ipcMain.handle('search-modrinth', async (event, params) => {
         try {

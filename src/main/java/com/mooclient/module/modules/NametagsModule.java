@@ -18,9 +18,25 @@ import net.minecraft.util.Formatting;
  */
 public class NametagsModule extends Module {
 
+    public enum PingPosition {
+        BESIDE("Obok / Beside"),
+        ABOVE("Nad / Above");
+
+        private final String displayName;
+
+        PingPosition(String displayName) {
+            this.displayName = displayName;
+        }
+
+        public String getDisplayName() {
+            return displayName;
+        }
+    }
+
     private static boolean enabled = true;
     private static boolean showLogo = true;
     private static boolean showPing = true;
+    private static PingPosition pingPosition = PingPosition.BESIDE;
     private static boolean removeBackground = false;
     private static boolean textShadow = true;
 
@@ -76,6 +92,18 @@ public class NametagsModule extends Module {
         showPing = !showPing;
     }
 
+    public static PingPosition getPingPosition() {
+        return pingPosition;
+    }
+
+    public static void setPingPosition(PingPosition pos) {
+        pingPosition = pos;
+    }
+
+    public static void cyclePingPosition() {
+        pingPosition = (pingPosition == PingPosition.BESIDE) ? PingPosition.ABOVE : PingPosition.BESIDE;
+    }
+
     public static boolean isRemoveBackground() {
         return removeBackground;
     }
@@ -101,6 +129,45 @@ public class NametagsModule extends Module {
     }
 
     /**
+     * Retrieves colored latency Text indicator for the given entity ID.
+     */
+    public static Text getPingText(int entityId) {
+        if (!enabled || !showPing) {
+            return null;
+        }
+
+        MinecraftClient client = MinecraftClient.getInstance();
+        if (client.world == null || client.getNetworkHandler() == null) {
+            return null;
+        }
+
+        if (!(client.world.getEntityById(entityId) instanceof PlayerEntity player)) {
+            return null;
+        }
+
+        PlayerListEntry entry = client.getNetworkHandler().getPlayerListEntry(player.getUuid());
+        if (entry == null) {
+            return null;
+        }
+
+        int ping = entry.getLatency();
+        Formatting pingColor;
+        if (ping <= 50) {
+            pingColor = Formatting.GREEN;      // §a (0-50ms)
+        } else if (ping <= 100) {
+            pingColor = Formatting.DARK_GREEN; // §2 (51-100ms)
+        } else if (ping <= 150) {
+            pingColor = Formatting.YELLOW;     // §e (101-150ms)
+        } else if (ping <= 250) {
+            pingColor = Formatting.GOLD;       // §6 (151-250ms)
+        } else {
+            pingColor = Formatting.RED;        // §c (250ms+)
+        }
+
+        return Text.literal("[" + ping + "ms]").formatted(pingColor);
+    }
+
+    /**
      * Formats player nametag with colorful latency indicator.
      */
     public static Text formatNametag(Text originalText, int entityId) {
@@ -108,40 +175,13 @@ public class NametagsModule extends Module {
             return originalText;
         }
 
-        MinecraftClient client = MinecraftClient.getInstance();
-        if (client.world == null) {
-            return originalText;
-        }
-
-        if (!(client.world.getEntityById(entityId) instanceof PlayerEntity player)) {
-            return originalText;
-        }
-
-        MutableText formatted = originalText.copy();
-
-        // Ping Display with dynamic latency colors
-        if (showPing && client.getNetworkHandler() != null) {
-            PlayerListEntry entry = client.getNetworkHandler().getPlayerListEntry(player.getUuid());
-            if (entry != null) {
-                int ping = entry.getLatency();
-                Formatting pingColor;
-                if (ping <= 50) {
-                    pingColor = Formatting.GREEN;      // §a (0-50ms)
-                } else if (ping <= 100) {
-                    pingColor = Formatting.DARK_GREEN; // §2 (51-100ms)
-                } else if (ping <= 150) {
-                    pingColor = Formatting.YELLOW;     // §e (101-150ms)
-                } else if (ping <= 250) {
-                    pingColor = Formatting.GOLD;       // §6 (151-250ms)
-                } else {
-                    pingColor = Formatting.RED;        // §c (250ms+)
-                }
-
-                formatted.append(Text.literal(" "))
-                         .append(Text.literal("[" + ping + "ms]").formatted(pingColor));
+        if (showPing && pingPosition == PingPosition.BESIDE) {
+            Text pingText = getPingText(entityId);
+            if (pingText != null) {
+                return originalText.copy().append(Text.literal(" ")).append(pingText);
             }
         }
 
-        return formatted;
+        return originalText;
     }
 }

@@ -1,4 +1,8 @@
 const net = require('net');
+let appVersion = '1.0.3';
+try {
+    appVersion = require('../package.json').version || '1.0.3';
+} catch (e) {}
 
 /**
  * Lightweight native Discord Rich Presence IPC client for Moo Client Launcher.
@@ -11,7 +15,7 @@ class DiscordRPC {
         this.connected = false;
         this.startTimestamp = Math.floor(Date.now() / 1000);
         this.currentDetails = 'Przegląda Launcher';
-        this.currentState = 'Wersja 1.0.0';
+        this.currentState = `Wersja ${appVersion}`;
     }
 
     init() {
@@ -79,7 +83,7 @@ class DiscordRPC {
                     },
                     assets: {
                         large_image: 'moo_logo',
-                        large_text: 'Moo Client v1.0.0 (Fabric 1.21.4)'
+                        large_text: `Moo Client v${appVersion} (Fabric 1.21.4)`
                     }
                 }
             },

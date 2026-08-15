@@ -25,7 +25,7 @@ public class MouseMixin {
 
     @Inject(method = "updateMouse", at = @At("HEAD"), cancellable = true)
     private void mooClient$onUpdateMouse(double timeDelta, CallbackInfo ci) {
-        if (FreelookModule.isActive()) {
+        if (this.client.currentScreen == null && FreelookModule.isActive()) {
             double dx = this.cursorDeltaX;
             double dy = this.cursorDeltaY;
             this.cursorDeltaX = 0.0;
@@ -40,7 +40,7 @@ public class MouseMixin {
             }
 
             ci.cancel();
-        } else if (com.mooclient.module.modules.ZoomModule.isZooming()) {
+        } else if (this.client.currentScreen == null && com.mooclient.module.modules.ZoomModule.isZooming()) {
             double divisor = com.mooclient.module.modules.ZoomModule.getZoomDivisor();
             if (divisor > 1.0) {
                 this.cursorDeltaX /= divisor;

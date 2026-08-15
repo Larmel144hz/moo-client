@@ -12,6 +12,7 @@ class GameManager {
     constructor() {
         this.gameDir = path.join(os.homedir(), '.mooclient');
         this.settingsPath = path.join(this.gameDir, 'settings.json');
+        this.accountsPath = path.join(this.gameDir, 'accounts.json');
         this.accountPath = path.join(this.gameDir, 'account.json');
         this.modsDir = path.join(this.gameDir, 'mods');
 
@@ -53,29 +54,107 @@ class GameManager {
         }
     }
 
-    getAccount() {
+    getAccountsData() {
         try {
+            if (fs.existsSync(this.accountsPath)) {
+                const data = JSON.parse(fs.readFileSync(this.accountsPath, 'utf8'));
+                if (data && Array.isArray(data.accounts)) return data;
+            }
+            // Migration from legacy single account.json
             if (fs.existsSync(this.accountPath)) {
-                const data = fs.readFileSync(this.accountPath, 'utf8');
-                return JSON.parse(data);
+                const legacy = JSON.parse(fs.readFileSync(this.accountPath, 'utf8'));
+                if (legacy && legacy.name) {
+                    const data = {
+                        activeUuid: legacy.uuid || legacy.name,
+                        accounts: [legacy]
+                    };
+                    this.saveAccountsData(data);
+                    return data;
+                }
             }
         } catch (e) {
-            console.error('Error reading account:', e);
+            console.error('Error reading accounts.json:', e);
         }
-        return null;
+        return { activeUuid: null, accounts: [] };
     }
 
-    saveAccount(account) {
+    saveAccountsData(data) {
         try {
             this.ensureDir(this.gameDir);
-            if (account) {
-                fs.writeFileSync(this.accountPath, JSON.stringify(account, null, 2));
+            fs.writeFileSync(this.accountsPath, JSON.stringify(data, null, 2));
+
+            // Sync active account to account.json for compatibility
+            const active = data.accounts.find(a => a.uuid === data.activeUuid) || (data.accounts.length > 0 ? data.accounts[0] : null);
+            if (active) {
+                fs.writeFileSync(this.accountPath, JSON.stringify(active, null, 2));
             } else if (fs.existsSync(this.accountPath)) {
                 fs.unlinkSync(this.accountPath);
             }
         } catch (e) {
-            console.error('Error saving account:', e);
+            console.error('Error saving accounts.json:', e);
         }
+    }
+
+    getAllAccounts() {
+        const data = this.getAccountsData();
+        return {
+            activeUuid: data.activeUuid,
+            accounts: data.accounts.map(acc => ({
+                name: acc.name,
+                uuid: acc.uuid,
+                type: acc.type || 'microsoft',
+                isActive: acc.uuid === data.activeUuid
+            }))
+        };
+    }
+
+    getAccount() {
+        const data = this.getAccountsData();
+        if (!data.accounts || data.accounts.length === 0) return null;
+        return data.accounts.find(a => a.uuid === data.activeUuid) || data.accounts[0] || null;
+    }
+
+    saveAccount(account) {
+        const data = this.getAccountsData();
+        if (!account) {
+            if (data.activeUuid) {
+                data.accounts = data.accounts.filter(a => a.uuid !== data.activeUuid);
+                data.activeUuid = data.accounts.length > 0 ? data.accounts[0].uuid : null;
+            } else {
+                data.accounts = [];
+                data.activeUuid = null;
+            }
+        } else {
+            const existingIdx = data.accounts.findIndex(a => a.uuid === account.uuid || (a.name && account.name && a.name.toLowerCase() === account.name.toLowerCase()));
+            if (existingIdx >= 0) {
+                data.accounts[existingIdx] = account;
+            } else {
+                data.accounts.push(account);
+            }
+            data.activeUuid = account.uuid;
+        }
+        this.saveAccountsData(data);
+    }
+
+    selectAccount(uuid) {
+        const data = this.getAccountsData();
+        const found = data.accounts.find(a => a.uuid === uuid);
+        if (found) {
+            data.activeUuid = found.uuid;
+            this.saveAccountsData(data);
+            return { success: true, account: found };
+        }
+        return { success: false, error: 'Konto nie zostało znalezione' };
+    }
+
+    removeAccount(uuid) {
+        const data = this.getAccountsData();
+        data.accounts = data.accounts.filter(a => a.uuid !== uuid);
+        if (data.activeUuid === uuid) {
+            data.activeUuid = data.accounts.length > 0 ? data.accounts[0].uuid : null;
+        }
+        this.saveAccountsData(data);
+        return { success: true, activeAccount: this.getAccount() };
     }
 
     /**

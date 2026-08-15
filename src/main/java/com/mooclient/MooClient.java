@@ -21,7 +21,7 @@ public class MooClient implements ClientModInitializer {
 
     public static final String MOD_ID = "mooclient";
     public static final String MOD_NAME = "Moo Client";
-    public static final String VERSION = "1.0.3";
+    public static final String VERSION = "1.1.0";
     public static final Logger LOGGER = LoggerFactory.getLogger(MOD_NAME);
 
     private static MooClient instance;
@@ -73,6 +73,17 @@ public class MooClient implements ClientModInitializer {
                 while (menuKeyBinding.wasPressed()) {
                     // Do nothing
                 }
+
+                // Ensure freelook and zoom are safely disengaged when inside any menu/GUI
+                if (com.mooclient.module.modules.FreelookModule.isActive()) {
+                    com.mooclient.module.modules.FreelookModule.stop();
+                }
+                if (com.mooclient.module.modules.ZoomModule.isActive()) {
+                    com.mooclient.module.modules.ZoomModule.stop();
+                }
+                freelookKeyWasDown = false;
+                zoomKeyWasDown = false;
+                sprintKeyWasDown = false;
             }
 
             // In-game Toggle Sprint key detection
@@ -142,15 +153,20 @@ public class MooClient implements ClientModInitializer {
             tickCounter++;
             if (tickCounter % 40 == 0) {
                 if (client.world == null) {
-                    DiscordRPC.getInstance().updatePresence("Moo Client 1.21.4", "W menu głównym");
+                    DiscordRPC.getInstance().updatePresence("Moo Client v" + VERSION, "W menu głównym");
                 } else if (client.isInSingleplayer()) {
-                    DiscordRPC.getInstance().updatePresence("Tryb jednoosobowy", "Moo Client 1.21.4");
+                    DiscordRPC.getInstance().updatePresence("Tryb jednoosobowy", "Moo Client v" + VERSION);
                 } else if (client.getCurrentServerEntry() != null) {
                     String serverIp = client.getCurrentServerEntry().address;
-                    DiscordRPC.getInstance().updatePresence("Serwer: " + serverIp, "Moo Client 1.21.4");
+                    DiscordRPC.getInstance().updatePresence("Serwer: " + serverIp, "Moo Client v" + VERSION);
                 } else {
-                    DiscordRPC.getInstance().updatePresence("W grze", "Moo Client 1.21.4");
+                    DiscordRPC.getInstance().updatePresence("W grze", "Moo Client v" + VERSION);
                 }
+            }
+
+            // Broadcast Moo Client handshake every ~5 seconds (100 ticks) in multiplayer
+            if (tickCounter % 100 == 0 && client.world != null) {
+                com.mooclient.network.MooNetworkHandler.sendBroadcast();
             }
         });
 

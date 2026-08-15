@@ -202,18 +202,19 @@ public class MooClientScreen extends Screen {
         int centerX = this.width / 2;
         int centerY = this.height / 2;
 
-        int logoSize = 64;
-        int logoY = centerY - 55;
-        context.drawTexture(RenderLayer::getGuiTextured, COW_LOGO, centerX - logoSize / 2, logoY, 0.0f, 0.0f, logoSize, logoSize, logoSize, logoSize);
-
-        String title = "MOO CLIENT";
-        int titleWidth = this.textRenderer.getWidth(title);
-        context.drawTextWithShadow(this.textRenderer, title, centerX - titleWidth / 2, logoY + logoSize + 8, COLOR_TEXT_WHITE);
-
         int btnW = 140;
         int btnH = 32;
         int btnX = centerX - btnW / 2;
-        int btnY = logoY + logoSize + 26;
+        int btnY = centerY - btnH / 2;
+
+        int titleY = btnY - 18;
+        String title = "MOO CLIENT";
+        int titleWidth = this.textRenderer.getWidth(title);
+
+        int logoSize = 64;
+        int logoY = titleY - logoSize - 8;
+        context.drawTexture(RenderLayer::getGuiTextured, COW_LOGO, centerX - logoSize / 2, logoY, 0.0f, 0.0f, logoSize, logoSize, logoSize, logoSize);
+        context.drawTextWithShadow(this.textRenderer, title, centerX - titleWidth / 2, titleY, COLOR_TEXT_WHITE);
 
         boolean hovered = mouseX >= btnX && mouseX <= btnX + btnW && mouseY >= btnY && mouseY <= btnY + btnH;
         int bg = hovered ? 0x99202028 : 0x55000000;
@@ -300,6 +301,8 @@ public class MooClientScreen extends Screen {
                 icon = "🏷";
             } else if (module.getName().equalsIgnoreCase("Zoom")) {
                 icon = "🔍";
+            } else if (module.getName().equalsIgnoreCase("Chat")) {
+                icon = "💬";
             } else {
                 icon = "⌨";
             }
@@ -322,11 +325,13 @@ public class MooClientScreen extends Screen {
                 desc = MooLanguage.get("nametags_desc");
             } else if (module.getName().equalsIgnoreCase("Zoom")) {
                 desc = MooLanguage.get("zoom_desc");
+            } else if (module.getName().equalsIgnoreCase("Chat")) {
+                desc = MooLanguage.get("chat_desc");
             } else {
                 desc = MooLanguage.get("macro_desc");
             }
             if (this.textRenderer.getWidth(desc) > cardW - 12) {
-                desc = module.getName().equalsIgnoreCase("Gamma") ? "Jasność w jaskiniach" : (module.getName().equalsIgnoreCase("FPS") ? "Licznik klatek" : (module.getName().equalsIgnoreCase("Sprint") ? "Ciągły bieg" : (module.getName().equalsIgnoreCase("Freelook") ? "Widok 360°" : (module.getName().equalsIgnoreCase("Potion Effects") ? "Aktywne mikstury" : (module.getName().equalsIgnoreCase("Nametags") ? "Nick i ping" : (module.getName().equalsIgnoreCase("Zoom") ? "Przybliżenie widoku" : "Skróty komend"))))));
+                desc = module.getName().equalsIgnoreCase("Gamma") ? "Jasność w jaskiniach" : (module.getName().equalsIgnoreCase("FPS") ? "Licznik klatek" : (module.getName().equalsIgnoreCase("Sprint") ? "Ciągły bieg" : (module.getName().equalsIgnoreCase("Freelook") ? "Widok 360°" : (module.getName().equalsIgnoreCase("Potion Effects") ? "Aktywne mikstury" : (module.getName().equalsIgnoreCase("Nametags") ? "Nick i ping" : (module.getName().equalsIgnoreCase("Zoom") ? "Przybliżenie widoku" : (module.getName().equalsIgnoreCase("Chat") ? "Ulepszenia czatu" : "Skróty komend")))))));
             }
             context.drawTextWithShadow(this.textRenderer, desc, cardX + (cardW - this.textRenderer.getWidth(desc)) / 2, cardY + 54, COLOR_TEXT_MUTED);
 
@@ -416,6 +421,12 @@ public class MooClientScreen extends Screen {
         } else if (modName.equalsIgnoreCase("Zoom")) {
             optTitle = MooLanguage.get("zoom_opt_title");
             optSubtitle = MooLanguage.get("zoom_opt_subtitle");
+        } else if (modName.equalsIgnoreCase("Chat")) {
+            optTitle = MooLanguage.get("chat_opt_title");
+            optSubtitle = MooLanguage.get("chat_opt_subtitle");
+        } else if (modName.equalsIgnoreCase("Macro")) {
+            optTitle = MooLanguage.get("macro_opt_title");
+            optSubtitle = MooLanguage.get("macro_opt_subtitle");
         } else {
             optTitle = MooLanguage.get("gamma_opt_title");
             optSubtitle = MooLanguage.get("gamma_opt_subtitle");
@@ -530,12 +541,17 @@ public class MooClientScreen extends Screen {
             drawOptionRow(context, rowX, rowY, rowW, rowH, MooLanguage.get("show_ping_label"));
             drawOptionToggle(context, rowX + rowW - 44, rowY + 8, mouseX, mouseY, com.mooclient.module.modules.NametagsModule.isShowPing());
 
-            // Row 2: Remove Background
+            // Row 2: Ping Position (Beside vs Above)
+            rowY += rowH + 6;
+            drawOptionRow(context, rowX, rowY, rowW, rowH, MooLanguage.get("ping_pos_label"));
+            renderPingPositionSelector(context, rowX + rowW - 206, rowY + 6, mouseX, mouseY, com.mooclient.module.modules.NametagsModule.getPingPosition().ordinal());
+
+            // Row 3: Remove Background
             rowY += rowH + 6;
             drawOptionRow(context, rowX, rowY, rowW, rowH, MooLanguage.get("remove_bg_label"));
             drawOptionToggle(context, rowX + rowW - 44, rowY + 8, mouseX, mouseY, com.mooclient.module.modules.NametagsModule.isRemoveBackground());
 
-            // Row 3: Text Shadow
+            // Row 4: Text Shadow
             rowY += rowH + 6;
             drawOptionRow(context, rowX, rowY, rowW, rowH, MooLanguage.get("shadow_label"));
             drawOptionToggle(context, rowX + rowW - 44, rowY + 8, mouseX, mouseY, com.mooclient.module.modules.NametagsModule.isTextShadow());
@@ -567,6 +583,21 @@ public class MooClientScreen extends Screen {
             rowY += rowH + 6;
             drawOptionRow(context, rowX, rowY, rowW, rowH, MooLanguage.get("smooth_zoom_label"));
             drawOptionToggle(context, rowX + rowW - 44, rowY + 8, mouseX, mouseY, com.mooclient.module.modules.ZoomModule.isSmoothZoom());
+
+        } else if (modName.equalsIgnoreCase("Chat")) {
+            // Row 1: Transparent Background
+            drawOptionRow(context, rowX, rowY, rowW, rowH, MooLanguage.get("chat_transparent_label"));
+            drawOptionToggle(context, rowX + rowW - 44, rowY + 8, mouseX, mouseY, com.mooclient.module.modules.ChatModule.isTransparentBackground());
+
+            // Row 2: Unlimited Chat
+            rowY += rowH + 6;
+            drawOptionRow(context, rowX, rowY, rowW, rowH, MooLanguage.get("chat_unlimited_label"));
+            drawOptionToggle(context, rowX + rowW - 44, rowY + 8, mouseX, mouseY, com.mooclient.module.modules.ChatModule.isUnlimitedChat());
+
+            // Row 3: Smooth Chat Animation
+            rowY += rowH + 6;
+            drawOptionRow(context, rowX, rowY, rowW, rowH, MooLanguage.get("chat_smooth_label"));
+            drawOptionToggle(context, rowX + rowW - 44, rowY + 8, mouseX, mouseY, com.mooclient.module.modules.ChatModule.isSmoothChat());
 
         } else if (modName.equalsIgnoreCase("Macro")) {
             java.util.List<com.mooclient.module.modules.MacroModule.MacroEntry> macroList = com.mooclient.module.modules.MacroModule.getMacros();
@@ -703,6 +734,30 @@ public class MooClientScreen extends Screen {
 
     private void renderModeSelector(DrawContext context, int startX, int y, int mouseX, int mouseY, int selectedOrdinal) {
         String[] labels = new String[]{"Hold", "Toggle"};
+        int[] widths = new int[]{100, 100};
+        int gap = 6;
+        int curX = startX;
+        int h = 22;
+
+        for (int i = 0; i < labels.length; i++) {
+            int w = widths[i];
+            boolean selected = (i == selectedOrdinal);
+            boolean hover = mouseX >= curX && mouseX <= curX + w && mouseY >= y && mouseY <= y + h;
+
+            int bg = selected ? 0xDD22C55E : (hover ? 0xCC252535 : 0x66141420);
+            int border = selected ? 0xFF4ADE80 : (hover ? 0xAAFFFFFF : 0x33FFFFFF);
+            int textColor = selected ? 0xFF0A2514 : (hover ? COLOR_TEXT_WHITE : 0xFFA0A0AB);
+
+            context.fill(curX, y, curX + w, y + h, bg);
+            drawBorder(context, curX, y, w, h, border);
+            drawCenteredText(context, labels[i], curX + w / 2, y + 7, textColor);
+
+            curX += w + gap;
+        }
+    }
+
+    private void renderPingPositionSelector(DrawContext context, int startX, int y, int mouseX, int mouseY, int selectedOrdinal) {
+        String[] labels = new String[]{MooLanguage.get("ping_pos_beside"), MooLanguage.get("ping_pos_above")};
         int[] widths = new int[]{100, 100};
         int gap = 6;
         int curX = startX;
@@ -950,12 +1005,10 @@ public class MooClientScreen extends Screen {
 
                 int centerX = this.width / 2;
                 int centerY = this.height / 2;
-                int logoSize = 64;
-                int logoY = centerY - 55;
                 int btnW = 140;
                 int btnH = 32;
                 int btnX = centerX - btnW / 2;
-                int btnY = logoY + logoSize + 26;
+                int btnY = centerY - btnH / 2;
 
                 if (mouseX >= btnX && mouseX <= btnX + btnW && mouseY >= btnY && mouseY <= btnY + btnH) {
                     playClickSound();
@@ -1186,7 +1239,16 @@ public class MooClientScreen extends Screen {
                         return true;
                     }
 
-                    // Row 2: Remove Background
+                    // Row 2: Ping Position (Beside vs Above)
+                    rowY += rowH + 6;
+                    int pingPosClick = getModeSelectorClick(rowX + rowW - 206, rowY + 6, (int) mouseX, (int) mouseY);
+                    if (pingPosClick >= 0) {
+                        playClickSound();
+                        com.mooclient.module.modules.NametagsModule.setPingPosition(com.mooclient.module.modules.NametagsModule.PingPosition.values()[pingPosClick]);
+                        return true;
+                    }
+
+                    // Row 3: Remove Background
                     rowY += rowH + 6;
                     if (mouseX >= rowX + rowW - 44 && mouseX <= rowX + rowW - 10 && mouseY >= rowY + 8 && mouseY <= rowY + 26) {
                         playClickSound();
@@ -1194,7 +1256,7 @@ public class MooClientScreen extends Screen {
                         return true;
                     }
 
-                    // Row 3: Text Shadow
+                    // Row 4: Text Shadow
                     rowY += rowH + 6;
                     if (mouseX >= rowX + rowW - 44 && mouseX <= rowX + rowW - 10 && mouseY >= rowY + 8 && mouseY <= rowY + 26) {
                         playClickSound();
@@ -1240,6 +1302,32 @@ public class MooClientScreen extends Screen {
                         playClickSound();
                         this.listeningForKeybind = false;
                         com.mooclient.module.modules.ZoomModule.toggleSmoothZoom();
+                        return true;
+                    }
+                } else if (modName.equalsIgnoreCase("Chat")) {
+                    // Row 1: Transparent Background
+                    if (mouseX >= rowX + rowW - 44 && mouseX <= rowX + rowW - 10 && mouseY >= rowY + 8 && mouseY <= rowY + 26) {
+                        playClickSound();
+                        com.mooclient.module.modules.ChatModule.toggleTransparentBackground();
+                        com.mooclient.util.MooConfig.save();
+                        return true;
+                    }
+
+                    // Row 2: Unlimited Chat
+                    rowY += rowH + 6;
+                    if (mouseX >= rowX + rowW - 44 && mouseX <= rowX + rowW - 10 && mouseY >= rowY + 8 && mouseY <= rowY + 26) {
+                        playClickSound();
+                        com.mooclient.module.modules.ChatModule.toggleUnlimitedChat();
+                        com.mooclient.util.MooConfig.save();
+                        return true;
+                    }
+
+                    // Row 3: Smooth Chat
+                    rowY += rowH + 6;
+                    if (mouseX >= rowX + rowW - 44 && mouseX <= rowX + rowW - 10 && mouseY >= rowY + 8 && mouseY <= rowY + 26) {
+                        playClickSound();
+                        com.mooclient.module.modules.ChatModule.toggleSmoothChat();
+                        com.mooclient.util.MooConfig.save();
                         return true;
                     }
                 } else if (modName.equalsIgnoreCase("Macro")) {

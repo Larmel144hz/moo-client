@@ -17,7 +17,7 @@ public class TitleScreenMixin {
     @Inject(method = "init", at = @At("HEAD"), cancellable = true)
     private void mooClient$openCustomMainMenu(CallbackInfo ci) {
         MinecraftClient client = MinecraftClient.getInstance();
-        if (client != null && !(client.currentScreen instanceof MooMainMenuScreen)) {
+        if (client != null && (client.currentScreen == null || client.currentScreen instanceof TitleScreen)) {
             client.setScreen(new MooMainMenuScreen());
             ci.cancel();
         }

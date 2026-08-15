@@ -79,6 +79,11 @@ const translations = {
         btn_update_later: 'Przypomnij później',
         update_downloading: 'Pobieranie aktualizacji...',
         update_success_msg: 'Moo Client został pomyślnie zaktualizowany!',
+        online_users_suffix: 'graczy online',
+        bg_theme_label: 'TŁO:',
+        accounts_title: 'Konta Premium',
+        btn_add_account: 'Dodaj konto',
+        account_active: 'Aktywne',
     },
     en: {
         nav_home: 'Home',
@@ -162,6 +167,11 @@ const translations = {
         version_modal_subtitle: 'Select a version from Modrinth for Fabric 1.21.4',
         no_updates_found: 'All mods are up to date! ✓',
         btn_pick_install: 'Install this version',
+        online_users_suffix: 'players online',
+        bg_theme_label: 'BG:',
+        accounts_title: 'Premium Accounts',
+        btn_add_account: 'Add Account',
+        account_active: 'Active',
     },
 };
 
@@ -190,10 +200,65 @@ function setLanguage(lang) {
     });
 
     localStorage.setItem('moo-lang', lang);
+    updateOnlineUsersDisplay();
 }
 
 function t(key) {
     return translations[currentLang][key] || key;
+}
+
+// =============================================
+// Online Players Counter (Top Right)
+// =============================================
+let baseOnlineCount = 1;
+
+function updateOnlineUsersDisplay() {
+    const countEl = document.getElementById('online-users-count');
+    if (!countEl) return;
+    const suffix = t('online_users_suffix');
+    countEl.textContent = `${baseOnlineCount} ${suffix}`;
+}
+
+function initOnlineUsersCounter() {
+    baseOnlineCount = 1;
+    updateOnlineUsersDisplay();
+}
+
+// =============================================
+// Background Theme Switcher (Classic vs Momomo Video)
+// =============================================
+function initBackgroundTheme() {
+    const bgVideo = document.getElementById('bg-video');
+    const bgOverlay = document.getElementById('bg-video-overlay');
+    const btnClassic = document.getElementById('btn-bg-classic');
+    const btnVideo = document.getElementById('btn-bg-video');
+
+    function applyBgTheme(theme) {
+        if (theme === 'video') {
+            btnVideo?.classList.add('active');
+            btnClassic?.classList.remove('active');
+            if (bgVideo) {
+                bgVideo.classList.remove('hidden');
+                bgVideo.play().catch(() => {});
+            }
+            if (bgOverlay) bgOverlay.classList.remove('hidden');
+        } else {
+            btnClassic?.classList.add('active');
+            btnVideo?.classList.remove('active');
+            if (bgVideo) {
+                bgVideo.pause();
+                bgVideo.classList.add('hidden');
+            }
+            if (bgOverlay) bgOverlay.classList.add('hidden');
+        }
+        localStorage.setItem('moo_bg_theme', theme);
+    }
+
+    btnClassic?.addEventListener('click', () => applyBgTheme('classic'));
+    btnVideo?.addEventListener('click', () => applyBgTheme('video'));
+
+    const savedTheme = localStorage.getItem('moo_bg_theme') || 'video';
+    applyBgTheme(savedTheme);
 }
 
 // =============================================
@@ -300,16 +365,20 @@ const accountAvatarImg = document.getElementById('account-avatar-img');
 const playerNameEl = document.getElementById('player-name');
 const playerAvatarImgs = document.querySelectorAll('.avatar-img');
 const btnCardLogout = document.getElementById('btn-card-logout');
+const playerCard = document.getElementById('player-card');
+const playerCardWrapper = document.getElementById('player-card-wrapper');
+const accountsPopup = document.getElementById('accounts-popup');
+const accountsPopupList = document.getElementById('accounts-popup-list');
+const accountsPopupCount = document.getElementById('accounts-popup-count');
+const btnPopupAdd = document.getElementById('btn-popup-add');
 
 let currentAccount = null;
-
-const playerCard = document.getElementById('player-card');
 
 function updateAccountUI(account) {
     currentAccount = account;
     if (account && account.name) {
         // Logged in state
-        playerCard?.classList.remove('clickable');
+        playerCard?.classList.add('clickable');
         btnCardLogout?.classList.remove('hidden');
 
         if (playerNameEl) playerNameEl.textContent = account.name;
@@ -319,7 +388,7 @@ function updateAccountUI(account) {
         playerAvatarImgs.forEach((img) => { img.src = avatarUrl; });
     } else {
         // Logged out state
-        playerCard?.classList.add('clickable');
+        closeAccountsPopup();
         btnCardLogout?.classList.add('hidden');
 
         if (playerNameEl) playerNameEl.textContent = t('not_logged_in');
@@ -327,6 +396,130 @@ function updateAccountUI(account) {
         playerAvatarImgs.forEach((img) => { img.src = 'logo.png'; });
     }
 }
+
+async function renderAccountsPopup() {
+    if (!accountsPopupList) return;
+    accountsPopupList.innerHTML = '';
+
+    try {
+        const data = await window.mooAPI?.getAccounts?.() || { activeUuid: null, accounts: [] };
+        const accounts = data.accounts || [];
+
+        if (accountsPopupCount) {
+            accountsPopupCount.textContent = accounts.length === 1 ? '1 konto' : `${accounts.length} kont`;
+        }
+
+        if (accounts.length === 0) {
+            accountsPopupList.innerHTML = `<div style="text-align:center; padding: 12px; font-size: 11px; color: var(--text-muted);">Brak zapisanych kont</div>`;
+            return;
+        }
+
+        accounts.forEach((acc) => {
+            const item = document.createElement('div');
+            item.className = `account-item ${acc.isActive ? 'active' : ''}`;
+            const avatarUrl = `https://mc-heads.net/avatar/${acc.name}/32`;
+
+            item.innerHTML = `
+                <div class="account-item-avatar">
+                    <img src="${avatarUrl}" alt="${acc.name}" onerror="this.src='logo.png'">
+                </div>
+                <div class="account-item-details">
+                    <span class="account-item-name">${acc.name}</span>
+                    <span class="account-item-badge">${acc.isActive ? `<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg> ${t('account_active')}` : 'Premium'}</span>
+                </div>
+                ${acc.isActive ? `<svg class="account-item-check" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>` : ''}
+                <button class="account-item-remove" title="Usuń to konto" type="button">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 6L6 18M6 6l12 12"/></svg>
+                </button>
+            `;
+
+            // Click to switch active account
+            item.addEventListener('click', async (e) => {
+                if (e.target.closest('.account-item-remove')) return;
+                if (!acc.isActive) {
+                    try {
+                        const res = await window.mooAPI?.selectAccount(acc.uuid);
+                        if (res?.success && res.account) {
+                            updateAccountUI(res.account);
+                            closeAccountsPopup();
+                            showToast(`Przełączono na konto ${res.account.name}!`, 'success');
+                        }
+                    } catch (err) {
+                        console.error('Select account error:', err);
+                    }
+                } else {
+                    closeAccountsPopup();
+                }
+            });
+
+            // Remove specific account
+            const btnRemove = item.querySelector('.account-item-remove');
+            btnRemove?.addEventListener('click', async (e) => {
+                e.stopPropagation();
+                try {
+                    const res = await window.mooAPI?.removeAccount(acc.uuid);
+                    if (res?.success) {
+                        showToast(`Usunięto konto ${acc.name}`, 'info');
+                        updateAccountUI(res.activeAccount);
+                        await renderAccountsPopup();
+                    }
+                } catch (err) {
+                    console.error('Remove account error:', err);
+                }
+            });
+
+            accountsPopupList.appendChild(item);
+        });
+
+    } catch (e) {
+        console.error('Error rendering accounts popup:', e);
+    }
+}
+
+function openAccountsPopup() {
+    if (!accountsPopup) return;
+    accountsPopup.classList.remove('hidden');
+    playerCardWrapper?.classList.add('open');
+    renderAccountsPopup();
+}
+
+function closeAccountsPopup() {
+    if (!accountsPopup) return;
+    accountsPopup.classList.add('hidden');
+    playerCardWrapper?.classList.remove('open');
+}
+
+function toggleAccountsPopup() {
+    if (accountsPopup?.classList.contains('hidden')) {
+        openAccountsPopup();
+    } else {
+        closeAccountsPopup();
+    }
+}
+
+// Click outside closes accounts popup
+document.addEventListener('click', (e) => {
+    if (playerCardWrapper && !playerCardWrapper.contains(e.target)) {
+        closeAccountsPopup();
+    }
+});
+
+// Add new account from popup
+btnPopupAdd?.addEventListener('click', async (e) => {
+    e.stopPropagation();
+    try {
+        const res = await window.mooAPI?.loginMicrosoft();
+        if (res?.success && res.account) {
+            updateAccountUI(res.account);
+            closeAccountsPopup();
+            showToast(`Dodano konto ${res.account.name}!`, 'success');
+        } else if (res?.error && res.error !== 'error.gui.closed') {
+            showToast(`Błąd: ${res.error}`, 'error');
+        }
+    } catch (err) {
+        console.error('Add account error:', err);
+    }
+});
 
 btnCardLogout?.addEventListener('click', async (e) => {
     e.stopPropagation();
@@ -338,7 +531,7 @@ btnCardLogout?.addEventListener('click', async (e) => {
     }
 });
 
-// Click on player card directly triggers Microsoft login if logged out
+// Click on player card: if logged out, logs in. If logged in, opens account switcher!
 playerCard?.addEventListener('click', async () => {
     if (!currentAccount) {
         if (playerStatus) playerStatus.textContent = t('btn_logging_in');
@@ -357,6 +550,8 @@ playerCard?.addEventListener('click', async () => {
             playerCard.style.pointerEvents = 'auto';
             updateAccountUI(currentAccount);
         }
+    } else {
+        toggleAccountsPopup();
     }
 });
 
@@ -502,21 +697,31 @@ function resetPlayButton() {
     isLaunching = false;
     playBtn?.classList.remove('launching');
     if (playBtn) playBtn.querySelector('.play-text').textContent = t('btn_play');
-    setTimeout(() => progressSection?.classList.add('hidden'), 3000);
+    setTimeout(() => {
+        if (!isLaunching) {
+            progressSection?.classList.add('hidden');
+        }
+    }, 2000);
+}
+
+function isClosedOrError(status) {
+    if (!status) return false;
+    const s = status.toLowerCase();
+    return s.includes('closed') || s.includes('zamknięta') || s.includes('zamknięto') || s.includes('error') || s.includes('błąd') || s.includes('failed') || s.includes('kod:');
 }
 
 function translateStatus(status) {
     if (!status) return '';
     const s = status.toLowerCase();
-    if (s.includes('game is running') || s.includes('gra uruchomiona')) return t('game_running');
-    if (s.includes('game starting')) return t('game_starting');
-    if (s.includes('preparing to launch')) return t('preparing_launch');
-    if (s.includes('checking for mod updates')) return t('checking_updates');
-    if (s.includes('launching minecraft')) return t('launching_mc');
-    if (s.includes('downloading game files')) return t('downloading_files');
+    if (s.includes('game is running') || s.includes('gra uruchomiona') || s.includes('gra została uruchomiona')) return t('game_running');
+    if (s.includes('game starting') || s.includes('startowanie gry')) return t('game_starting');
+    if (s.includes('preparing to launch') || s.includes('przygotowywanie do startu') || s.includes('przygotowywanie profilu')) return t('preparing_launch');
+    if (s.includes('checking for mod updates') || s.includes('sprawdzanie aktualizacji')) return t('checking_updates');
+    if (s.includes('launching minecraft') || s.includes('uruchamianie minecraft')) return t('launching_mc');
+    if (s.includes('downloading game files') || s.includes('pobieranie plików')) return t('downloading_files');
     if (s.includes('downloading:')) return status.replace(/Downloading:/i, t('downloading_assets') + ':');
-    if (s.includes('downloading')) return t('downloading_files');
-    if (s.includes('game closed') || s.includes('closed')) return t('game_closed');
+    if (s.includes('downloading') || s.includes('pobieranie')) return t('downloading_files');
+    if (s.includes('game closed') || s.includes('closed') || s.includes('zamknięta') || s.includes('zamknięto')) return t('game_closed');
     return status;
 }
 
@@ -525,12 +730,13 @@ function translateStatus(status) {
 // =============================================
 if (window.mooAPI) {
     window.mooAPI.onLaunchStatus?.((status) => {
-        if (progressStatus) progressStatus.textContent = translateStatus(status);
-        if (playerStatus && !status.includes('closed') && !status.includes('Error')) {
-            playerStatus.textContent = translateStatus(status);
-        }
-        if (status.includes('closed') || status.includes('Error')) {
-            setTimeout(resetPlayButton, 2000);
+        const translated = translateStatus(status);
+        if (progressStatus) progressStatus.textContent = translated;
+        if (isClosedOrError(status)) {
+            if (playerStatus) playerStatus.textContent = t('status_ready_play');
+            resetPlayButton();
+        } else {
+            if (playerStatus) playerStatus.textContent = translated;
         }
     });
 
@@ -1578,6 +1784,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const savedLang = localStorage.getItem('moo-lang') || 'pl';
     setLanguage(savedLang);
     initParticles();
+    initBackgroundTheme();
+    initOnlineUsersCounter();
     loadAccount();
     loadSettings();
     checkClientCoreUpdate(false);

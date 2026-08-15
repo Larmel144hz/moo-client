@@ -33,6 +33,17 @@ public abstract class NametagBackgroundMixin {
     public abstract TextRenderer getTextRenderer();
 
     private static final Identifier MOO_LOGO = Identifier.of("minecraft", "icons/icon_128x128.png");
+    private final ThreadLocal<EntityRenderState> mooClient$currentState = new ThreadLocal<>();
+
+    @Inject(method = "renderLabelIfPresent", at = @At("HEAD"))
+    private void mooClient$captureState(EntityRenderState state, Text text, MatrixStack matrices, VertexConsumerProvider vertexConsumers, int light, CallbackInfo ci) {
+        this.mooClient$currentState.set(state);
+    }
+
+    @Inject(method = "renderLabelIfPresent", at = @At("RETURN"))
+    private void mooClient$clearState(EntityRenderState state, Text text, MatrixStack matrices, VertexConsumerProvider vertexConsumers, int light, CallbackInfo ci) {
+        this.mooClient$currentState.remove();
+    }
 
     @Redirect(
         method = "renderLabelIfPresent",
@@ -43,6 +54,20 @@ public abstract class NametagBackgroundMixin {
             return 0.0F;
         }
         return options.getTextBackgroundOpacity(fallback);
+    }
+
+    @ModifyArg(
+        method = "renderLabelIfPresent",
+        at = @At(value = "INVOKE", target = "Lnet/minecraft/client/font/TextRenderer;draw(Lnet/minecraft/text/Text;FFIZLorg/joml/Matrix4f;Lnet/minecraft/client/render/VertexConsumerProvider;Lnet/minecraft/client/font/TextRenderer$TextLayerType;II)I"),
+        index = 1
+    )
+    private float mooClient$centerNametagWithBadge(float originalX) {
+        EntityRenderState state = this.mooClient$currentState.get();
+        if (state instanceof PlayerEntityRenderState playerState && com.mooclient.util.MooUserManager.isMooUser(playerState.name, playerState.id)) {
+            float badgeTotalWidth = 11.0f; // iconSize (8.5f) + gap (2.5f)
+            return originalX + (badgeTotalWidth / 2.0f);
+        }
+        return originalX;
     }
 
     @ModifyArg(
@@ -59,44 +84,53 @@ public abstract class NametagBackgroundMixin {
 
     @Inject(
         method = "renderLabelIfPresent",
-        at = @At(value = "INVOKE", target = "Lnet/minecraft/client/util/math/MatrixStack;scale(FFF)V", shift = At.Shift.AFTER)
-    )
-    private void mooClient$centerNametagWithBadge(EntityRenderState state, Text text, MatrixStack matrices, VertexConsumerProvider vertexConsumers, int light, CallbackInfo ci) {
-        if (state instanceof PlayerEntityRenderState playerState && com.mooclient.util.MooUserManager.isMooUser(playerState.name, playerState.id)) {
-            float iconSize = 9.0f;
-            float iconOffset = (iconSize + 2.5f) / 2.0f;
-            matrices.translate(iconOffset, 0.0f, 0.0f);
-        }
-    }
-
-    @Inject(
-        method = "renderLabelIfPresent",
         at = @At(value = "INVOKE", target = "Lnet/minecraft/client/util/math/MatrixStack;pop()V")
     )
     private void mooClient$renderClientLogoBadge(EntityRenderState state, Text text, MatrixStack matrices, VertexConsumerProvider vertexConsumers, int light, CallbackInfo ci) {
         if (state instanceof PlayerEntityRenderState playerState && com.mooclient.util.MooUserManager.isMooUser(playerState.name, playerState.id)) {
             float textWidth = this.getTextRenderer().getWidth(text);
-            float startX = -textWidth / 2.0f;
+            float badgeTotalWidth = 11.0f;
+            float iconSize = 8.5f;
 
-            float iconSize = 9.0f;
-            float iconX = startX - iconSize - 2.5f;
-            float iconY = -0.5f;
+            // Total visual element is centered at x = 0.0
+            float totalWidth = textWidth + badgeTotalWidth;
+            float iconX = -totalWidth / 2.0f;
+            float textStartX = iconX + badgeTotalWidth;
+            float iconY = 0.0f;
 
             Matrix4f matrix = matrices.peek().getPositionMatrix();
 
-            // 1. See-through pass for through-wall visibility
-            VertexConsumer seeThrough = vertexConsumers.getBuffer(RenderLayer.getTextSeeThrough(MOO_LOGO));
-            seeThrough.vertex(matrix, iconX, iconY, 0.0f).color(255, 255, 255, 128).texture(0.0f, 0.0f).light(light);
-            seeThrough.vertex(matrix, iconX, iconY + iconSize, 0.0f).color(255, 255, 255, 128).texture(0.0f, 1.0f).light(light);
-            seeThrough.vertex(matrix, iconX + iconSize, iconY + iconSize, 0.0f).color(255, 255, 255, 128).texture(1.0f, 1.0f).light(light);
-            seeThrough.vertex(matrix, iconX + iconSize, iconY, 0.0f).color(255, 255, 255, 128).texture(1.0f, 0.0f).light(light);
-
-            // 2. Normal textured pass for full opacity in direct line of sight
+            // 1. Clean crisp logo badge rendering (no shadow / no background box behind icon)
             VertexConsumer buffer = vertexConsumers.getBuffer(RenderLayer.getText(MOO_LOGO));
             buffer.vertex(matrix, iconX, iconY, 0.0f).color(255, 255, 255, 255).texture(0.0f, 0.0f).light(light);
             buffer.vertex(matrix, iconX, iconY + iconSize, 0.0f).color(255, 255, 255, 255).texture(0.0f, 1.0f).light(light);
             buffer.vertex(matrix, iconX + iconSize, iconY + iconSize, 0.0f).color(255, 255, 255, 255).texture(1.0f, 1.0f).light(light);
             buffer.vertex(matrix, iconX + iconSize, iconY, 0.0f).color(255, 255, 255, 255).texture(1.0f, 0.0f).light(light);
+
+            // 2. Render Ping above nickname if configured as ABOVE
+            if (NametagsModule.isNametagsEnabled() && NametagsModule.isShowPing() && NametagsModule.getPingPosition() == NametagsModule.PingPosition.ABOVE) {
+                Text pingText = NametagsModule.getPingText(playerState.id);
+                if (pingText != null) {
+                    float pingWidth = this.getTextRenderer().getWidth(pingText);
+                    float pingX = -pingWidth / 2.0f;
+                    float pingY = -10.0f;
+                    int bgAlpha = NametagsModule.isRemoveBackground() ? 0 : (int)(net.minecraft.client.MinecraftClient.getInstance().options.getTextBackgroundOpacity(0.25F) * 255.0F);
+                    int bgColor = bgAlpha << 24;
+
+                    this.getTextRenderer().draw(
+                        pingText,
+                        pingX,
+                        pingY,
+                        -1,
+                        NametagsModule.isTextShadow(),
+                        matrix,
+                        vertexConsumers,
+                        TextRenderer.TextLayerType.NORMAL,
+                        bgColor,
+                        light
+                    );
+                }
+            }
         }
     }
 }

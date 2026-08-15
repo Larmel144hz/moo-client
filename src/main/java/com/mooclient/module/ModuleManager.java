@@ -37,6 +37,7 @@ public class ModuleManager {
         register(new com.mooclient.module.modules.NametagsModule());      // "Nametags"
         register(new com.mooclient.module.modules.ZoomModule());          // "Zoom"
         register(new com.mooclient.module.modules.MacroModule());         // "Macro"
+        register(new com.mooclient.module.modules.ChatModule());          // "Chat"
     }
 
     public void register(Module module) {

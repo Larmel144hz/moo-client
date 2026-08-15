@@ -42,6 +42,9 @@ public class MooNetworkHandler {
                     if (payload.username() != null && !payload.username().isEmpty()) {
                         MooUserManager.registerUser(payload.username(), null);
                         MooClient.LOGGER.info("Discovered fellow Moo Client user: {}", payload.username());
+
+                        // Send our handshake back so the other user also sees us immediately
+                        sendBroadcast();
                     }
                 });
             });
@@ -52,12 +55,7 @@ public class MooNetworkHandler {
                 if (client.player != null) {
                     MooUserManager.registerUser(client.player.getName().getString(), client.player.getUuid());
                 }
-                try {
-                    if (ClientPlayNetworking.canSend(MooHandshakePayload.ID)) {
-                        String name = client.player != null ? client.player.getName().getString() : client.getSession().getUsername();
-                        ClientPlayNetworking.send(new MooHandshakePayload(MooClient.VERSION, name));
-                    }
-                } catch (Exception ignored) {}
+                sendBroadcast();
             });
 
             ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> {
@@ -67,5 +65,15 @@ public class MooNetworkHandler {
         } catch (Exception e) {
             MooClient.LOGGER.warn("Could not register Moo Client network payload: {}", e.getMessage());
         }
+    }
+
+    public static void sendBroadcast() {
+        try {
+            net.minecraft.client.MinecraftClient client = net.minecraft.client.MinecraftClient.getInstance();
+            if (client.world != null && ClientPlayNetworking.canSend(MooHandshakePayload.ID)) {
+                String name = client.player != null ? client.player.getName().getString() : client.getSession().getUsername();
+                ClientPlayNetworking.send(new MooHandshakePayload(MooClient.VERSION, name));
+            }
+        } catch (Exception ignored) {}
     }
 }

@@ -83,6 +83,7 @@ public class MooConfig {
             nametags.addProperty("enabled", com.mooclient.module.modules.NametagsModule.isNametagsEnabled());
             nametags.addProperty("showLogo", com.mooclient.module.modules.NametagsModule.isShowLogo());
             nametags.addProperty("showPing", com.mooclient.module.modules.NametagsModule.isShowPing());
+            nametags.addProperty("pingPosition", com.mooclient.module.modules.NametagsModule.getPingPosition().name());
             nametags.addProperty("removeBackground", com.mooclient.module.modules.NametagsModule.isRemoveBackground());
             nametags.addProperty("textShadow", com.mooclient.module.modules.NametagsModule.isTextShadow());
             root.add("nametags", nametags);
@@ -113,7 +114,13 @@ public class MooConfig {
                 macrosArray.add(mObj);
             }
             macroJson.add("list", macrosArray);
-            root.add("macro", macroJson);
+            // Chat Module
+            JsonObject chat = new JsonObject();
+            chat.addProperty("enabled", com.mooclient.module.modules.ChatModule.isModuleEnabled());
+            chat.addProperty("transparentBackground", com.mooclient.module.modules.ChatModule.isTransparentBackground());
+            chat.addProperty("unlimitedChat", com.mooclient.module.modules.ChatModule.isUnlimitedChat());
+            chat.addProperty("smoothChat", com.mooclient.module.modules.ChatModule.isSmoothChat());
+            root.add("chat", chat);
 
             Files.writeString(CONFIG_PATH, GSON.toJson(root));
             MooClient.LOGGER.info("Saved config to {}", CONFIG_PATH);
@@ -245,6 +252,11 @@ public class MooConfig {
                 if (nametags.has("showPing")) {
                     com.mooclient.module.modules.NametagsModule.setShowPing(nametags.get("showPing").getAsBoolean());
                 }
+                if (nametags.has("pingPosition")) {
+                    try {
+                        com.mooclient.module.modules.NametagsModule.setPingPosition(com.mooclient.module.modules.NametagsModule.PingPosition.valueOf(nametags.get("pingPosition").getAsString()));
+                    } catch (Exception ignored) {}
+                }
                 if (nametags.has("removeBackground")) {
                     com.mooclient.module.modules.NametagsModule.setRemoveBackground(nametags.get("removeBackground").getAsBoolean());
                 }
@@ -311,6 +323,25 @@ public class MooConfig {
                             existing.add(new com.mooclient.module.modules.MacroModule.MacroEntry(id, cmd, kCode, kName, isMouse, mEnabled));
                         }
                     }
+                }
+            }
+
+            // Chat Module
+            if (root.has("chat")) {
+                JsonObject chat = root.getAsJsonObject("chat");
+                if (chat.has("enabled")) {
+                    boolean state = chat.get("enabled").getAsBoolean();
+                    com.mooclient.module.modules.ChatModule.setModuleEnabled(state);
+                    ModuleManager.getInstance().getModule("Chat").ifPresent(m -> m.setEnabled(state));
+                }
+                if (chat.has("transparentBackground")) {
+                    com.mooclient.module.modules.ChatModule.setTransparentBackground(chat.get("transparentBackground").getAsBoolean());
+                }
+                if (chat.has("unlimitedChat")) {
+                    com.mooclient.module.modules.ChatModule.setUnlimitedChat(chat.get("unlimitedChat").getAsBoolean());
+                }
+                if (chat.has("smoothChat")) {
+                    com.mooclient.module.modules.ChatModule.setSmoothChat(chat.get("smoothChat").getAsBoolean());
                 }
             }
 

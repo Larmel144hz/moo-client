@@ -17,6 +17,9 @@ contextBridge.exposeInMainWorld('mooAPI', {
     loginMicrosoft: () => ipcRenderer.invoke('login-microsoft'),
     logoutMicrosoft: () => ipcRenderer.invoke('logout-microsoft'),
     getAccount: () => ipcRenderer.invoke('get-account'),
+    getAccounts: () => ipcRenderer.invoke('get-accounts'),
+    selectAccount: (uuid) => ipcRenderer.invoke('select-account', uuid),
+    removeAccount: (uuid) => ipcRenderer.invoke('remove-account', uuid),
 
     // Settings
     getSettings: () => ipcRenderer.invoke('get-settings'),
