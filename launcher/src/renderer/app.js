@@ -237,122 +237,33 @@ function initOnlineUsersCounter() {
 }
 
 // =============================================
-// Background Theme Switcher (Classic vs Momomo Video)
 // =============================================
-function initBackgroundTheme() {
+// Animated Video Background (Momomo)
+// =============================================
+function initVideoBackground() {
     const bgVideo = document.getElementById('bg-video');
-    const bgOverlay = document.getElementById('bg-video-overlay');
-    const particlesCanvas = document.getElementById('particles-canvas');
-    const btnClassic = document.getElementById('btn-bg-classic');
-    const btnVideo = document.getElementById('btn-bg-video');
+    if (!bgVideo) return;
 
-    function applyBgTheme(theme) {
-        localStorage.setItem('moo_bg_theme', theme);
-        if (theme === 'video') {
-            btnVideo?.classList.add('active');
-            btnClassic?.classList.remove('active');
-            if (bgVideo) {
-                bgVideo.muted = true;
-                bgVideo.playsInline = true;
-                bgVideo.classList.remove('hidden');
-                bgVideo.style.display = 'block';
-                bgVideo.play().catch((err) => {
-                    const playOnInteraction = () => {
-                        bgVideo.play().catch(() => {});
-                        window.removeEventListener('click', playOnInteraction);
-                        window.removeEventListener('keydown', playOnInteraction);
-                    };
-                    window.addEventListener('click', playOnInteraction);
-                    window.addEventListener('keydown', playOnInteraction);
-                });
-            }
-            if (bgOverlay) {
-                bgOverlay.classList.remove('hidden');
-                bgOverlay.style.display = 'block';
-            }
-            if (particlesCanvas) {
-                particlesCanvas.classList.add('hidden');
-                particlesCanvas.style.display = 'none';
-            }
-        } else {
-            btnClassic?.classList.add('active');
-            btnVideo?.classList.remove('active');
-            if (bgVideo) {
-                bgVideo.pause();
-                bgVideo.classList.add('hidden');
-                bgVideo.style.display = 'none';
-            }
-            if (bgOverlay) {
-                bgOverlay.classList.add('hidden');
-                bgOverlay.style.display = 'none';
-            }
-            if (particlesCanvas) {
-                particlesCanvas.classList.remove('hidden');
-                particlesCanvas.style.display = 'block';
-            }
-        }
-    }
+    bgVideo.muted = true;
+    bgVideo.playsInline = true;
+    bgVideo.loop = true;
 
-    btnClassic?.addEventListener('click', () => applyBgTheme('classic'));
-    btnVideo?.addEventListener('click', () => applyBgTheme('video'));
-
-    const savedTheme = localStorage.getItem('moo_bg_theme') || 'video';
-    applyBgTheme(savedTheme);
-}
-
-// =============================================
-// Particles Background
-// =============================================
-function initParticles() {
-    const canvas = document.getElementById('particles-canvas');
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-    let particles = [];
-    let w, h;
-
-    function resize() {
-        w = canvas.width = window.innerWidth;
-        h = canvas.height = window.innerHeight;
-    }
-
-    function createParticles() {
-        particles = [];
-        const count = Math.floor((w * h) / 12000);
-        for (let i = 0; i < count; i++) {
-            particles.push({
-                x: Math.random() * w,
-                y: Math.random() * h,
-                r: Math.random() * 1.5 + 0.3,
-                dx: (Math.random() - 0.5) * 0.3,
-                dy: (Math.random() - 0.5) * 0.3,
-                opacity: Math.random() * 0.4 + 0.1,
+    const startPlayback = () => {
+        const promise = bgVideo.play();
+        if (promise !== undefined) {
+            promise.catch(() => {
+                const onInteraction = () => {
+                    bgVideo.play().catch(() => {});
+                    window.removeEventListener('click', onInteraction);
+                    window.removeEventListener('keydown', onInteraction);
+                };
+                window.addEventListener('click', onInteraction);
+                window.addEventListener('keydown', onInteraction);
             });
         }
-    }
+    };
 
-    function draw() {
-        ctx.clearRect(0, 0, w, h);
-        for (const p of particles) {
-            p.x += p.dx;
-            p.y += p.dy;
-
-            if (p.x < 0) p.x = w;
-            if (p.x > w) p.x = 0;
-            if (p.y < 0) p.y = h;
-            if (p.y > h) p.y = 0;
-
-            ctx.beginPath();
-            ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
-            ctx.fillStyle = `rgba(255, 255, 255, ${p.opacity * 0.75})`;
-            ctx.fill();
-        }
-        requestAnimationFrame(draw);
-    }
-
-    window.addEventListener('resize', () => { resize(); createParticles(); });
-    resize();
-    createParticles();
-    draw();
+    startPlayback();
 }
 
 // =============================================
@@ -1831,8 +1742,7 @@ document.getElementById('btn-update-now')?.addEventListener('click', performClie
 document.addEventListener('DOMContentLoaded', () => {
     const savedLang = localStorage.getItem('moo-lang') || 'pl';
     setLanguage(savedLang);
-    initParticles();
-    initBackgroundTheme();
+    initVideoBackground();
     initOnlineUsersCounter();
     loadAccount();
     loadSettings();

@@ -10,11 +10,10 @@
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-    <!-- ANIMATED BACKGROUND PARTICLES & VIDEO -->
+    <!-- ANIMATED BACKGROUND VIDEO -->
     <div id="background-container">
         <video id="bg-video" src="moomoo.mp4" autoplay loop muted playsinline class="bg-video"></video>
         <div id="bg-video-overlay" class="bg-video-overlay"></div>
-        <canvas id="particles-canvas"></canvas>
     </div>
 
     <!-- ============ CUSTOM TITLEBAR ============ -->
@@ -27,7 +26,7 @@
             <!-- Moo Client Update Status Pill -->
             <div class="update-status-pill" id="update-status-pill" title="Sprawdź stan aktualizacji">
                 <span class="update-dot" id="update-dot"></span>
-                <span class="update-text" id="update-text">v1.1.7</span>
+                <span class="update-text" id="update-text">v1.1.8</span>
                 <button class="update-check-btn" id="btn-manual-update-check" title="Sprawdź aktualizacje">
                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M23 4v6h-6M1 20v-6h6"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg>
                 </button>
@@ -186,22 +185,7 @@
                     </div>
                 </div>
 
-                <!-- Background Theme Switcher (Bottom Right) -->
-                <div class="bg-switcher-container" id="bg-switcher-container">
-                    <span class="bg-switcher-label" data-i18n="bg_theme_label">TŁO:</span>
-                    <div class="bg-switcher-pills">
-                        <button class="bg-pill" id="btn-bg-classic" data-bg="classic" title="Klasyczne tło cząsteczkowe">
-                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
-                            <span>Classic</span>
-                        </button>
-                        <button class="bg-pill active" id="btn-bg-video" data-bg="video" title="Wideo w tle Momomo">
-                            <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
-                            <span>Momomo</span>
-                        </button>
-                    </div>
                 </div>
-
-            </div>
 
             <!-- MODS PAGE (MODRINTH INTEGRATION) -->
             <div class="page" id="page-mods">

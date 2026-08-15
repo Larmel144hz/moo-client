@@ -54,17 +54,6 @@ html, body {
     user-select: none;
 }
 
-/* === PARTICLES CANVAS === */
-#particles-canvas {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    z-index: 1;
-    pointer-events: none;
-}
-
 /* === TITLEBAR === */
 .titlebar {
     display: flex;
@@ -2857,69 +2846,5 @@ html, body {
     letter-spacing: 0.3px;
 }
 
-/* =============================================
-   BACKGROUND SWITCHER (BOTTOM RIGHT)
-   ============================================= */
-.bg-switcher-container {
-    position: fixed;
-    bottom: 24px;
-    right: 28px;
-    z-index: 100;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    background: rgba(15, 15, 20, 0.85);
-    backdrop-filter: blur(18px);
-    border: 1px solid rgba(255, 255, 255, 0.15);
-    border-radius: 24px;
-    padding: 4px 6px 4px 12px;
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.55);
-    user-select: none;
-}
 
-.bg-switcher-label {
-    font-size: 10px;
-    font-weight: 800;
-    letter-spacing: 1.5px;
-    color: #a1a1aa;
-    text-transform: uppercase;
-}
-
-.bg-switcher-pills {
-    display: flex;
-    align-items: center;
-    gap: 4px;
-}
-
-.bg-pill {
-    display: flex;
-    align-items: center;
-    gap: 5px;
-    background: transparent;
-    border: 1px solid transparent;
-    color: #a1a1aa;
-    font-size: 11px;
-    font-weight: 600;
-    padding: 4px 10px;
-    border-radius: 16px;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    outline: none;
-}
-
-.bg-pill:hover {
-    color: #ffffff;
-    background: rgba(255, 255, 255, 0.08);
-}
-
-.bg-pill.active {
-    background: #ffffff;
-    color: #09090b;
-    font-weight: 700;
-    box-shadow: 0 2px 10px rgba(255, 255, 255, 0.25);
-}
-
-.bg-pill svg {
-    flex-shrink: 0;
-}
 

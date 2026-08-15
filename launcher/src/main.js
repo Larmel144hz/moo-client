@@ -388,7 +388,6 @@ function setupIPC() {
 let launcherOnlineCount = 1;
 const LAUNCHER_PRESENCE_TOPIC = 'mooclient_launcher_presence_2026';
 const crypto = require('crypto');
-const https = require('https');
 const launcherClientId = 'moo_launcher_' + crypto.randomBytes(6).toString('hex');
 
 function setupLauncherPresence() {
