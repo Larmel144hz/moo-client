@@ -19,6 +19,7 @@ import net.minecraft.util.Formatting;
 public class NametagsModule extends Module {
 
     private static boolean enabled = true;
+    private static boolean showLogo = true;
     private static boolean showPing = true;
     private static boolean removeBackground = false;
     private static boolean textShadow = true;
@@ -49,6 +50,18 @@ public class NametagsModule extends Module {
                 m.setEnabled(state);
             }
         });
+    }
+
+    public static boolean isShowLogo() {
+        return showLogo;
+    }
+
+    public static void setShowLogo(boolean state) {
+        showLogo = state;
+    }
+
+    public static void toggleShowLogo() {
+        showLogo = !showLogo;
     }
 
     public static boolean isShowPing() {

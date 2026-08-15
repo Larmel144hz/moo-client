@@ -32,7 +32,7 @@ public abstract class NametagBackgroundMixin {
     @Shadow
     public abstract TextRenderer getTextRenderer();
 
-    private static final Identifier MOO_LOGO = Identifier.of("mooclient", "icon.png");
+    private static final Identifier MOO_LOGO = Identifier.of("minecraft", "icons/icon_128x128.png");
 
     @Redirect(
         method = "renderLabelIfPresent",
@@ -74,7 +74,6 @@ public abstract class NametagBackgroundMixin {
         at = @At(value = "INVOKE", target = "Lnet/minecraft/client/util/math/MatrixStack;pop()V")
     )
     private void mooClient$renderClientLogoBadge(EntityRenderState state, Text text, MatrixStack matrices, VertexConsumerProvider vertexConsumers, int light, CallbackInfo ci) {
-        // Render Moo Client badge only for confirmed Moo Client users (Lunar/Badlion style)
         if (state instanceof PlayerEntityRenderState playerState && com.mooclient.util.MooUserManager.isMooUser(playerState.name, playerState.id)) {
             float textWidth = this.getTextRenderer().getWidth(text);
             float startX = -textWidth / 2.0f;
@@ -83,11 +82,17 @@ public abstract class NametagBackgroundMixin {
             float iconX = startX - iconSize - 2.5f;
             float iconY = -0.5f;
 
-            // Draw Moo Client logo icon badge in the nametag layer
-            RenderLayer layer = RenderLayer.getText(MOO_LOGO);
-            VertexConsumer buffer = vertexConsumers.getBuffer(layer);
             Matrix4f matrix = matrices.peek().getPositionMatrix();
 
+            // 1. See-through pass for through-wall visibility
+            VertexConsumer seeThrough = vertexConsumers.getBuffer(RenderLayer.getTextSeeThrough(MOO_LOGO));
+            seeThrough.vertex(matrix, iconX, iconY, 0.0f).color(255, 255, 255, 128).texture(0.0f, 0.0f).light(light);
+            seeThrough.vertex(matrix, iconX, iconY + iconSize, 0.0f).color(255, 255, 255, 128).texture(0.0f, 1.0f).light(light);
+            seeThrough.vertex(matrix, iconX + iconSize, iconY + iconSize, 0.0f).color(255, 255, 255, 128).texture(1.0f, 1.0f).light(light);
+            seeThrough.vertex(matrix, iconX + iconSize, iconY, 0.0f).color(255, 255, 255, 128).texture(1.0f, 0.0f).light(light);
+
+            // 2. Normal textured pass for full opacity in direct line of sight
+            VertexConsumer buffer = vertexConsumers.getBuffer(RenderLayer.getText(MOO_LOGO));
             buffer.vertex(matrix, iconX, iconY, 0.0f).color(255, 255, 255, 255).texture(0.0f, 0.0f).light(light);
             buffer.vertex(matrix, iconX, iconY + iconSize, 0.0f).color(255, 255, 255, 255).texture(0.0f, 1.0f).light(light);
             buffer.vertex(matrix, iconX + iconSize, iconY + iconSize, 0.0f).color(255, 255, 255, 255).texture(1.0f, 1.0f).light(light);

@@ -168,7 +168,7 @@ public class MooMainMenuScreen extends Screen {
         }
 
         // Footer: Left
-        context.drawTextWithShadow(this.textRenderer, "Moo Client v1.0.0", 14, this.height - 18, 0x88FFFFFF);
+        context.drawTextWithShadow(this.textRenderer, "Moo Client v" + com.mooclient.MooClient.VERSION, 14, this.height - 18, 0x88FFFFFF);
     }
 
     @Override

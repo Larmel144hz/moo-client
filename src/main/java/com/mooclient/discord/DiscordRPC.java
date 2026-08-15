@@ -115,8 +115,8 @@ public class DiscordRPC {
             activity.add("timestamps", timestamps);
 
             JsonObject assets = new JsonObject();
-            assets.addProperty("large_image", "moo_logo");
-            assets.addProperty("large_text", "Moo Client v1.0.0 (Fabric 1.21.4)");
+            assets.addProperty("large_image", "logo");
+            assets.addProperty("large_text", "Moo Client v" + com.mooclient.MooClient.VERSION + " (Fabric 1.21.4)");
             assets.addProperty("small_image", "minecraft");
             assets.addProperty("small_text", "Minecraft 1.21.4");
             activity.add("assets", assets);

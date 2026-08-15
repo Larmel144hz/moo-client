@@ -81,6 +81,7 @@ public class MooConfig {
             // Nametags Module
             JsonObject nametags = new JsonObject();
             nametags.addProperty("enabled", com.mooclient.module.modules.NametagsModule.isNametagsEnabled());
+            nametags.addProperty("showLogo", com.mooclient.module.modules.NametagsModule.isShowLogo());
             nametags.addProperty("showPing", com.mooclient.module.modules.NametagsModule.isShowPing());
             nametags.addProperty("removeBackground", com.mooclient.module.modules.NametagsModule.isRemoveBackground());
             nametags.addProperty("textShadow", com.mooclient.module.modules.NametagsModule.isTextShadow());
@@ -237,6 +238,9 @@ public class MooConfig {
                     boolean state = nametags.get("enabled").getAsBoolean();
                     com.mooclient.module.modules.NametagsModule.setNametagsEnabled(state);
                     ModuleManager.getInstance().getModule("Nametags").ifPresent(m -> m.setEnabled(state));
+                }
+                if (nametags.has("showLogo")) {
+                    com.mooclient.module.modules.NametagsModule.setShowLogo(nametags.get("showLogo").getAsBoolean());
                 }
                 if (nametags.has("showPing")) {
                     com.mooclient.module.modules.NametagsModule.setShowPing(nametags.get("showPing").getAsBoolean());

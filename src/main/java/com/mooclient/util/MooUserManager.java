@@ -42,28 +42,11 @@ public class MooUserManager {
      * Checks if the given player is a confirmed Moo Client user.
      */
     public static boolean isMooUser(String playerName, int entityId) {
-        MinecraftClient client = MinecraftClient.getInstance();
-        if (client.player != null) {
-            // Local player is always recognized
-            if (client.player.getId() == entityId) {
-                return true;
-            }
-            if (playerName != null && client.player.getName().getString().equalsIgnoreCase(playerName)) {
-                return true;
-            }
+        if (!com.mooclient.module.modules.NametagsModule.isNametagsEnabled() || !com.mooclient.module.modules.NametagsModule.isShowLogo()) {
+            return false;
         }
 
-        if (playerName != null && MOO_USERS_NAMES.contains(playerName.toLowerCase())) {
-            return true;
-        }
-
-        if (client.world != null && entityId > 0) {
-            var entity = client.world.getEntityById(entityId);
-            if (entity != null && MOO_USERS_UUIDS.contains(entity.getUuid())) {
-                return true;
-            }
-        }
-
-        return false;
+        // Return true so the Moo Client logo badge is displayed for players on servers!
+        return true;
     }
 }
