@@ -37,6 +37,10 @@ public class MooClientScreen extends Screen {
     private int editingMacroIndex = -1;
     private double scrollY = 0;
 
+    // Search bar state in Mods view
+    private String searchFilter = "";
+    private boolean searching = false;
+
     // Draggable HUD widget state
     private String draggingWidget = null;
     private int dragOffsetX = 0;
@@ -245,18 +249,18 @@ public class MooClientScreen extends Screen {
     }
 
     /**
-     * MODS WINDOW: 3-column scrollable grid of mod cards with OPTIONS bar
+     * MODS WINDOW: 3-column scrollable grid of mod cards with OPTIONS bar and search box
      */
     private void renderModsWindow(DrawContext context, int mouseX, int mouseY, float delta) {
         int panelW = 560;
-        int panelH = 260;
+        int panelH = 265;
         int panelX = (this.width - panelW) / 2;
         int panelY = (this.height - panelH) / 2;
 
         context.fill(panelX, panelY, panelX + panelW, panelY + panelH, COLOR_PANEL_BG);
         drawBorder(context, panelX, panelY, panelW, panelH, COLOR_PANEL_BORDER);
 
-        int headerH = 42;
+        int headerH = 56;
         int backX = panelX + 14;
         int backY = panelY + 12;
         int backW = 74;
@@ -265,13 +269,48 @@ public class MooClientScreen extends Screen {
         int backTextColor = backHover ? COLOR_TEXT_WHITE : 0xFFA0A0AB;
         context.drawTextWithShadow(this.textRenderer, MooLanguage.get("back"), backX, backY + 3, backTextColor);
 
+        // Header Title
         String headerTitle = "MOO CLIENT";
         int titleW = this.textRenderer.getWidth(headerTitle);
-        context.drawTextWithShadow(this.textRenderer, headerTitle, panelX + (panelW - titleW) / 2, panelY + 15, COLOR_TEXT_WHITE);
+        context.drawTextWithShadow(this.textRenderer, headerTitle, panelX + (panelW - titleW) / 2, panelY + 10, COLOR_TEXT_WHITE);
+
+        // Search Bar under "MOO CLIENT"
+        int searchW = 200;
+        int searchH = 18;
+        int searchX = panelX + (panelW - searchW) / 2;
+        int searchY = panelY + 26;
+        boolean searchHover = mouseX >= searchX && mouseX <= searchX + searchW && mouseY >= searchY && mouseY <= searchY + searchH;
+
+        context.fill(searchX, searchY, searchX + searchW, searchY + searchH, searching ? 0x99101018 : (searchHover ? 0x88181824 : 0x550A0A10));
+        drawBorder(context, searchX, searchY, searchW, searchH, searching ? 0xFF55FFFF : (searchHover ? 0x88FFFFFF : 0x33FFFFFF));
+
+        context.drawTextWithShadow(this.textRenderer, "🔍", searchX + 5, searchY + 4, searching ? 0xFF55FFFF : 0xFFA0A0AB);
+
+        if (searchFilter.isEmpty()) {
+            context.drawTextWithShadow(this.textRenderer, MooLanguage.current == MooLanguage.PL ? "Szukaj modów..." : "Search mods...", searchX + 20, searchY + 5, 0x66FFFFFF);
+        } else {
+            String cursor = searching && (System.currentTimeMillis() % 1000 < 500) ? "_" : "";
+            context.drawTextWithShadow(this.textRenderer, searchFilter + cursor, searchX + 20, searchY + 5, COLOR_TEXT_WHITE);
+            // Clear icon '✕'
+            boolean clearHover = mouseX >= searchX + searchW - 16 && mouseX <= searchX + searchW - 2 && mouseY >= searchY && mouseY <= searchY + searchH;
+            context.drawTextWithShadow(this.textRenderer, "✕", searchX + searchW - 13, searchY + 5, clearHover ? 0xFFFF5555 : 0x88FFFFFF);
+        }
 
         context.fill(panelX + 14, panelY + headerH, panelX + panelW - 14, panelY + headerH + 1, 0x22FFFFFF);
 
-        List<Module> modules = ModuleManager.getInstance().getModules();
+        List<Module> allModules = ModuleManager.getInstance().getModules();
+        List<Module> modules;
+        if (searchFilter == null || searchFilter.trim().isEmpty()) {
+            modules = allModules;
+        } else {
+            String query = searchFilter.trim().toLowerCase();
+            modules = allModules.stream().filter(m -> {
+                String name = m.getName().toLowerCase();
+                String desc = getModuleDescText(m.getName()).toLowerCase();
+                return name.contains(query) || desc.contains(query);
+            }).toList();
+        }
+
         int cols = 3;
         int cardW = 160;
         int cardH = 150;
@@ -279,16 +318,21 @@ public class MooClientScreen extends Screen {
 
         int totalGridW = cols * cardW + (cols - 1) * cardGap;
         int startX = panelX + (panelW - totalGridW) / 2;
-        int startY = panelY + headerH + 16;
+        int startY = panelY + headerH + 14;
 
-        int totalRows = (modules.size() + cols - 1) / cols;
+        int totalRows = Math.max(1, (modules.size() + cols - 1) / cols);
         int totalContentH = totalRows * cardH + (totalRows - 1) * cardGap;
-        int visibleAreaH = panelH - headerH - 24;
+        int visibleAreaH = panelH - headerH - 20;
         int maxScroll = Math.max(0, totalContentH - visibleAreaH + 8);
         scrollY = Math.max(0, Math.min(maxScroll, scrollY));
 
         // Scissor clipping for scrollable area
         context.enableScissor(panelX + 4, panelY + headerH + 2, panelX + panelW - 4, panelY + panelH - 4);
+
+        if (modules.isEmpty()) {
+            String noResults = (MooLanguage.current == MooLanguage.PL ? "Brak wyników dla: " : "No mods found for: ") + "\"" + searchFilter + "\"";
+            drawCenteredText(context, noResults, panelX + panelW / 2, startY + 40, 0x88FFFFFF);
+        }
 
         for (int i = 0; i < modules.size(); i++) {
             Module module = modules.get(i);
@@ -331,29 +375,7 @@ public class MooClientScreen extends Screen {
             drawCenteredText(context, icon, cardX + cardW / 2, cardY + 16, COLOR_TEXT_WHITE);
             drawCenteredText(context, module.getName(), cardX + cardW / 2, cardY + 38, COLOR_TEXT_WHITE);
 
-            // Description
-            String desc;
-            if (module.getName().equalsIgnoreCase("Gamma")) {
-                desc = MooLanguage.get("gamma_desc");
-            } else if (module.getName().equalsIgnoreCase("FPS")) {
-                desc = MooLanguage.get("fps_desc");
-            } else if (module.getName().equalsIgnoreCase("Sprint")) {
-                desc = MooLanguage.get("sprint_desc");
-            } else if (module.getName().equalsIgnoreCase("Freelook")) {
-                desc = MooLanguage.get("freelook_desc");
-            } else if (module.getName().equalsIgnoreCase("Potion Effects")) {
-                desc = MooLanguage.get("potions_desc");
-            } else if (module.getName().equalsIgnoreCase("Nametags")) {
-                desc = MooLanguage.get("nametags_desc");
-            } else if (module.getName().equalsIgnoreCase("Zoom")) {
-                desc = MooLanguage.get("zoom_desc");
-            } else if (module.getName().equalsIgnoreCase("Chat")) {
-                desc = MooLanguage.get("chat_desc");
-            } else if (module.getName().equalsIgnoreCase("Ping")) {
-                desc = MooLanguage.get("ping_desc");
-            } else {
-                desc = MooLanguage.get("macro_desc");
-            }
+            String desc = getModuleDescText(module.getName());
             context.drawTextWithShadow(this.textRenderer, desc, cardX + (cardW - this.textRenderer.getWidth(desc)) / 2, cardY + 54, COLOR_TEXT_MUTED);
 
             // OPTIONS Bar
@@ -396,8 +418,20 @@ public class MooClientScreen extends Screen {
             int thumbH = Math.max(22, (int) ((float) visibleAreaH / (visibleAreaH + maxScroll) * scrollTrackH));
             int thumbY = scrollTrackY + (int) ((scrollY / (float) maxScroll) * (scrollTrackH - thumbH));
             context.fill(scrollTrackX, scrollTrackY, scrollTrackX + 3, scrollTrackY + scrollTrackH, 0x33000000);
-            context.fill(scrollTrackX, thumbY, scrollTrackX + 3, thumbY + thumbH, 0x88FFFFFF);
         }
+    }
+
+    private String getModuleDescText(String name) {
+        if (name.equalsIgnoreCase("Gamma")) return MooLanguage.get("gamma_desc");
+        if (name.equalsIgnoreCase("FPS")) return MooLanguage.get("fps_desc");
+        if (name.equalsIgnoreCase("Sprint")) return MooLanguage.get("sprint_desc");
+        if (name.equalsIgnoreCase("Freelook")) return MooLanguage.get("freelook_desc");
+        if (name.equalsIgnoreCase("Potion Effects")) return MooLanguage.get("potions_desc");
+        if (name.equalsIgnoreCase("Nametags")) return MooLanguage.get("nametags_desc");
+        if (name.equalsIgnoreCase("Zoom")) return MooLanguage.get("zoom_desc");
+        if (name.equalsIgnoreCase("Chat")) return MooLanguage.get("chat_desc");
+        if (name.equalsIgnoreCase("Ping")) return MooLanguage.get("ping_desc");
+        return MooLanguage.get("macro_desc");
     }
 
     /**
@@ -642,6 +676,11 @@ public class MooClientScreen extends Screen {
             rowY += rowH + 6;
             drawOptionRow(context, rowX, rowY, rowW, rowH, MooLanguage.get("chat_smooth_label"));
             drawOptionToggle(context, rowX + rowW - 44, rowY + 8, mouseX, mouseY, com.mooclient.module.modules.ChatModule.isSmoothChat());
+
+            // Row 4: Text Shadow
+            rowY += rowH + 6;
+            drawOptionRow(context, rowX, rowY, rowW, rowH, MooLanguage.get("shadow_label"));
+            drawOptionToggle(context, rowX + rowW - 44, rowY + 8, mouseX, mouseY, com.mooclient.module.modules.ChatModule.isTextShadow());
 
         } else if (modName.equalsIgnoreCase("Macro")) {
             java.util.List<com.mooclient.module.modules.MacroModule.MacroEntry> macroList = com.mooclient.module.modules.MacroModule.getMacros();
@@ -1076,7 +1115,7 @@ public class MooClientScreen extends Screen {
             // 3. Mods View Clicks
             else if (currentView == View.MODS) {
                 int panelW = 560;
-                int panelH = 260;
+                int panelH = 265;
                 int panelX = (this.width - panelW) / 2;
                 int panelY = (this.height - panelH) / 2;
 
@@ -1088,17 +1127,48 @@ public class MooClientScreen extends Screen {
                 if (mouseX >= backX && mouseX <= backX + backW && mouseY >= backY && mouseY <= backY + backH) {
                     playClickSound();
                     this.currentView = View.HUB;
+                    this.searching = false;
                     return true;
                 }
 
-                List<Module> modules = ModuleManager.getInstance().getModules();
+                // Search Bar Click
+                int searchW = 200;
+                int searchH = 18;
+                int searchX = panelX + (panelW - searchW) / 2;
+                int searchY = panelY + 26;
+                if (mouseX >= searchX && mouseX <= searchX + searchW && mouseY >= searchY && mouseY <= searchY + searchH) {
+                    playClickSound();
+                    if (!searchFilter.isEmpty() && mouseX >= searchX + searchW - 18) {
+                        searchFilter = "";
+                        searching = true;
+                    } else {
+                        searching = true;
+                    }
+                    return true;
+                } else {
+                    searching = false;
+                }
+
+                List<Module> allModules = ModuleManager.getInstance().getModules();
+                List<Module> modules;
+                if (searchFilter == null || searchFilter.trim().isEmpty()) {
+                    modules = allModules;
+                } else {
+                    String query = searchFilter.trim().toLowerCase();
+                    modules = allModules.stream().filter(m -> {
+                        String name = m.getName().toLowerCase();
+                        String desc = getModuleDescText(m.getName()).toLowerCase();
+                        return name.contains(query) || desc.contains(query);
+                    }).toList();
+                }
+
                 int cols = 3;
                 int cardW = 160;
                 int cardH = 150;
                 int cardGap = 16;
                 int totalGridW = cols * cardW + (cols - 1) * cardGap;
                 int startX = panelX + (panelW - totalGridW) / 2;
-                int startY = panelY + 42 + 16;
+                int startY = panelY + 56 + 14;
 
                 for (int i = 0; i < modules.size(); i++) {
                     Module module = modules.get(i);
@@ -1108,7 +1178,7 @@ public class MooClientScreen extends Screen {
                     int cardY = startY + row * (cardH + cardGap) - (int) scrollY;
 
                     // Ensure click is inside visible area
-                    if (mouseY < panelY + 42 + 2 || mouseY > panelY + panelH - 4) {
+                    if (mouseY < panelY + 56 + 2 || mouseY > panelY + panelH - 4) {
                         continue;
                     }
 
@@ -1415,6 +1485,15 @@ public class MooClientScreen extends Screen {
                         com.mooclient.util.MooConfig.save();
                         return true;
                     }
+
+                    // Row 4: Text Shadow
+                    rowY += rowH + 6;
+                    if (mouseX >= rowX + rowW - 44 && mouseX <= rowX + rowW - 10 && mouseY >= rowY + 8 && mouseY <= rowY + 26) {
+                        playClickSound();
+                        com.mooclient.module.modules.ChatModule.toggleTextShadow();
+                        com.mooclient.util.MooConfig.save();
+                        return true;
+                    }
                 } else if (modName.equalsIgnoreCase("Macro")) {
                     java.util.List<com.mooclient.module.modules.MacroModule.MacroEntry> macroList = com.mooclient.module.modules.MacroModule.getMacros();
                     int mRowH = 28;
@@ -1487,6 +1566,13 @@ public class MooClientScreen extends Screen {
 
     @Override
     public boolean charTyped(char chr, int modifiers) {
+        if (currentView == View.MODS && searching) {
+            if (chr >= 32 && chr != 127) {
+                searchFilter += chr;
+                scrollY = 0;
+                return true;
+            }
+        }
         if (currentView == View.OPTIONS && editingMacroIndex >= 0) {
             java.util.List<com.mooclient.module.modules.MacroModule.MacroEntry> macroList = com.mooclient.module.modules.MacroModule.getMacros();
             if (editingMacroIndex < macroList.size()) {
@@ -1533,6 +1619,31 @@ public class MooClientScreen extends Screen {
 
     @Override
     public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
+        // If searching in Mods view
+        if (currentView == View.MODS && searching) {
+            if (keyCode == org.lwjgl.glfw.GLFW.GLFW_KEY_BACKSPACE) {
+                if (!searchFilter.isEmpty()) {
+                    searchFilter = searchFilter.substring(0, searchFilter.length() - 1);
+                    scrollY = 0;
+                }
+                return true;
+            } else if (keyCode == org.lwjgl.glfw.GLFW.GLFW_KEY_ENTER || keyCode == org.lwjgl.glfw.GLFW.GLFW_KEY_KP_ENTER || keyCode == org.lwjgl.glfw.GLFW.GLFW_KEY_ESCAPE) {
+                searching = false;
+                return true;
+            } else if (keyCode == org.lwjgl.glfw.GLFW.GLFW_KEY_V && (modifiers & org.lwjgl.glfw.GLFW.GLFW_MOD_CONTROL) != 0) {
+                try {
+                    if (this.client != null && this.client.keyboard != null) {
+                        String clip = this.client.keyboard.getClipboard();
+                        if (clip != null && !clip.isEmpty()) {
+                            searchFilter += clip.trim();
+                            scrollY = 0;
+                        }
+                    }
+                } catch (Exception ignored) {}
+                return true;
+            }
+        }
+
         // If editing macro command text
         if (currentView == View.OPTIONS && editingMacroIndex >= 0) {
             java.util.List<com.mooclient.module.modules.MacroModule.MacroEntry> macroList = com.mooclient.module.modules.MacroModule.getMacros();

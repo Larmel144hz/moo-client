@@ -40,6 +40,27 @@ public abstract class ChatHudMixin {
     }
 
     /**
+     * Text Shadow toggle in Chat
+     */
+    @Redirect(
+        method = "render",
+        at = @At(value = "INVOKE", target = "Lnet/minecraft/client/gui/DrawContext;drawTextWithShadow(Lnet/minecraft/client/font/TextRenderer;Lnet/minecraft/text/OrderedText;III)I"),
+        require = 0
+    )
+    private int mooClient$redirectChatTextShadowOrdered(DrawContext context, net.minecraft.client.font.TextRenderer textRenderer, net.minecraft.text.OrderedText text, int x, int y, int color) {
+        return context.drawText(textRenderer, text, x, y, color, ChatModule.isTextShadow());
+    }
+
+    @Redirect(
+        method = "render",
+        at = @At(value = "INVOKE", target = "Lnet/minecraft/client/gui/DrawContext;drawTextWithShadow(Lnet/minecraft/client/font/TextRenderer;Lnet/minecraft/text/Text;III)I"),
+        require = 0
+    )
+    private int mooClient$redirectChatTextShadow(DrawContext context, net.minecraft.client.font.TextRenderer textRenderer, net.minecraft.text.Text text, int x, int y, int color) {
+        return context.drawText(textRenderer, text, x, y, color, ChatModule.isTextShadow());
+    }
+
+    /**
      * Smooth chat animation: Push matrix and slide downwards smoothly when new messages arrive.
      */
     @Inject(method = "render", at = @At("HEAD"))

@@ -15,12 +15,13 @@ public class ChatModule extends Module {
     private static boolean transparentBackground = false;
     private static boolean unlimitedChat = true;
     private static boolean smoothChat = true;
+    private static boolean textShadow = true;
 
     // Smooth chat animation state
     private static float animOffset = 0.0f;
 
     public ChatModule() {
-        super("Chat", "Ulepszenia czatu: przezroczystość, nielimitowana historia, płynna animacja", Category.RENDER);
+        super("Chat", "Ulepszenia czatu: przezroczystość, cień tekstu, nielimitowana historia, animacja", Category.RENDER);
         setEnabled(true);
     }
 
@@ -82,6 +83,18 @@ public class ChatModule extends Module {
 
     public static void toggleSmoothChat() {
         smoothChat = !smoothChat;
+    }
+
+    public static boolean isTextShadow() {
+        return textShadow;
+    }
+
+    public static void setTextShadow(boolean state) {
+        textShadow = state;
+    }
+
+    public static void toggleTextShadow() {
+        textShadow = !textShadow;
     }
 
     public static void onMessageAdded() {

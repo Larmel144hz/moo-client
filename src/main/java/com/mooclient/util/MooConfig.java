@@ -122,6 +122,7 @@ public class MooConfig {
             chat.addProperty("transparentBackground", com.mooclient.module.modules.ChatModule.isTransparentBackground());
             chat.addProperty("unlimitedChat", com.mooclient.module.modules.ChatModule.isUnlimitedChat());
             chat.addProperty("smoothChat", com.mooclient.module.modules.ChatModule.isSmoothChat());
+            chat.addProperty("textShadow", com.mooclient.module.modules.ChatModule.isTextShadow());
             root.add("chat", chat);
 
             // Ping Module
@@ -355,6 +356,9 @@ public class MooConfig {
                 }
                 if (chat.has("smoothChat")) {
                     com.mooclient.module.modules.ChatModule.setSmoothChat(chat.get("smoothChat").getAsBoolean());
+                }
+                if (chat.has("textShadow")) {
+                    com.mooclient.module.modules.ChatModule.setTextShadow(chat.get("textShadow").getAsBoolean());
                 }
             }
 
