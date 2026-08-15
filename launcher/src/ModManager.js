@@ -119,13 +119,13 @@ class ModManager {
      */
     async getRemoteVersion() {
         try {
-            return await this.fetchFromReleasesAPI();
+            return await this.fetchRawVersion();
         } catch (e) {
-            console.warn('GitHub Releases API failed, falling back to mod-version.json:', e.message);
+            console.warn('Raw version fetch failed, falling back to Releases API:', e.message);
             try {
-                return await this.fetchFromContentsAPI();
+                return await this.fetchFromReleasesAPI();
             } catch (e2) {
-                return await this.fetchRawVersion();
+                return await this.fetchFromContentsAPI();
             }
         }
     }
@@ -208,33 +208,35 @@ class ModManager {
     }
 
     /**
-     * FALLBACK 2: Fetches mod-version.json via raw.githubusercontent.com.
+     * PRIMARY: Fetches mod-version.json via raw.githubusercontent.com with cache-buster.
      */
     async fetchRawVersion() {
         return new Promise((resolve, reject) => {
+            const rawUrl = `${this.versionUrl}?_t=${Date.now()}`;
             const fetch = (url) => {
                 const client = url.startsWith('https') ? https : http;
-                client.get(url, { headers: { 'User-Agent': 'MooClient-Launcher' } }, (res) => {
+                client.get(url, { headers: { 'User-Agent': 'MooClient-Launcher', 'Cache-Control': 'no-cache, no-store, must-revalidate' } }, (res) => {
                     if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
                         fetch(res.headers.location);
                         return;
                     }
                     if (res.statusCode !== 200) {
-                        reject(new Error(`Failed to fetch version: HTTP ${res.statusCode}`));
+                        reject(new Error(`Raw version URL returned HTTP ${res.statusCode}`));
                         return;
                     }
                     let data = '';
                     res.on('data', chunk => data += chunk);
                     res.on('end', () => {
                         try {
-                            resolve(JSON.parse(data));
+                            const json = JSON.parse(data);
+                            resolve(json);
                         } catch (e) {
-                            reject(new Error('Invalid version JSON from GitHub'));
+                            reject(e);
                         }
                     });
                 }).on('error', reject);
             };
-            fetch(this.versionUrl + '?t=' + Date.now());
+            fetch(rawUrl);
         });
     }
 
