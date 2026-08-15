@@ -272,7 +272,7 @@ public class InGameHudMixin {
             if (style == com.mooclient.module.modules.PingModule.PingStyle.MOO_CLIENT) {
                 if (com.mooclient.module.modules.PingModule.isShowBackground()) {
                     context.fill(x - 2, y - 2, x + textWidth + 4, y + 10, 0x88000000);
-                    context.fill(x - 3, y - 2, x - 2, y + 10, 0xFF55FFFF);
+                    context.fill(x - 3, y - 2, x - 2, y + 10, 0xFFFFFFFF);
                 }
                 context.drawText(client.textRenderer, pingText, x + (com.mooclient.module.modules.PingModule.isShowBackground() ? 2 : 0), y, 0xFFFFFFFF, com.mooclient.module.modules.PingModule.isTextShadow());
             } else {
