@@ -210,76 +210,30 @@ function t(key) {
 // =============================================
 // Real-Time Online Players Counter (Live Presence)
 // =============================================
-const PRESENCE_TOPIC = 'mooclient_presence_live_2026';
 let onlineCount = 1;
-let heartbeatInterval = null;
 
-function getClientPresenceId() {
-    let id = localStorage.getItem('moo_client_presence_id');
-    if (!id) {
-        id = 'moo_' + Math.random().toString(36).substring(2, 12) + '_' + Date.now().toString(36);
-        localStorage.setItem('moo_client_presence_id', id);
+function updateOnlineUsersDisplay(count) {
+    if (typeof count === 'number' && !isNaN(count)) {
+        onlineCount = Math.max(1, count);
     }
-    return id;
-}
-
-function updateOnlineUsersDisplay() {
     const countEl = document.getElementById('online-users-count');
     if (!countEl) return;
     const suffix = t('online_users_suffix');
     countEl.textContent = `${onlineCount} ${suffix}`;
 }
 
-async function performPresenceHeartbeat() {
-    const myId = getClientPresenceId();
-    try {
-        // 1. Send our presence heartbeat
-        fetch(`https://ntfy.sh/${PRESENCE_TOPIC}`, {
-            method: 'POST',
-            body: JSON.stringify({ id: myId, t: Date.now() }),
-            headers: { 'Content-Type': 'application/json' }
-        }).catch(() => {});
-
-        // 2. Query active users in the last 45 seconds
-        const res = await fetch(`https://ntfy.sh/${PRESENCE_TOPIC}/json?poll=1&since=45s`);
-        if (res.ok) {
-            const text = await res.text();
-            const lines = text.trim().split('\n').filter(Boolean);
-            const activeSet = new Set();
-            const now = Date.now();
-
-            for (const line of lines) {
-                try {
-                    const msg = JSON.parse(line);
-                    if (msg.message) {
-                        const data = JSON.parse(msg.message);
-                        if (data.id && (now - data.t < 45000 || !data.t)) {
-                            activeSet.add(data.id);
-                        }
-                    }
-                } catch (err) {}
-            }
-
-            activeSet.add(myId); // Always include local player
-            onlineCount = Math.max(1, activeSet.size);
-            updateOnlineUsersDisplay();
-        }
-    } catch (e) {
-        console.warn('Presence heartbeat error:', e);
-        updateOnlineUsersDisplay();
-    }
-}
-
 function initOnlineUsersCounter() {
-    onlineCount = 1;
-    updateOnlineUsersDisplay();
+    updateOnlineUsersDisplay(1);
 
-    // Initial heartbeat after 1s
-    setTimeout(performPresenceHeartbeat, 1000);
+    // Get current count from backend process
+    window.mooAPI?.getOnlineUsersCount?.().then((count) => {
+        if (typeof count === 'number') updateOnlineUsersDisplay(count);
+    }).catch(() => {});
 
-    // Regular heartbeat every 15 seconds
-    if (heartbeatInterval) clearInterval(heartbeatInterval);
-    heartbeatInterval = setInterval(performPresenceHeartbeat, 15000);
+    // Listen for live broadcast updates
+    window.mooAPI?.onOnlineUsersCount?.((count) => {
+        updateOnlineUsersDisplay(count);
+    });
 }
 
 // =============================================
@@ -389,7 +343,11 @@ navItems.forEach((item) => {
         document.getElementById(`page-${target}`)?.classList.add('active');
 
         if (target === 'mods') {
-            refreshInstalledMods();
+            if (currentModsTab === 'browse') {
+                searchAndRenderMods(modsSearchInput?.value || '');
+            } else {
+                refreshInstalledMods().then(() => renderInstalledModsView(''));
+            }
             checkAndApplyUpdatesSilently(false);
         }
     });

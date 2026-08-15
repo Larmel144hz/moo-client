@@ -294,6 +294,70 @@ function setupIPC() {
             return { success: false, error: e.message };
         }
     });
+
+    // --- Live Online Players Counter ---
+    ipcMain.handle('get-online-users-count', () => launcherOnlineCount);
+}
+
+// =============================================
+// Live Presence Manager (Online Launcher Users)
+// =============================================
+let launcherOnlineCount = 1;
+const LAUNCHER_PRESENCE_TOPIC = 'mooclient_launcher_presence_2026';
+const crypto = require('crypto');
+const https = require('https');
+const launcherClientId = 'moo_launcher_' + crypto.randomBytes(6).toString('hex');
+
+function setupLauncherPresence() {
+    function pingAndFetch() {
+        try {
+            const postReq = https.request({
+                hostname: 'ntfy.sh',
+                path: `/${LAUNCHER_PRESENCE_TOPIC}`,
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' }
+            });
+            postReq.on('error', () => {});
+            postReq.write(JSON.stringify({ id: launcherClientId, t: Date.now() }));
+            postReq.end();
+
+            const getReq = https.request({
+                hostname: 'ntfy.sh',
+                path: `/${LAUNCHER_PRESENCE_TOPIC}/json?poll=1&since=45s`,
+                method: 'GET'
+            }, (res) => {
+                let data = '';
+                res.on('data', chunk => data += chunk);
+                res.on('end', () => {
+                    try {
+                        const lines = data.trim().split('\n');
+                        const active = new Set();
+                        const now = Date.now();
+                        for (const line of lines) {
+                            if (!line.trim()) continue;
+                            try {
+                                const msg = JSON.parse(line);
+                                if (msg.message) {
+                                    const parsed = JSON.parse(msg.message);
+                                    if (parsed.id && (now - parsed.t < 45000 || !parsed.t)) {
+                                        active.add(parsed.id);
+                                    }
+                                }
+                            } catch (e) {}
+                        }
+                        active.add(launcherClientId);
+                        launcherOnlineCount = Math.max(1, active.size);
+                        sendToRenderer('online-users-count', launcherOnlineCount);
+                    } catch (e) {}
+                });
+            });
+            getReq.on('error', () => {});
+            getReq.end();
+        } catch (e) {}
+    }
+
+    pingAndFetch();
+    setInterval(pingAndFetch, 12000);
 }
 
 // Helper: send message to renderer
@@ -310,6 +374,7 @@ app.whenReady().then(() => {
     createWindow();
     setupIPC();
     setupAutoUpdater();
+    setupLauncherPresence();
     discordRPC.init();
 });
 
