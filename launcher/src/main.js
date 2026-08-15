@@ -280,6 +280,10 @@ function setupIPC() {
         return modManager.installLocalMods(filePaths);
     });
 
+    ipcMain.handle('save-mod-file', async (event, { filename, buffer }) => {
+        return modManager.saveModBuffer(filename, buffer);
+    });
+
     ipcMain.handle('get-mod-versions', async (event, data) => {
         const projectId = typeof data === 'string' ? data : data?.projectId;
         const allVersions = typeof data === 'object' ? !!data?.allVersions : false;
@@ -353,11 +357,14 @@ function setupIPC() {
                     });
                 });
 
-                sendToRenderer('client-update-progress', { status: 'Aktualizowanie launchera w tle...', percent: 98 });
+                sendToRenderer('client-update-progress', { status: 'Aktualizowanie i ponowne uruchamianie...', percent: 98 });
                 
-                // Launch installer silently (/S) and quit current app
+                // Launch installer silently (/S) and automatically relaunch the updated Moo Client.exe
                 const { spawn } = require('child_process');
-                const child = spawn(tempInstaller, ['/S'], {
+                const targetExe = process.execPath;
+                const updateScript = `Start-Sleep -Milliseconds 800; Start-Process -FilePath '${tempInstaller.replace(/'/g, "''")}' -ArgumentList '/S' -Wait; Start-Process -FilePath '${targetExe.replace(/'/g, "''")}'`;
+                
+                const child = spawn('powershell.exe', ['-WindowStyle', 'Hidden', '-NoProfile', '-Command', updateScript], {
                     detached: true,
                     stdio: 'ignore'
                 });
@@ -365,7 +372,7 @@ function setupIPC() {
 
                 setTimeout(() => {
                     app.quit();
-                }, 1000);
+                }, 600);
 
                 return { success: true, updated: true, restarting: true };
             }
@@ -477,22 +484,42 @@ function sendToRenderer(channel, data) {
 }
 
 // =============================================
-// App lifecycle
+// Single Instance Lock (Only 1 launcher instance allowed)
 // =============================================
-app.whenReady().then(() => {
-    createWindow();
-    setupIPC();
-    setupAutoUpdater();
-    setupLauncherPresence();
-    discordRPC.init();
-});
+const gotTheLock = app.requestSingleInstanceLock();
 
-app.on('window-all-closed', () => {
+if (!gotTheLock) {
     app.quit();
-});
+} else {
+    app.on('second-instance', (event, commandLine, workingDirectory) => {
+        // Someone tried to run a second instance, focus our main window
+        if (mainWindow && !mainWindow.isDestroyed()) {
+            if (mainWindow.isMinimized()) {
+                mainWindow.restore();
+            }
+            mainWindow.show();
+            mainWindow.focus();
+        }
+    });
 
-app.on('activate', () => {
-    if (BrowserWindow.getAllWindows().length === 0) {
+    // =============================================
+    // App lifecycle
+    // =============================================
+    app.whenReady().then(() => {
         createWindow();
-    }
-});
+        setupIPC();
+        setupAutoUpdater();
+        setupLauncherPresence();
+        discordRPC.init();
+    });
+
+    app.on('window-all-closed', () => {
+        app.quit();
+    });
+
+    app.on('activate', () => {
+        if (BrowserWindow.getAllWindows().length === 0) {
+            createWindow();
+        }
+    });
+}

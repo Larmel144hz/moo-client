@@ -84,6 +84,8 @@ const translations = {
         accounts_title: 'Konta Premium',
         btn_add_account: 'Dodaj konto',
         account_active: 'Aktywne',
+        setting_autoupdate: 'Automatyczne aktualizacje w tle',
+        setting_autoupdate_desc: 'Pobieraj i instaluj najnowsze wersje klienta w tle',
     },
     en: {
         nav_home: 'Home',
@@ -105,6 +107,8 @@ const translations = {
         setting_java_desc: 'Custom Java installation (empty = auto)',
         setting_resolution: 'Resolution',
         setting_resolution_desc: 'Game window size',
+        setting_autoupdate: 'Background Auto-Updates',
+        setting_autoupdate_desc: 'Silently download and install client updates in the background',
         btn_browse: 'Browse',
         btn_save: 'Save Settings',
         btn_saved: '✓ Saved!',
@@ -714,6 +718,7 @@ const ramValue = document.getElementById('ram-value');
 const settingJava = document.getElementById('setting-java');
 const settingWidth = document.getElementById('setting-width');
 const settingHeight = document.getElementById('setting-height');
+const settingAutoUpdate = document.getElementById('setting-autoupdate');
 const btnSave = document.getElementById('btn-save-settings');
 const btnBrowseJava = document.getElementById('btn-browse-java');
 
@@ -735,6 +740,7 @@ async function loadSettings() {
             if (settingJava) settingJava.value = s.javaPath || '';
             if (settingWidth) settingWidth.value = s.resolution?.width || 1280;
             if (settingHeight) settingHeight.value = s.resolution?.height || 720;
+            if (settingAutoUpdate) settingAutoUpdate.checked = (s.autoUpdate !== false);
         }
     } catch (e) { console.error('Failed to load settings:', e); }
 }
@@ -743,6 +749,7 @@ btnSave?.addEventListener('click', async () => {
     const settings = {
         ram: settingRam?.value || '4',
         javaPath: settingJava?.value || '',
+        autoUpdate: settingAutoUpdate ? settingAutoUpdate.checked : true,
         resolution: {
             width: parseInt(settingWidth?.value) || 1280,
             height: parseInt(settingHeight?.value) || 720,
@@ -1572,7 +1579,15 @@ window.addEventListener('drop', async (e) => {
         return; // Drag & drop is allowed exclusively on Installed mods tab
     }
 
-    const files = Array.from(e.dataTransfer?.files || []);
+    let files = Array.from(e.dataTransfer?.files || []);
+    if (files.length === 0 && e.dataTransfer?.items) {
+        for (const item of Array.from(e.dataTransfer.items)) {
+            if (item.kind === 'file') {
+                const f = item.getAsFile();
+                if (f) files.push(f);
+            }
+        }
+    }
     if (files.length === 0) return;
 
     let installedCount = 0;
@@ -1587,7 +1602,8 @@ window.addEventListener('drop', async (e) => {
         } else if (name.toLowerCase().endsWith('.jar')) {
             try {
                 const arrayBuffer = await file.arrayBuffer();
-                const res = await window.mooAPI?.saveModFile(name, arrayBuffer);
+                const uint8 = new Uint8Array(arrayBuffer);
+                const res = await window.mooAPI?.saveModFile(name, uint8);
                 if (res?.success) {
                     installedCount++;
                 }
@@ -1641,7 +1657,25 @@ async function checkClientCoreUpdate(showToastIfUpToDate = false) {
             label.textContent = `v${res.latestVersion} ${t('update_available_short')}`;
             pill.title = `${t('update_modal_title')} (v${res.currentVersion} ➔ v${res.latestVersion})`;
 
-            // Prompt modal automatically if launched with update available
+            // If background auto-update is enabled and this is an automatic background check
+            const settings = await window.mooAPI?.getSettings();
+            if (settings?.autoUpdate !== false && !showToastIfUpToDate) {
+                try {
+                    const updateRes = await window.mooAPI?.performClientUpdate();
+                    if (updateRes?.success && updateRes.updated && !updateRes.restarting) {
+                        currentClientUpdateInfo = null;
+                        pill.classList.remove('has-update');
+                        label.textContent = `v${res.latestVersion} (${t('update_up_to_date')})`;
+                        pill.title = `Moo Client v${res.latestVersion} — ${t('update_up_to_date')}`;
+                        showToast(`✨ Moo Client został automatycznie zaktualizowany w tle do v${res.latestVersion}!`, 'success');
+                        return;
+                    }
+                } catch (e) {
+                    console.error('Silent background update failed, prompting modal instead:', e);
+                }
+            }
+
+            // Prompt modal if auto-update is disabled or manual check
             openClientUpdateModal(res);
         } else {
             currentClientUpdateInfo = null;

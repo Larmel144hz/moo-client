@@ -162,6 +162,26 @@ public class MooClientScreen extends Screen {
                 drawBorder(context, x - 3, y - 2, boxW, boxH, 0x88FFFFFF);
             }
         }
+
+        // 4. Draggable Ping Widget Preview
+        if (com.mooclient.module.modules.PingModule.isPingEnabled()) {
+            int ping = com.mooclient.module.modules.PingModule.getCurrentPing();
+            String pingText = com.mooclient.module.modules.PingModule.getStyle() == com.mooclient.module.modules.PingModule.PingStyle.BRACKETS ? "[" + ping + " ms]" : (com.mooclient.module.modules.PingModule.isShowPrefix() ? "Ping: " + ping + " ms" : ping + " ms");
+            int textWidth = this.textRenderer.getWidth(pingText);
+            int boxW = textWidth + 7;
+            int boxH = 12;
+            com.mooclient.module.modules.PingModule.width = boxW;
+            com.mooclient.module.modules.PingModule.height = boxH;
+
+            int x = com.mooclient.module.modules.PingModule.posX;
+            int y = com.mooclient.module.modules.PingModule.posY;
+
+            boolean hovered = mouseX >= x - 3 && mouseX <= x - 3 + boxW && mouseY >= y - 2 && mouseY <= y - 2 + boxH;
+
+            if (hovered || "PING".equals(draggingWidget)) {
+                drawBorder(context, x - 3, y - 2, boxW, boxH, 0x88FFFFFF);
+            }
+        }
     }
 
     /**
@@ -303,6 +323,8 @@ public class MooClientScreen extends Screen {
                 icon = "🔍";
             } else if (module.getName().equalsIgnoreCase("Chat")) {
                 icon = "💬";
+            } else if (module.getName().equalsIgnoreCase("Ping")) {
+                icon = "📡";
             } else {
                 icon = "⌨";
             }
@@ -327,11 +349,10 @@ public class MooClientScreen extends Screen {
                 desc = MooLanguage.get("zoom_desc");
             } else if (module.getName().equalsIgnoreCase("Chat")) {
                 desc = MooLanguage.get("chat_desc");
+            } else if (module.getName().equalsIgnoreCase("Ping")) {
+                desc = MooLanguage.get("ping_desc");
             } else {
                 desc = MooLanguage.get("macro_desc");
-            }
-            if (this.textRenderer.getWidth(desc) > cardW - 12) {
-                desc = module.getName().equalsIgnoreCase("Gamma") ? "Jasność w jaskiniach" : (module.getName().equalsIgnoreCase("FPS") ? "Licznik klatek" : (module.getName().equalsIgnoreCase("Sprint") ? "Ciągły bieg" : (module.getName().equalsIgnoreCase("Freelook") ? "Widok 360°" : (module.getName().equalsIgnoreCase("Potion Effects") ? "Aktywne mikstury" : (module.getName().equalsIgnoreCase("Nametags") ? "Nick i ping" : (module.getName().equalsIgnoreCase("Zoom") ? "Przybliżenie widoku" : (module.getName().equalsIgnoreCase("Chat") ? "Ulepszenia czatu" : "Skróty komend")))))));
             }
             context.drawTextWithShadow(this.textRenderer, desc, cardX + (cardW - this.textRenderer.getWidth(desc)) / 2, cardY + 54, COLOR_TEXT_MUTED);
 
@@ -406,6 +427,9 @@ public class MooClientScreen extends Screen {
         if (modName.equalsIgnoreCase("FPS")) {
             optTitle = MooLanguage.get("fps_opt_title");
             optSubtitle = MooLanguage.get("fps_opt_subtitle");
+        } else if (modName.equalsIgnoreCase("Ping")) {
+            optTitle = MooLanguage.get("ping_opt_title");
+            optSubtitle = MooLanguage.get("ping_opt_subtitle");
         } else if (modName.equalsIgnoreCase("Sprint")) {
             optTitle = MooLanguage.get("sprint_opt_title");
             optSubtitle = MooLanguage.get("sprint_opt_subtitle");
@@ -461,6 +485,26 @@ public class MooClientScreen extends Screen {
             rowY += rowH + 6;
             drawOptionRow(context, rowX, rowY, rowW, rowH, MooLanguage.get("prefix_label"));
             drawOptionToggle(context, rowX + rowW - 44, rowY + 8, mouseX, mouseY, FpsModule.isShowPrefix());
+
+        } else if (modName.equalsIgnoreCase("Ping")) {
+            // Row 1: Appearance Style Tabs
+            drawOptionRow(context, rowX, rowY, rowW, rowH, MooLanguage.get("style_label"));
+            renderStyleSelector(context, rowX + rowW - 206, rowY + 6, mouseX, mouseY, com.mooclient.module.modules.PingModule.getStyle().ordinal());
+
+            // Row 2: Show Background
+            rowY += rowH + 6;
+            drawOptionRow(context, rowX, rowY, rowW, rowH, MooLanguage.get("bg_label"));
+            drawOptionToggle(context, rowX + rowW - 44, rowY + 8, mouseX, mouseY, com.mooclient.module.modules.PingModule.isShowBackground());
+
+            // Row 3: Text Shadow
+            rowY += rowH + 6;
+            drawOptionRow(context, rowX, rowY, rowW, rowH, MooLanguage.get("shadow_label"));
+            drawOptionToggle(context, rowX + rowW - 44, rowY + 8, mouseX, mouseY, com.mooclient.module.modules.PingModule.isTextShadow());
+
+            // Row 4: Show Prefix 'Ping:'
+            rowY += rowH + 6;
+            drawOptionRow(context, rowX, rowY, rowW, rowH, MooLanguage.get("prefix_label"));
+            drawOptionToggle(context, rowX + rowW - 44, rowY + 8, mouseX, mouseY, com.mooclient.module.modules.PingModule.isShowPrefix());
 
         } else if (modName.equalsIgnoreCase("Sprint")) {
             // Row 1: Interactive Keybind Selector (Click to change keybind!)
@@ -1003,6 +1047,19 @@ public class MooClientScreen extends Screen {
                     }
                 }
 
+                if (com.mooclient.module.modules.PingModule.isPingEnabled()) {
+                    int x = com.mooclient.module.modules.PingModule.posX;
+                    int y = com.mooclient.module.modules.PingModule.posY;
+                    int w = com.mooclient.module.modules.PingModule.width;
+                    int h = com.mooclient.module.modules.PingModule.height;
+                    if (mouseX >= x - 4 && mouseX <= x + w + 4 && mouseY >= y - 4 && mouseY <= y + h + 4) {
+                        draggingWidget = "PING";
+                        dragOffsetX = (int) mouseX - x;
+                        dragOffsetY = (int) mouseY - y;
+                        return true;
+                    }
+                }
+
                 int centerX = this.width / 2;
                 int centerY = this.height / 2;
                 int btnW = 140;
@@ -1134,6 +1191,34 @@ public class MooClientScreen extends Screen {
                     if (mouseX >= rowX + rowW - 44 && mouseX <= rowX + rowW - 10 && mouseY >= rowY + 8 && mouseY <= rowY + 26) {
                         playClickSound();
                         FpsModule.toggleShowPrefix();
+                        return true;
+                    }
+                } else if (modName.equalsIgnoreCase("Ping")) {
+                    int styleClick = getStyleSelectorClick(rowX + rowW - 206, rowY + 6, (int) mouseX, (int) mouseY);
+                    if (styleClick >= 0) {
+                        playClickSound();
+                        com.mooclient.module.modules.PingModule.setStyle(com.mooclient.module.modules.PingModule.PingStyle.values()[styleClick]);
+                        return true;
+                    }
+
+                    rowY += rowH + 6;
+                    if (mouseX >= rowX + rowW - 44 && mouseX <= rowX + rowW - 10 && mouseY >= rowY + 8 && mouseY <= rowY + 26) {
+                        playClickSound();
+                        com.mooclient.module.modules.PingModule.toggleShowBackground();
+                        return true;
+                    }
+
+                    rowY += rowH + 6;
+                    if (mouseX >= rowX + rowW - 44 && mouseX <= rowX + rowW - 10 && mouseY >= rowY + 8 && mouseY <= rowY + 26) {
+                        playClickSound();
+                        com.mooclient.module.modules.PingModule.toggleTextShadow();
+                        return true;
+                    }
+
+                    rowY += rowH + 6;
+                    if (mouseX >= rowX + rowW - 44 && mouseX <= rowX + rowW - 10 && mouseY >= rowY + 8 && mouseY <= rowY + 26) {
+                        playClickSound();
+                        com.mooclient.module.modules.PingModule.toggleShowPrefix();
                         return true;
                     }
                 } else if (modName.equalsIgnoreCase("Sprint")) {
@@ -1431,6 +1516,10 @@ public class MooClientScreen extends Screen {
                 PotionEffectsModule.posX = Math.max(2, Math.min(this.width - PotionEffectsModule.width - 2, (int) mouseX - dragOffsetX));
                 PotionEffectsModule.posY = Math.max(2, Math.min(this.height - PotionEffectsModule.height - 2, (int) mouseY - dragOffsetY));
                 return true;
+            } else if ("PING".equals(draggingWidget)) {
+                com.mooclient.module.modules.PingModule.posX = Math.max(2, Math.min(this.width - com.mooclient.module.modules.PingModule.width - 2, (int) mouseX - dragOffsetX));
+                com.mooclient.module.modules.PingModule.posY = Math.max(2, Math.min(this.height - com.mooclient.module.modules.PingModule.height - 2, (int) mouseY - dragOffsetY));
+                return true;
             }
         }
         return super.mouseDragged(mouseX, mouseY, button, deltaX, deltaY);
@@ -1542,6 +1631,11 @@ public class MooClientScreen extends Screen {
             }
         }
         return super.keyPressed(keyCode, scanCode, modifiers);
+    }
+
+    @Override
+    public boolean shouldCloseOnEsc() {
+        return false;
     }
 
     @Override

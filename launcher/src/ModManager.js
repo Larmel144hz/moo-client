@@ -866,6 +866,28 @@ class ModManager {
             return { success: false, error: e.message };
         }
     }
+
+    /**
+     * Save a raw binary buffer directly as a .jar mod into .mooclient/mods/
+     * Perfect for Drag & Drop from WinRAR, 7-Zip, browsers, etc.
+     */
+    saveModBuffer(filename, buffer) {
+        try {
+            if (!filename || !filename.toLowerCase().endsWith('.jar')) {
+                return { success: false, error: 'Plik musi mieć rozszerzenie .jar' };
+            }
+            this.ensureDir(this.modsDir);
+            const safeName = path.basename(filename);
+            const targetPath = path.join(this.modsDir, safeName);
+            
+            const buf = Buffer.isBuffer(buffer) ? buffer : Buffer.from(buffer);
+            fs.writeFileSync(targetPath, buf);
+            return { success: true, filename: safeName };
+        } catch (e) {
+            console.error('Error saving mod buffer:', e);
+            return { success: false, error: e.message };
+        }
+    }
 }
 
 module.exports = ModManager;

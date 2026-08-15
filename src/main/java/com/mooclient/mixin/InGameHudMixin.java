@@ -247,5 +247,40 @@ public class InGameHudMixin {
                 PotionEffectsModule.height = Math.max(26, totalH);
             }
         }
+
+        // 4. Ping Module Rendering
+        if (com.mooclient.module.modules.PingModule.isPingEnabled()) {
+            int ping = com.mooclient.module.modules.PingModule.getCurrentPing();
+            com.mooclient.module.modules.PingModule.PingStyle style = com.mooclient.module.modules.PingModule.getStyle();
+
+            String pingText;
+            if (style == com.mooclient.module.modules.PingModule.PingStyle.BRACKETS) {
+                pingText = "[" + ping + " ms]";
+            } else if (com.mooclient.module.modules.PingModule.isShowPrefix()) {
+                pingText = "Ping: " + ping + " ms";
+            } else {
+                pingText = ping + " ms";
+            }
+
+            int textWidth = client.textRenderer.getWidth(pingText);
+            com.mooclient.module.modules.PingModule.width = textWidth + 6;
+            com.mooclient.module.modules.PingModule.height = 12;
+
+            int x = com.mooclient.module.modules.PingModule.posX;
+            int y = com.mooclient.module.modules.PingModule.posY;
+
+            if (style == com.mooclient.module.modules.PingModule.PingStyle.MOO_CLIENT) {
+                if (com.mooclient.module.modules.PingModule.isShowBackground()) {
+                    context.fill(x - 2, y - 2, x + textWidth + 4, y + 10, 0x88000000);
+                    context.fill(x - 3, y - 2, x - 2, y + 10, 0xFF55FFFF);
+                }
+                context.drawText(client.textRenderer, pingText, x + (com.mooclient.module.modules.PingModule.isShowBackground() ? 2 : 0), y, 0xFFFFFFFF, com.mooclient.module.modules.PingModule.isTextShadow());
+            } else {
+                if (com.mooclient.module.modules.PingModule.isShowBackground()) {
+                    context.fill(x - 2, y - 2, x + textWidth + 2, y + 10, 0x66000000);
+                }
+                context.drawText(client.textRenderer, pingText, x, y, 0xFFFFFFFF, com.mooclient.module.modules.PingModule.isTextShadow());
+            }
+        }
     }
 }

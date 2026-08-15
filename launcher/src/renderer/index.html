@@ -26,7 +26,7 @@
             <!-- Moo Client Update Status Pill -->
             <div class="update-status-pill" id="update-status-pill" title="Sprawdź stan aktualizacji">
                 <span class="update-dot" id="update-dot"></span>
-                <span class="update-text" id="update-text">v1.2.2</span>
+                <span class="update-text" id="update-text">v1.2.3</span>
                 <button class="update-check-btn" id="btn-manual-update-check" title="Sprawdź aktualizacje">
                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M23 4v6h-6M1 20v-6h6"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg>
                 </button>
@@ -312,6 +312,24 @@
                             <input type="number" class="setting-input small" id="setting-width" value="1280" min="800">
                             <span class="resolution-x">×</span>
                             <input type="number" class="setting-input small" id="setting-height" value="720" min="600">
+                        </div>
+                    </div>
+
+                    <div class="setting-card">
+                        <div class="setting-header" style="justify-content: space-between; align-items: center;">
+                            <div style="display: flex; gap: 14px; align-items: center;">
+                                <div class="setting-icon-wrap">
+                                    <svg class="setting-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg>
+                                </div>
+                                <div>
+                                    <h3 data-i18n="setting_autoupdate">Automatyczne aktualizacje w tle</h3>
+                                    <p data-i18n="setting_autoupdate_desc">Pobieraj i instaluj najnowsze wersje klienta w tle</p>
+                                </div>
+                            </div>
+                            <label class="mod-switch" style="margin-right: 0;">
+                                <input type="checkbox" id="setting-autoupdate" checked>
+                                <span class="mod-slider"></span>
+                            </label>
                         </div>
                     </div>
                 </div>

@@ -124,6 +124,17 @@ public class MooConfig {
             chat.addProperty("smoothChat", com.mooclient.module.modules.ChatModule.isSmoothChat());
             root.add("chat", chat);
 
+            // Ping Module
+            JsonObject ping = new JsonObject();
+            ping.addProperty("enabled", com.mooclient.module.modules.PingModule.isPingEnabled());
+            ping.addProperty("style", com.mooclient.module.modules.PingModule.getStyle().name());
+            ping.addProperty("showBackground", com.mooclient.module.modules.PingModule.isShowBackground());
+            ping.addProperty("textShadow", com.mooclient.module.modules.PingModule.isTextShadow());
+            ping.addProperty("showPrefix", com.mooclient.module.modules.PingModule.isShowPrefix());
+            ping.addProperty("posX", com.mooclient.module.modules.PingModule.posX);
+            ping.addProperty("posY", com.mooclient.module.modules.PingModule.posY);
+            root.add("ping", ping);
+
             Files.writeString(CONFIG_PATH, GSON.toJson(root));
             MooClient.LOGGER.info("Saved config to {}", CONFIG_PATH);
         } catch (IOException e) {
@@ -344,6 +355,36 @@ public class MooConfig {
                 }
                 if (chat.has("smoothChat")) {
                     com.mooclient.module.modules.ChatModule.setSmoothChat(chat.get("smoothChat").getAsBoolean());
+                }
+            }
+
+            // Ping Module
+            if (root.has("ping")) {
+                JsonObject ping = root.getAsJsonObject("ping");
+                if (ping.has("enabled")) {
+                    boolean state = ping.get("enabled").getAsBoolean();
+                    com.mooclient.module.modules.PingModule.setPingEnabled(state);
+                    ModuleManager.getInstance().getModule("Ping").ifPresent(m -> m.setEnabled(state));
+                }
+                if (ping.has("style")) {
+                    try {
+                        com.mooclient.module.modules.PingModule.setStyle(com.mooclient.module.modules.PingModule.PingStyle.valueOf(ping.get("style").getAsString()));
+                    } catch (IllegalArgumentException ignored) {}
+                }
+                if (ping.has("showBackground")) {
+                    com.mooclient.module.modules.PingModule.setShowBackground(ping.get("showBackground").getAsBoolean());
+                }
+                if (ping.has("textShadow")) {
+                    com.mooclient.module.modules.PingModule.setTextShadow(ping.get("textShadow").getAsBoolean());
+                }
+                if (ping.has("showPrefix")) {
+                    com.mooclient.module.modules.PingModule.setShowPrefix(ping.get("showPrefix").getAsBoolean());
+                }
+                if (ping.has("posX")) {
+                    com.mooclient.module.modules.PingModule.posX = ping.get("posX").getAsInt();
+                }
+                if (ping.has("posY")) {
+                    com.mooclient.module.modules.PingModule.posY = ping.get("posY").getAsInt();
                 }
             }
 

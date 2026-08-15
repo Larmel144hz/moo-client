@@ -38,6 +38,7 @@ public class ModuleManager {
         register(new com.mooclient.module.modules.ZoomModule());          // "Zoom"
         register(new com.mooclient.module.modules.MacroModule());         // "Macro"
         register(new com.mooclient.module.modules.ChatModule());          // "Chat"
+        register(new com.mooclient.module.modules.PingModule());          // "Ping"
     }
 
     public void register(Module module) {

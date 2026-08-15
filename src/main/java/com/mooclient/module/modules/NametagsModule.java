@@ -190,23 +190,36 @@ public class NametagsModule extends Module {
 
     /**
      * Formats player nametag with colorful latency indicator when in BESIDE mode.
+     * Prevents double ping rendering if server already has an inline ping indicator.
      */
     public static Text formatNametag(Text originalText, int entityId, String playerName) {
         if (!enabled || originalText == null) {
             return originalText;
         }
 
-        Text result = originalText.copy();
+        String raw = originalText.getString();
+        boolean hasServerPing = raw != null && raw.matches(".*\\[\\d+\\s*ms\\].*");
 
-        // Append Ping indicator in BESIDE mode
         if (showPing && pingPosition == PingPosition.BESIDE) {
-            Text pingText = getPingText(entityId, playerName);
-            if (pingText != null) {
-                result = result.copy().append(Text.literal(" ")).append(pingText);
+            if (!hasServerPing) {
+                Text pingText = getPingText(entityId, playerName);
+                if (pingText != null) {
+                    return originalText.copy().append(Text.literal(" ")).append(pingText);
+                }
+            }
+            return originalText;
+        }
+
+        if (showPing && pingPosition == PingPosition.ABOVE) {
+            // In ABOVE mode: if the server already embedded "[XXms]" in the nametag,
+            // remove that duplicate text from the nametag line so it's cleanly shown ONLY above!
+            if (hasServerPing) {
+                String cleaned = raw.replaceAll("\\s*\\[\\d+\\s*ms\\]", "");
+                return Text.literal(cleaned).setStyle(originalText.getStyle());
             }
         }
 
-        return result;
+        return originalText;
     }
 
     public static Text formatNametag(Text originalText, int entityId) {

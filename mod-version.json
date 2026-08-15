@@ -1,6 +1,6 @@
 {
-  "version": "1.2.2",
+  "version": "1.2.3",
   "minecraft": "1.21.4",
-  "download_url": "https://github.com/Larmel144hz/moo-client/releases/download/v1.2.2/moo-client-1.2.2.jar",
+  "download_url": "https://github.com/Larmel144hz/moo-client/releases/download/v1.2.3/moo-client-1.2.3.jar",
   "changelog": "👤 Multi-Account: Zarządzanie wieloma kontami Premium — przełączanie 1-kliknięciem\n🎬 Video Background: Animowane tło wideo Momomo z przełącznikiem Classic/Momomo\n💬 Chat Module: Przezroczyste tło czatu, nielimitowana historia (16384 linii)\n🏷️ Nametags: Logo krowy wyłącznie dla graczy Moo Client (handshake), pozycja pingu\n🟢 Online Counter: Badge aktywności graczy online w prawym górnym rogu\n🚀 Launcher: Poprawki przycisku GRAJ, Discord RPC, reset po zamknięciu gry"
 }
