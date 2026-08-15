@@ -1,6 +1,6 @@
 {
-  "version": "1.0.2",
+  "version": "1.0.3",
   "minecraft": "1.21.4",
-  "download_url": "https://github.com/Larmel144hz/moo-client/releases/download/v1.0.2/moo-client-1.0.2.jar",
-  "changelog": "• Core Dependencies: Auto-download & manage Fabric API Core library\n• Silent Launch: Suppressed background terminal/console window on Windows\n• Macro Module: Chat commands & shortcuts with keybinds\n• System-wide Windows App & Uninstaller cow icons"
+  "download_url": "https://github.com/Larmel144hz/moo-client/releases/download/v1.0.3/moo-client-1.0.3.jar",
+  "changelog": "• GUI Stability: Fixed random/accidental GUI screen auto-closing\n• FPS Module: Customizable background & shadow options in Moo Client style\n• Zoom Module: Instant unzoom upon key release (smooth animation only on start)\n• Nametags: Symmetrical centering above player head\n• Installer: Assisted installer with Desktop Shortcut checkbox selection"
 }

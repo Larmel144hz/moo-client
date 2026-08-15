@@ -59,6 +59,18 @@ public abstract class NametagBackgroundMixin {
 
     @Inject(
         method = "renderLabelIfPresent",
+        at = @At(value = "INVOKE", target = "Lnet/minecraft/client/util/math/MatrixStack;scale(FFF)V", shift = At.Shift.AFTER)
+    )
+    private void mooClient$centerNametagWithBadge(EntityRenderState state, Text text, MatrixStack matrices, VertexConsumerProvider vertexConsumers, int light, CallbackInfo ci) {
+        if (state instanceof PlayerEntityRenderState playerState && com.mooclient.util.MooUserManager.isMooUser(playerState.name, playerState.id)) {
+            float iconSize = 9.0f;
+            float iconOffset = (iconSize + 2.5f) / 2.0f;
+            matrices.translate(iconOffset, 0.0f, 0.0f);
+        }
+    }
+
+    @Inject(
+        method = "renderLabelIfPresent",
         at = @At(value = "INVOKE", target = "Lnet/minecraft/client/util/math/MatrixStack;pop()V")
     )
     private void mooClient$renderClientLogoBadge(EntityRenderState state, Text text, MatrixStack matrices, VertexConsumerProvider vertexConsumers, int light, CallbackInfo ci) {

@@ -1437,7 +1437,7 @@ public class MooClientScreen extends Screen {
             return true;
         }
 
-        if (keyCode == 344) { // GLFW_KEY_RIGHT_SHIFT
+        if (keyCode == 344 && editingMacroIndex < 0 && listeningMacroIndex < 0 && !listeningForKeybind) { // GLFW_KEY_RIGHT_SHIFT
             this.close();
             return true;
         }

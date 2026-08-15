@@ -63,13 +63,15 @@ public class MooClient implements ClientModInitializer {
 
         // Listen for ticks and input
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
-            // Menu key press
-            while (menuKeyBinding.wasPressed()) {
-                if (client.currentScreen == null) {
+            // Menu key press - only open when no screen is open
+            if (client.currentScreen == null) {
+                while (menuKeyBinding.wasPressed()) {
                     client.setScreen(new MooClientScreen());
-                } else if (client.currentScreen instanceof MooClientScreen) {
-                    client.setScreen(null);
-                    MooConfig.save(); // Save settings when closing the menu
+                }
+            } else {
+                // Drain keypresses while in screens to prevent unwanted triggers
+                while (menuKeyBinding.wasPressed()) {
+                    // Do nothing
                 }
             }
 

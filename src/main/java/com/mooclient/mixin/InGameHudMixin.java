@@ -55,9 +55,11 @@ public class InGameHudMixin {
             int y = FpsModule.posY;
 
             if (style == FpsModule.FpsStyle.MOO_CLIENT) {
-                context.fill(x - 2, y - 2, x + textWidth + 4, y + 10, 0x88000000);
-                context.fill(x - 3, y - 2, x - 2, y + 10, 0xFFFFFFFF);
-                context.drawText(client.textRenderer, fpsText, x + 2, y, 0xFFFFFFFF, true);
+                if (FpsModule.isShowBackground()) {
+                    context.fill(x - 2, y - 2, x + textWidth + 4, y + 10, 0x88000000);
+                    context.fill(x - 3, y - 2, x - 2, y + 10, 0xFFFFFFFF);
+                }
+                context.drawText(client.textRenderer, fpsText, x + (FpsModule.isShowBackground() ? 2 : 0), y, 0xFFFFFFFF, FpsModule.isTextShadow());
             } else {
                 if (FpsModule.isShowBackground()) {
                     context.fill(x - 2, y - 2, x + textWidth + 2, y + 10, 0x66000000);

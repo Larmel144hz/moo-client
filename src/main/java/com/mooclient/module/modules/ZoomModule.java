@@ -101,7 +101,7 @@ public class ZoomModule extends Module {
     }
 
     public static boolean isZooming() {
-        return enabled && (active || (smoothZoom && currentZoom > 1.05f));
+        return enabled && active;
     }
 
     public static boolean isActive() {
@@ -115,6 +115,9 @@ public class ZoomModule extends Module {
 
     public static void stop() {
         active = false;
+        // Instantly reset zoom on release so there is no delay/animation on unzoom
+        currentZoom = 1.0f;
+        lastZoom = 1.0f;
     }
 
     public static void toggleZoomActive() {
@@ -127,7 +130,13 @@ public class ZoomModule extends Module {
 
     public static void onTick() {
         lastZoom = currentZoom;
-        float target = active ? factor.getFactor() : 1.0f;
+        if (!active) {
+            currentZoom = 1.0f;
+            lastZoom = 1.0f;
+            return;
+        }
+
+        float target = factor.getFactor();
         if (smoothZoom) {
             currentZoom = MathHelper.lerp(0.35f, currentZoom, target);
         } else {

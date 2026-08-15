@@ -64,12 +64,6 @@ public class FpsModule extends Module {
 
     public static void setStyle(FpsStyle newStyle) {
         style = newStyle;
-        if (style == FpsStyle.MOO_CLIENT) {
-            showBackground = true;
-            showPrefix = true;
-        } else if (style == FpsStyle.SIMPLE) {
-            showBackground = false;
-        }
     }
 
     public static void cycleStyle() {
