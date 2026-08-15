@@ -1,5 +1,4 @@
 const { app, BrowserWindow, ipcMain, dialog, shell } = require('electron');
-const { autoUpdater } = require('electron-updater');
 const path = require('path');
 const fs = require('fs');
 const os = require('os');
@@ -86,46 +85,6 @@ function createWindow() {
 }
 
 
-// =============================================
-// Auto-Updater (Launcher updates from GitHub)
-// =============================================
-function setupAutoUpdater() {
-    autoUpdater.autoDownload = true;
-    autoUpdater.autoInstallOnAppQuit = true;
-
-    autoUpdater.on('checking-for-update', () => {
-        sendToRenderer('updater-status', 'Checking for launcher updates...');
-    });
-
-    autoUpdater.on('update-available', (info) => {
-        sendToRenderer('updater-status', `Update available: v${info.version}`);
-    });
-
-    autoUpdater.on('update-not-available', () => {
-        sendToRenderer('updater-status', 'Launcher is up to date');
-    });
-
-    autoUpdater.on('download-progress', (progress) => {
-        sendToRenderer('updater-progress', Math.round(progress.percent));
-    });
-
-    autoUpdater.on('update-downloaded', (info) => {
-        sendToRenderer('updater-status', `Update v${info.version} ready — restarting...`);
-        setTimeout(() => autoUpdater.quitAndInstall(), 3000);
-    });
-
-    autoUpdater.on('error', (err) => {
-        sendToRenderer('updater-status', 'Update check skipped');
-        console.log('Auto-updater error (expected in dev):', err.message);
-    });
-
-    // Only check in production builds
-    if (app.isPackaged) {
-        autoUpdater.checkForUpdatesAndNotify();
-    } else {
-        sendToRenderer('updater-status', 'Dev mode — auto-update skipped');
-    }
-}
 
 // =============================================
 // IPC Handlers (communication with renderer)
@@ -340,58 +299,101 @@ function setupIPC() {
             const modNeedsUpdate = ModManager.isNewerVersion(remote.version, localMod.version);
 
             // 1. Fast Delta Update for Fabric Mod Jar (only ~200 KB!)
-            sendToRenderer('client-update-progress', { status: 'Pobieranie zaktualizowanego kodu klienta...', percent: 40 });
-            const modUpdated = await modManager.checkAndUpdate((status, percent) => {
-                sendToRenderer('client-update-progress', { status: `Kod klienta: ${status}`, percent: Math.round(percent * 0.9) });
-            });
-
-            // 2. If launcher UI/code has an update, perform fast Hot-ASAR delta update (~1.5 MB!)
-            if (app.isPackaged && launcherNeedsUpdate) {
-                sendToRenderer('client-update-progress', { status: 'Pobieranie nowej paczki kodu launchera...', percent: 60 });
-                const latestVer = remote.version;
-                const asarUrl = `https://github.com/Larmel144hz/moo-client/releases/download/v${latestVer}/app.asar`;
-                const tempAsar = path.join(os.tmpdir(), `app-update-${latestVer}.asar`);
-                const targetAsar = path.join(process.resourcesPath, 'app.asar');
-
-                try {
-                    await downloadFile(asarUrl, tempAsar, (percent) => {
-                        sendToRenderer('client-update-progress', { 
-                            status: `Pobieranie kodu launchera: ${percent}%`, 
-                            percent: 60 + Math.round(percent * 0.35) 
-                        });
-                    });
-
-                    sendToRenderer('client-update-progress', { status: 'Ponowne uruchamianie...', percent: 98 });
-                    
-                    const { spawn } = require('child_process');
-                    const targetExe = process.execPath;
-                    const cleanTemp = tempAsar.replace(/'/g, "''");
-                    const cleanTarget = targetAsar.replace(/'/g, "''");
-                    const cleanExe = targetExe.replace(/'/g, "''");
-                    
-                    const updateScript = `for ($k=0;$k -lt 6;$k++){Get-Process -Name '*Moo Client*' -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue; Start-Sleep -Milliseconds 200}; $copied=$false; for ($i=0;$i -lt 30;$i++){ try { Copy-Item -Path '${cleanTemp}' -Destination '${cleanTarget}' -Force -ErrorAction Stop; $copied=$true; break } catch { Start-Sleep -Milliseconds 200 } }; if ($copied) { Remove-Item -Path '${cleanTemp}' -Force -ErrorAction SilentlyContinue }; Start-Process -FilePath '${cleanExe}'`;
-                    
-                    const child = spawn('powershell.exe', ['-WindowStyle', 'Hidden', '-NoProfile', '-Command', updateScript], {
-                        detached: true,
-                        stdio: 'ignore'
-                    });
-                    child.unref();
-
-                    setTimeout(() => {
-                        app.exit(0);
-                    }, 100);
-
-                    return { success: true, updated: true, restarting: true };
-                } catch (e) {
-                    console.error('ASAR update failed:', e);
-                }
+            if (modNeedsUpdate) {
+                sendToRenderer('client-update-progress', { status: 'Pobieranie zaktualizowanego kodu klienta...', percent: 20 });
+                await modManager.checkAndUpdate((status, percent) => {
+                    sendToRenderer('client-update-progress', { status: `Kod klienta: ${status}`, percent: 20 + Math.round(percent * 0.3) });
+                });
             }
 
+            // 2. Hot-ASAR delta update (~1.5 MB) — writes external .ps1 script for reliability
+            if (app.isPackaged && launcherNeedsUpdate) {
+                sendToRenderer('client-update-progress', { status: 'Pobieranie nowej paczki kodu launchera...', percent: 55 });
+                const latestVer = remote.version;
+                const asarUrl = `https://github.com/Larmel144hz/moo-client/releases/download/v${latestVer}/app.asar`;
+                const tempAsar = path.join(os.tmpdir(), `moo-update-${latestVer}.asar`);
+                const targetAsar = path.join(process.resourcesPath, 'app.asar');
+                const targetExe = process.execPath;
+
+                await downloadFile(asarUrl, tempAsar, (percent) => {
+                    sendToRenderer('client-update-progress', { 
+                        status: `Pobieranie kodu launchera: ${percent}%`, 
+                        percent: 55 + Math.round(percent * 0.4) 
+                    });
+                });
+
+                sendToRenderer('client-update-progress', { status: 'Przygotowywanie aktualizacji...', percent: 96 });
+
+                // Write a self-contained .ps1 updater script to disk
+                const scriptPath = path.join(os.tmpdir(), 'moo-client-updater.ps1');
+                const scriptContent = [
+                    '# Moo Client Hot-ASAR Updater',
+                    '$ErrorActionPreference = "SilentlyContinue"',
+                    `$tempAsar = '${tempAsar.replace(/\\/g, '\\').replace(/'/g, "''")}'`,
+                    `$targetAsar = '${targetAsar.replace(/\\/g, '\\').replace(/'/g, "''")}'`,
+                    `$exePath = '${targetExe.replace(/\\/g, '\\').replace(/'/g, "''")}'`,
+                    '',
+                    '# Step 1: Wait for Moo Client to fully exit (up to 10 seconds)',
+                    'for ($w = 0; $w -lt 50; $w++) {',
+                    '    $procs = Get-Process | Where-Object { $_.ProcessName -like "*Moo Client*" -or $_.ProcessName -like "*moo-client*" }',
+                    '    if (-not $procs) { break }',
+                    '    $procs | Stop-Process -Force -ErrorAction SilentlyContinue',
+                    '    Start-Sleep -Milliseconds 200',
+                    '}',
+                    '',
+                    '# Step 2: Wait an extra moment for file handles to release',
+                    'Start-Sleep -Milliseconds 500',
+                    '',
+                    '# Step 3: Copy new app.asar with retry (up to 15 seconds)',
+                    '$copied = $false',
+                    'for ($i = 0; $i -lt 75; $i++) {',
+                    '    try {',
+                    '        [System.IO.File]::Copy($tempAsar, $targetAsar, $true)',
+                    '        $copied = $true',
+                    '        break',
+                    '    } catch {',
+                    '        Start-Sleep -Milliseconds 200',
+                    '    }',
+                    '}',
+                    '',
+                    '# Step 4: Clean up temp file',
+                    'if ($copied) {',
+                    '    Remove-Item -Path $tempAsar -Force -ErrorAction SilentlyContinue',
+                    '}',
+                    '',
+                    '# Step 5: Restart Moo Client',
+                    'Start-Process -FilePath $exePath',
+                    '',
+                    '# Step 6: Self-delete this script',
+                    'Remove-Item -Path $MyInvocation.MyCommand.Path -Force -ErrorAction SilentlyContinue',
+                ].join('\r\n');
+
+                fs.writeFileSync(scriptPath, scriptContent, 'utf8');
+
+                sendToRenderer('client-update-progress', { status: 'Ponowne uruchamianie...', percent: 99 });
+
+                const { spawn } = require('child_process');
+                const child = spawn('powershell.exe', [
+                    '-WindowStyle', 'Hidden',
+                    '-NoProfile',
+                    '-ExecutionPolicy', 'Bypass',
+                    '-File', scriptPath
+                ], {
+                    detached: true,
+                    stdio: 'ignore'
+                });
+                child.unref();
+
+                setTimeout(() => { app.exit(0); }, 100);
+                return { success: true, updated: true, restarting: true };
+            }
+
+            // 3. Mod-only update (no launcher restart needed)
             sendToRenderer('client-update-progress', { status: 'Zaktualizowano pomyślnie!', percent: 100 });
             const newLocal = modManager.getLocalVersion();
             return {
                 success: true,
-                updated: true,
+                updated: modNeedsUpdate,
                 restarting: false,
                 version: newLocal.version
             };
@@ -524,7 +526,6 @@ if (!gotTheLock) {
     app.whenReady().then(() => {
         createWindow();
         setupIPC();
-        setupAutoUpdater();
         setupLauncherPresence();
         discordRPC.init();
     });

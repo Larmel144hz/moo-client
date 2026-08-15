@@ -1,6 +1,6 @@
 {
   "name": "moo-client-launcher",
-  "version": "1.2.6",
+  "version": "1.2.7",
   "description": "Moo Client Launcher — Premium Minecraft Client inspired by Lunar Client",
   "main": "src/main.js",
   "scripts": {
@@ -17,7 +17,6 @@
     "png-to-ico": "^3.0.2"
   },
   "dependencies": {
-    "electron-updater": "^6.3.9",
     "minecraft-launcher-core": "^3.18.1",
     "msmc": "^5.0.5",
     "node-fetch": "^2.7.0",
@@ -44,7 +43,7 @@
     },
     "nsis": {
       "oneClick": false,
-      "allowToChangeInstallationDirectory": false,
+      "allowToChangeInstallationDirectory": true,
       "include": "build/installer.nsh",
       "createDesktopShortcut": "always",
       "createStartMenuShortcut": true,
