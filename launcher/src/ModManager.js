@@ -57,14 +57,42 @@ class ModManager {
     }
 
     /**
-     * Fetches the remote version info from GitHub.
+     * Fetches the remote version info from GitHub (real-time without CDN caching).
      */
     async getRemoteVersion() {
+        return new Promise((resolve, reject) => {
+            // First try GitHub API for instant, non-cached data
+            const apiUrl = 'https://api.github.com/repos/Larmel144hz/moo-client/contents/mod-version.json';
+            https.get(apiUrl, { headers: { 'User-Agent': 'MooClient-Launcher' } }, (res) => {
+                if (res.statusCode === 200) {
+                    let data = '';
+                    res.on('data', chunk => data += chunk);
+                    res.on('end', () => {
+                        try {
+                            const json = JSON.parse(data);
+                            if (json.content) {
+                                const decoded = Buffer.from(json.content, 'base64').toString('utf8');
+                                return resolve(JSON.parse(decoded));
+                            }
+                        } catch (e) {}
+                        // If parsing failed, fallback
+                        this.fetchRawVersion().then(resolve).catch(reject);
+                    });
+                } else {
+                    // Fallback to cache-busted raw URL
+                    this.fetchRawVersion().then(resolve).catch(reject);
+                }
+            }).on('error', () => {
+                this.fetchRawVersion().then(resolve).catch(reject);
+            });
+        });
+    }
+
+    async fetchRawVersion() {
         return new Promise((resolve, reject) => {
             const fetch = (url) => {
                 const client = url.startsWith('https') ? https : http;
                 client.get(url, { headers: { 'User-Agent': 'MooClient-Launcher' } }, (res) => {
-                    // Handle redirects
                     if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
                         fetch(res.headers.location);
                         return;
@@ -84,7 +112,7 @@ class ModManager {
                     });
                 }).on('error', reject);
             };
-            fetch(this.versionUrl);
+            fetch(this.versionUrl + '?t=' + Date.now());
         });
     }
 
