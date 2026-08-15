@@ -365,7 +365,11 @@ function setupIPC() {
                     
                     const { spawn } = require('child_process');
                     const targetExe = process.execPath;
-                    const updateScript = `Start-Sleep -Milliseconds 800; Get-Process 'Moo Client' -ErrorAction SilentlyContinue | Stop-Process -Force; Start-Sleep -Milliseconds 400; Copy-Item -Path '${tempAsar.replace(/'/g, "''")}' -Destination '${targetAsar.replace(/'/g, "''")}' -Force; Start-Process -FilePath '${targetExe.replace(/'/g, "''")}'`;
+                    const cleanTemp = tempAsar.replace(/'/g, "''");
+                    const cleanTarget = targetAsar.replace(/'/g, "''");
+                    const cleanExe = targetExe.replace(/'/g, "''");
+                    
+                    const updateScript = `for ($k=0;$k -lt 6;$k++){Get-Process -Name '*Moo Client*' -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue; Start-Sleep -Milliseconds 200}; $copied=$false; for ($i=0;$i -lt 30;$i++){ try { Copy-Item -Path '${cleanTemp}' -Destination '${cleanTarget}' -Force -ErrorAction Stop; $copied=$true; break } catch { Start-Sleep -Milliseconds 200 } }; if ($copied) { Remove-Item -Path '${cleanTemp}' -Force -ErrorAction SilentlyContinue }; Start-Process -FilePath '${cleanExe}'`;
                     
                     const child = spawn('powershell.exe', ['-WindowStyle', 'Hidden', '-NoProfile', '-Command', updateScript], {
                         detached: true,
@@ -375,7 +379,7 @@ function setupIPC() {
 
                     setTimeout(() => {
                         app.exit(0);
-                    }, 200);
+                    }, 100);
 
                     return { success: true, updated: true, restarting: true };
                 } catch (e) {
