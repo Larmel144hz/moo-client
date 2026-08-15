@@ -154,6 +154,32 @@ class ModManager {
     }
 
     /**
+     * Ensures Fabric API (Core Mod) is present in the mods folder.
+     */
+    async ensureFabricApi(onProgress = () => {}) {
+        try {
+            const files = fs.existsSync(this.modsDir) ? fs.readdirSync(this.modsDir) : [];
+            const hasFabricApi = files.some(f => f.toLowerCase().startsWith('fabric-api') && f.endsWith('.jar'));
+            if (hasFabricApi) {
+                return true;
+            }
+
+            onProgress('Pobieranie biblioteki Fabric API (Core)...', 15);
+            const fabricApiUrl = 'https://cdn.modrinth.com/data/P7dR8mSH/versions/p96k10UR/fabric-api-0.119.4%2B1.21.4.jar';
+            const destPath = path.join(this.modsDir, 'fabric-api-0.119.4+1.21.4.jar');
+
+            await this.downloadFile(fabricApiUrl, destPath, (percent) => {
+                onProgress(`Pobieranie Fabric API: ${percent}%`, 15 + Math.round(percent * 0.15));
+            });
+            console.log('Fabric API downloaded successfully!');
+            return true;
+        } catch (e) {
+            console.error('Error ensuring Fabric API:', e);
+            return false;
+        }
+    }
+
+    /**
      * Main method: checks for updates and downloads if needed.
      * @param {Function} onProgress - Callback (status, progressPercent)
      * @returns {boolean} true if mod was updated, false if already up to date

@@ -173,6 +173,37 @@ class GameManager {
         });
     }
 
+    resolveJavawPath(customPath) {
+        if (customPath && fs.existsSync(customPath)) {
+            if (process.platform === 'win32' && customPath.toLowerCase().endsWith('java.exe')) {
+                const javaw = customPath.slice(0, -8) + 'javaw.exe';
+                if (fs.existsSync(javaw)) return javaw;
+            }
+            return customPath;
+        }
+
+        if (process.platform === 'win32') {
+            // Check common Java 21 JDK installation directories
+            const programFiles = process.env.ProgramFiles || 'C:\\Program Files';
+            const candidates = [
+                path.join(programFiles, 'Java', 'jdk-21', 'bin', 'javaw.exe'),
+                path.join(programFiles, 'Eclipse Adoptium', 'jdk-21', 'bin', 'javaw.exe'),
+                path.join(programFiles, 'Microsoft', 'jdk-21', 'bin', 'javaw.exe'),
+                path.join(programFiles, 'Zulu', 'zulu-21', 'bin', 'javaw.exe'),
+                'C:\\Program Files (x86)\\Minecraft Launcher\\runtime\\java-runtime-gamma\\windows-x64\\java-runtime-gamma\\bin\\javaw.exe'
+            ];
+
+            for (const c of candidates) {
+                if (fs.existsSync(c)) return c;
+            }
+
+            // Fallback to javaw in PATH (silent, no console)
+            return 'javaw';
+        }
+
+        return 'java';
+    }
+
     /**
      * Launch Minecraft with Fabric and the Moo Client mod.
      */
@@ -193,9 +224,12 @@ class GameManager {
         onProgress('Przygotowywanie profilu Fabric...', 30);
         const customFabric = await this.ensureFabricVersion(versionNumber);
 
+        const javaExecutable = this.resolveJavawPath(settings.javaPath);
+
         const launchOpts = {
             authorization: auth,
             root: this.gameDir,
+            javaPath: javaExecutable,
             version: {
                 number: versionNumber,
                 type: 'release',
@@ -209,28 +243,27 @@ class GameManager {
                 width: settings.resolution?.width || 1280,
                 height: settings.resolution?.height || 720,
             },
+            overrides: {
+                detached: true
+            }
         };
-
-        if (settings.javaPath && fs.existsSync(settings.javaPath)) {
-            launchOpts.javaPath = settings.javaPath;
-        }
 
         launcher.on('debug', (e) => console.log('[MC Debug]', e));
         launcher.on('data', (e) => console.log('[MC Data]', e));
         launcher.on('progress', (e) => {
             const percent = Math.round((e.task / e.total) * 100);
-            onProgress(`Downloading: ${e.type}`, percent);
+            onProgress(`Pobieranie plików: ${e.type}`, percent);
         });
         launcher.on('download-status', (e) => {
             const percent = Math.round((e.current / e.total) * 100);
-            onProgress(`Downloading game files...`, percent);
+            onProgress(`Pobieranie zasobów gry...`, percent);
         });
-        launcher.on('arguments', () => onProgress('Game starting...', 95));
-        launcher.on('close', (code) => onProgress(`Game closed (code: ${code})`, 0));
+        launcher.on('arguments', () => onProgress('Uruchamianie silnika gry...', 95));
+        launcher.on('close', (code) => onProgress(`Gra zamknięta (kod: ${code})`, 0));
 
-        onProgress('Preparing to launch...', 50);
+        onProgress('Uruchamianie Minecrafta...', 50);
         await launcher.launch(launchOpts);
-        onProgress('Game is running!', 100);
+        onProgress('Gra została uruchomiona!', 100);
     }
 }
 

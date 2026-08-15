@@ -106,17 +106,23 @@ function setupIPC() {
     // --- Launch game ---
     ipcMain.handle('launch-game', async (event, options) => {
         try {
-            sendToRenderer('launch-status', 'Checking for mod updates...');
+            sendToRenderer('launch-status', 'Sprawdzanie bibliotek i modów...');
             sendToRenderer('launch-progress', 5);
 
-            // Step 1: Check & update mod from GitHub
+            // Step 1: Ensure Fabric API Core dependency is downloaded
+            await modManager.ensureFabricApi((status, progress) => {
+                sendToRenderer('launch-status', status);
+                sendToRenderer('launch-progress', progress);
+            });
+
+            // Step 2: Check & update mod from GitHub
             const modUpdated = await modManager.checkAndUpdate((status, progress) => {
                 sendToRenderer('launch-status', status);
                 sendToRenderer('launch-progress', progress);
             });
 
-            // Step 2: Launch Minecraft with Fabric + mod
-            sendToRenderer('launch-status', 'Launching Minecraft...');
+            // Step 3: Launch Minecraft with Fabric + mod
+            sendToRenderer('launch-status', 'Uruchamianie Minecrafta...');
             sendToRenderer('launch-progress', 80);
             discordRPC.updateActivity('Uruchamia grę...', 'Minecraft 1.21.4 (Fabric)');
 
