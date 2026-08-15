@@ -8,12 +8,16 @@ const discordRPC = require('./DiscordRPC');
 
 function downloadFile(url, destPath, onProgress) {
     return new Promise((resolve, reject) => {
+        const prevNoAsar = process.noAsar;
+        process.noAsar = true;
         const client = url.startsWith('https') ? https : http;
         client.get(url, { headers: { 'User-Agent': 'MooClient-Launcher' } }, (res) => {
             if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
+                process.noAsar = prevNoAsar;
                 return downloadFile(res.headers.location, destPath, onProgress).then(resolve).catch(reject);
             }
             if (res.statusCode !== 200) {
+                process.noAsar = prevNoAsar;
                 return reject(new Error(`Pobieranie nie powiodło się: HTTP ${res.statusCode}`));
             }
 
@@ -32,14 +36,19 @@ function downloadFile(url, destPath, onProgress) {
             res.pipe(fileStream);
 
             fileStream.on('finish', () => {
-                fileStream.close(() => resolve(destPath));
+                fileStream.close(() => {
+                    process.noAsar = prevNoAsar;
+                    resolve(destPath);
+                });
             });
 
             fileStream.on('error', (err) => {
+                process.noAsar = prevNoAsar;
                 fs.unlink(destPath, () => {});
                 reject(err);
             });
         }).on('error', (err) => {
+            process.noAsar = prevNoAsar;
             fs.unlink(destPath, () => {});
             reject(err);
         });
@@ -311,7 +320,7 @@ function setupIPC() {
                 sendToRenderer('client-update-progress', { status: 'Pobieranie nowej paczki kodu launchera...', percent: 55 });
                 const latestVer = remote.version;
                 const asarUrl = `https://github.com/Larmel144hz/moo-client/releases/download/v${latestVer}/app.asar`;
-                const tempAsar = path.join(os.tmpdir(), `moo-update-${latestVer}.asar`);
+                const tempAsar = path.join(os.tmpdir(), `moo-update-${latestVer}.pkg`);
                 const targetAsar = path.join(process.resourcesPath, 'app.asar');
                 const targetExe = process.execPath;
 
