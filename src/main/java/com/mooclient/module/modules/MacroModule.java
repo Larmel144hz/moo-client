@@ -77,6 +77,10 @@ public class MacroModule extends Module {
         return enabled;
     }
 
+    public static void setMacroEnabled(boolean value) {
+        enabled = value;
+    }
+
     public static List<MacroEntry> getMacros() {
         return macros;
     }

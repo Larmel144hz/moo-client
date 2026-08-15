@@ -114,6 +114,8 @@ public class MooConfig {
                 macrosArray.add(mObj);
             }
             macroJson.add("list", macrosArray);
+            root.add("macro", macroJson);
+
             // Chat Module
             JsonObject chat = new JsonObject();
             chat.addProperty("enabled", com.mooclient.module.modules.ChatModule.isModuleEnabled());
@@ -297,7 +299,7 @@ public class MooConfig {
                 JsonObject macroJson = root.getAsJsonObject("macro");
                 if (macroJson.has("enabled")) {
                     boolean state = macroJson.get("enabled").getAsBoolean();
-                    com.mooclient.module.modules.MacroModule.getMacros();
+                    com.mooclient.module.modules.MacroModule.setMacroEnabled(state);
                     ModuleManager.getInstance().getModule("Macro").ifPresent(m -> m.setEnabled(state));
                 }
                 if (macroJson.has("list")) {
