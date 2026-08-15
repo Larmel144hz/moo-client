@@ -245,11 +245,13 @@ function setupIPC() {
 
     // --- Moo Client Core Version & Update Check ---
     ipcMain.handle('check-client-update', async () => {
+        const pkg = require('../package.json');
+        const defaultVer = pkg.version || '1.0.2';
         try {
             const local = modManager.getLocalVersion();
             const remote = await modManager.getRemoteVersion();
-            const localVer = (local.version && local.version !== 'none') ? local.version : '1.0.0';
-            const hasUpdate = (remote.version && remote.version !== 'none' && remote.version !== localVer);
+            const localVer = (local.version && local.version !== 'none') ? local.version : defaultVer;
+            const hasUpdate = ModManager.isNewerVersion(remote.version, localVer);
             return {
                 success: true,
                 hasUpdate,
@@ -263,7 +265,7 @@ function setupIPC() {
             return {
                 success: false,
                 hasUpdate: false,
-                currentVersion: (local.version && local.version !== 'none') ? local.version : '1.0.0',
+                currentVersion: (local.version && local.version !== 'none') ? local.version : defaultVer,
                 error: e.message
             };
         }

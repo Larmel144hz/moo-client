@@ -43,15 +43,18 @@
       "signAndEditExecutable": false
     },
     "nsis": {
-      "oneClick": true,
+      "oneClick": false,
       "allowToChangeInstallationDirectory": false,
-      "createDesktopShortcut": true,
+      "include": "build/installer.nsh",
+      "createDesktopShortcut": "always",
       "createStartMenuShortcut": true,
       "shortcutName": "Moo Client",
       "installerIcon": "build/icon.ico",
       "uninstallerIcon": "build/icon.ico",
       "installerHeaderIcon": "build/icon.ico",
-      "uninstallDisplayName": "Moo Client ${version}"
+      "uninstallDisplayName": "Moo Client ${version}",
+      "allowElevation": true,
+      "perMachine": false
     },
     "publish": {
       "provider": "github",

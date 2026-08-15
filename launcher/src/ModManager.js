@@ -20,15 +20,62 @@ class ModManager {
         this.localVersionPath = path.join(this.gameDir, 'installed-mod-version.json');
 
         // GitHub raw URL for version check
-        // Change Larmel144hz and moo-client to your actual GitHub details
         this.versionUrl = 'https://raw.githubusercontent.com/Larmel144hz/moo-client/main/mod-version.json';
 
         this.ensureDir(this.modsDir);
+        this.ensureBundledMod();
+    }
+
+    static isNewerVersion(remote, local) {
+        if (!remote) return false;
+        if (!local) return true;
+        const rParts = String(remote).replace(/^v/i, '').split('.').map(n => parseInt(n, 10) || 0);
+        const lParts = String(local).replace(/^v/i, '').split('.').map(n => parseInt(n, 10) || 0);
+        for (let i = 0; i < Math.max(rParts.length, lParts.length); i++) {
+            const r = rParts[i] || 0;
+            const l = lParts[i] || 0;
+            if (r > l) return true;
+            if (r < l) return false;
+        }
+        return false;
     }
 
     ensureDir(dir) {
         if (!fs.existsSync(dir)) {
             fs.mkdirSync(dir, { recursive: true });
+        }
+    }
+
+    /**
+     * Deploys the bundled mod jar from assets if not already installed.
+     */
+    ensureBundledMod() {
+        try {
+            const pkg = require('../package.json');
+            const defaultVer = pkg.version || '1.0.2';
+            const bundledPath = path.join(__dirname, '..', 'assets', 'moo-client.jar');
+            const targetJar = path.join(this.modsDir, `moo-client-${defaultVer}.jar`);
+
+            if (fs.existsSync(bundledPath)) {
+                const files = fs.existsSync(this.modsDir) ? fs.readdirSync(this.modsDir) : [];
+                const hasMatchingOrNewer = files.some(f => {
+                    const m = f.match(/^moo-client-([0-9.]+)\.jar$/i);
+                    return m && !ModManager.isNewerVersion(defaultVer, m[1]);
+                });
+
+                if (!hasMatchingOrNewer) {
+                    this.cleanOldMods();
+                    fs.copyFileSync(bundledPath, targetJar);
+                    fs.writeFileSync(this.localVersionPath, JSON.stringify({
+                        version: defaultVer,
+                        minecraft: '1.21.4',
+                        installedAt: new Date().toISOString(),
+                    }, null, 2));
+                    console.log(`Bundled mod moo-client-${defaultVer}.jar deployed successfully!`);
+                }
+            }
+        } catch (e) {
+            console.warn('Could not deploy bundled mod:', e.message);
         }
     }
 
@@ -43,17 +90,24 @@ class ModManager {
             }
             if (fs.existsSync(this.modsDir)) {
                 const files = fs.readdirSync(this.modsDir);
+                let highest = null;
                 for (const file of files) {
                     const match = file.match(/^moo-client-([0-9.]+)\.jar$/i);
                     if (match) {
-                        return { version: match[1], minecraft: '1.21.4' };
+                        if (!highest || ModManager.isNewerVersion(match[1], highest)) {
+                            highest = match[1];
+                        }
                     }
+                }
+                if (highest) {
+                    return { version: highest, minecraft: '1.21.4' };
                 }
             }
         } catch (e) {
             console.error('Error reading local mod version:', e);
         }
-        return { version: '1.0.0', minecraft: '1.21.4' };
+        const pkg = require('../package.json');
+        return { version: pkg.version || '1.0.2', minecraft: '1.21.4' };
     }
 
     /**
@@ -229,8 +283,8 @@ class ModManager {
             const localVersion = this.getLocalVersion();
             onProgress(`Latest mod version: v${remoteVersion.version}`, 20);
 
-            // Compare versions
-            if (localVersion.version === remoteVersion.version) {
+            // Compare versions using semver
+            if (!ModManager.isNewerVersion(remoteVersion.version, localVersion.version)) {
                 onProgress('Mod is up to date!', 40);
                 return false;
             }
