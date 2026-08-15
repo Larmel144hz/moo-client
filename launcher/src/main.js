@@ -242,11 +242,12 @@ function setupIPC() {
         try {
             const local = modManager.getLocalVersion();
             const remote = await modManager.getRemoteVersion();
-            const hasUpdate = (local.version !== remote.version && remote.version && remote.version !== 'none');
+            const localVer = (local.version && local.version !== 'none') ? local.version : '1.0.0';
+            const hasUpdate = (remote.version && remote.version !== 'none' && remote.version !== localVer);
             return {
                 success: true,
                 hasUpdate,
-                currentVersion: local.version || '1.0.0',
+                currentVersion: localVer,
                 latestVersion: remote.version,
                 changelog: remote.changelog || '',
                 downloadUrl: remote.download_url
@@ -256,7 +257,7 @@ function setupIPC() {
             return {
                 success: false,
                 hasUpdate: false,
-                currentVersion: local.version || '1.0.0',
+                currentVersion: (local.version && local.version !== 'none') ? local.version : '1.0.0',
                 error: e.message
             };
         }

@@ -41,10 +41,19 @@ class ModManager {
                 const data = fs.readFileSync(this.localVersionPath, 'utf8');
                 return JSON.parse(data);
             }
+            if (fs.existsSync(this.modsDir)) {
+                const files = fs.readdirSync(this.modsDir);
+                for (const file of files) {
+                    const match = file.match(/^moo-client-([0-9.]+)\.jar$/i);
+                    if (match) {
+                        return { version: match[1], minecraft: '1.21.4' };
+                    }
+                }
+            }
         } catch (e) {
             console.error('Error reading local mod version:', e);
         }
-        return { version: 'none', minecraft: '1.21.4' };
+        return { version: '1.0.0', minecraft: '1.21.4' };
     }
 
     /**
