@@ -1,6 +1,7 @@
 package com.mooclient.mixin;
 
 import com.mooclient.module.modules.NametagsModule;
+import com.mooclient.util.MooUserManager;
 import net.minecraft.client.font.TextRenderer;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.hud.PlayerListHud;
@@ -29,10 +30,13 @@ public class PlayerListHudMixin {
     )
     private int mooClient$renderPlayerNameWithLogo(DrawContext context, TextRenderer textRenderer, Text text, int x, int y, int color) {
         if (text != null && NametagsModule.isNametagsEnabled() && NametagsModule.isShowLogo()) {
-            // Draw 8x8 cow logo badge before every player nickname
-            context.drawTexture(RenderLayer::getGuiTextured, MOO_LOGO, x, y, 0.0f, 0.0f, 8, 8, 8, 8);
-            // Draw player nickname shifted right by 10px
-            return context.drawTextWithShadow(textRenderer, text, x + 10, y, color);
+            String rawText = text.getString();
+            if (rawText != null && !rawText.isEmpty() && MooUserManager.isMooUser(rawText, -1)) {
+                // Draw 8x8 cow logo badge before player nickname
+                context.drawTexture(RenderLayer::getGuiTextured, MOO_LOGO, x, y, 0.0f, 0.0f, 8, 8, 8, 8);
+                // Draw player nickname shifted right by 10px
+                return context.drawTextWithShadow(textRenderer, text, x + 10, y, color);
+            }
         }
         return context.drawTextWithShadow(textRenderer, text, x, y, color);
     }

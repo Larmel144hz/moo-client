@@ -63,7 +63,7 @@ public abstract class NametagBackgroundMixin {
     )
     private float mooClient$centerNametagWithBadge(float originalX) {
         EntityRenderState state = this.mooClient$currentState.get();
-        if (state instanceof PlayerEntityRenderState && NametagsModule.isNametagsEnabled() && NametagsModule.isShowLogo()) {
+        if (state instanceof PlayerEntityRenderState playerState && com.mooclient.util.MooUserManager.isMooUser(playerState.name, playerState.id)) {
             float badgeTotalWidth = 11.0f; // iconSize (8.5f) + gap (2.5f)
             return originalX + (badgeTotalWidth / 2.0f);
         }
@@ -94,7 +94,7 @@ public abstract class NametagBackgroundMixin {
         Matrix4f matrix = matrices.peek().getPositionMatrix();
 
         // 1. Authentic Moo Client Cow Logo Badge rendering
-        if (NametagsModule.isNametagsEnabled() && NametagsModule.isShowLogo()) {
+        if (com.mooclient.util.MooUserManager.isMooUser(playerState.name, playerState.id)) {
             float textWidth = this.getTextRenderer().getWidth(text);
             float badgeTotalWidth = 11.0f;
             float iconSize = 8.5f;
