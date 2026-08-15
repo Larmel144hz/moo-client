@@ -242,28 +242,55 @@ function initOnlineUsersCounter() {
 function initBackgroundTheme() {
     const bgVideo = document.getElementById('bg-video');
     const bgOverlay = document.getElementById('bg-video-overlay');
+    const particlesCanvas = document.getElementById('particles-canvas');
     const btnClassic = document.getElementById('btn-bg-classic');
     const btnVideo = document.getElementById('btn-bg-video');
 
     function applyBgTheme(theme) {
+        localStorage.setItem('moo_bg_theme', theme);
         if (theme === 'video') {
             btnVideo?.classList.add('active');
             btnClassic?.classList.remove('active');
             if (bgVideo) {
+                bgVideo.muted = true;
+                bgVideo.playsInline = true;
                 bgVideo.classList.remove('hidden');
-                bgVideo.play().catch(() => {});
+                bgVideo.style.display = 'block';
+                bgVideo.play().catch((err) => {
+                    const playOnInteraction = () => {
+                        bgVideo.play().catch(() => {});
+                        window.removeEventListener('click', playOnInteraction);
+                        window.removeEventListener('keydown', playOnInteraction);
+                    };
+                    window.addEventListener('click', playOnInteraction);
+                    window.addEventListener('keydown', playOnInteraction);
+                });
             }
-            if (bgOverlay) bgOverlay.classList.remove('hidden');
+            if (bgOverlay) {
+                bgOverlay.classList.remove('hidden');
+                bgOverlay.style.display = 'block';
+            }
+            if (particlesCanvas) {
+                particlesCanvas.classList.add('hidden');
+                particlesCanvas.style.display = 'none';
+            }
         } else {
             btnClassic?.classList.add('active');
             btnVideo?.classList.remove('active');
             if (bgVideo) {
                 bgVideo.pause();
                 bgVideo.classList.add('hidden');
+                bgVideo.style.display = 'none';
             }
-            if (bgOverlay) bgOverlay.classList.add('hidden');
+            if (bgOverlay) {
+                bgOverlay.classList.add('hidden');
+                bgOverlay.style.display = 'none';
+            }
+            if (particlesCanvas) {
+                particlesCanvas.classList.remove('hidden');
+                particlesCanvas.style.display = 'block';
+            }
         }
-        localStorage.setItem('moo_bg_theme', theme);
     }
 
     btnClassic?.addEventListener('click', () => applyBgTheme('classic'));
