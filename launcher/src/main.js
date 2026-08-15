@@ -236,6 +236,43 @@ function setupIPC() {
         shell.openPath(modManager.modsDir);
         return { success: true };
     });
+
+    // --- Moo Client Core Version & Update Check ---
+    ipcMain.handle('check-client-update', async () => {
+        try {
+            const local = modManager.getLocalVersion();
+            const remote = await modManager.getRemoteVersion();
+            const hasUpdate = (local.version !== remote.version && remote.version && remote.version !== 'none');
+            return {
+                success: true,
+                hasUpdate,
+                currentVersion: local.version || '1.0.0',
+                latestVersion: remote.version,
+                changelog: remote.changelog || '',
+                downloadUrl: remote.download_url
+            };
+        } catch (e) {
+            const local = modManager.getLocalVersion();
+            return {
+                success: false,
+                hasUpdate: false,
+                currentVersion: local.version || '1.0.0',
+                error: e.message
+            };
+        }
+    });
+
+    ipcMain.handle('perform-client-update', async () => {
+        try {
+            const updated = await modManager.checkAndUpdate((status, percent) => {
+                sendToRenderer('client-update-progress', { status, percent });
+            });
+            const newLocal = modManager.getLocalVersion();
+            return { success: true, updated, version: newLocal.version };
+        } catch (e) {
+            return { success: false, error: e.message };
+        }
+    });
 }
 
 // Helper: send message to renderer

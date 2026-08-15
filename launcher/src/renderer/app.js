@@ -70,6 +70,15 @@ const translations = {
         version_modal_subtitle: 'Wybierz wersję z Modrinth dla Fabric 1.21.4',
         no_updates_found: 'Wszystkie mody są aktualne! ✓',
         btn_pick_install: 'Zainstaluj tę wersję',
+        update_up_to_date: 'Najnowsza',
+        update_available_short: 'Aktualizacja!',
+        update_checking: 'Sprawdzanie...',
+        update_modal_title: 'Dostępna nowa wersja Moo Client!',
+        update_changelog_title: 'Co nowego w tej wersji:',
+        btn_update_now: 'Zaktualizuj teraz',
+        btn_update_later: 'Przypomnij później',
+        update_downloading: 'Pobieranie aktualizacji...',
+        update_success_msg: 'Moo Client został pomyślnie zaktualizowany!',
     },
     en: {
         nav_home: 'Home',
@@ -128,6 +137,23 @@ const translations = {
         dropzone_title: 'Drop .jar files here',
         dropzone_subtitle: 'Mods will be automatically added to the game',
         mods_drag_installed: 'Successfully added mods!',
+        btn_check_updates: 'Check for Updates',
+        btn_update: 'Update',
+        btn_updating: 'Updating...',
+        btn_versions: 'Versions',
+        version_modal_title: 'Select Mod Version',
+        version_modal_subtitle: 'Choose a version from Modrinth for Fabric 1.21.4',
+        no_updates_found: 'All mods are up to date! ✓',
+        btn_pick_install: 'Install this version',
+        update_up_to_date: 'Up to date',
+        update_available_short: 'Update Available!',
+        update_checking: 'Checking...',
+        update_modal_title: 'New Moo Client Version Available!',
+        update_changelog_title: "What's new in this version:",
+        btn_update_now: 'Update Now',
+        btn_update_later: 'Later',
+        update_downloading: 'Downloading update...',
+        update_success_msg: 'Moo Client updated successfully!',
         btn_check_updates: 'Check for Updates',
         btn_update: 'Update',
         btn_updating: 'Updating...',
@@ -1400,6 +1426,152 @@ pageMods?.addEventListener('drop', async (e) => {
 });
 
 // =============================================
+// Moo Client Core Update Check & Modal
+// =============================================
+let currentClientUpdateInfo = null;
+
+async function checkClientCoreUpdate(showToastIfUpToDate = false) {
+    const pill = document.getElementById('update-status-pill');
+    const label = document.getElementById('update-text');
+
+    if (!pill || !label) return;
+
+    pill.classList.add('checking');
+    label.textContent = t('update_checking');
+
+    try {
+        const res = await window.mooAPI?.checkClientUpdate();
+        pill.classList.remove('checking');
+
+        if (res && res.hasUpdate) {
+            currentClientUpdateInfo = res;
+            pill.classList.add('has-update');
+            label.textContent = `v${res.latestVersion} ${t('update_available_short')}`;
+            pill.title = `${t('update_modal_title')} (v${res.currentVersion} ➔ v${res.latestVersion})`;
+
+            // Prompt modal automatically if launched with update available
+            openClientUpdateModal(res);
+        } else {
+            currentClientUpdateInfo = null;
+            pill.classList.remove('has-update');
+            const ver = res?.currentVersion || '1.0.0';
+            label.textContent = `v${ver} (${t('update_up_to_date')})`;
+            pill.title = `Moo Client v${ver} — ${t('update_up_to_date')}`;
+
+            if (showToastIfUpToDate) {
+                showToast(`Moo Client v${ver} — ${t('update_up_to_date')}! ✓`, 'success');
+            }
+        }
+    } catch (err) {
+        pill.classList.remove('checking');
+        label.textContent = 'v1.0.0';
+        console.error('Error checking client update:', err);
+    }
+}
+
+function openClientUpdateModal(info) {
+    if (!info) return;
+    const modal = document.getElementById('modal-client-update');
+    const versionTag = document.getElementById('update-modal-version-tag');
+    const changelogText = document.getElementById('update-modal-changelog-text');
+    const progressSection = document.getElementById('update-progress-section');
+    const actions = document.getElementById('update-modal-actions');
+
+    if (!modal) return;
+
+    if (versionTag) {
+        versionTag.textContent = `Moo Client v${info.currentVersion || '1.0.0'} ➔ v${info.latestVersion}`;
+    }
+
+    if (changelogText) {
+        changelogText.textContent = info.changelog || 'Brak dodatkowego opisu zmian.';
+    }
+
+    if (progressSection) progressSection.style.display = 'none';
+    if (actions) actions.style.display = 'flex';
+
+    modal.classList.remove('hidden');
+}
+
+function closeClientUpdateModal() {
+    document.getElementById('modal-client-update')?.classList.add('hidden');
+}
+
+async function performClientCoreUpdate() {
+    const progressSection = document.getElementById('update-progress-section');
+    const progressBar = document.getElementById('client-update-progress-bar');
+    const progressMsg = document.getElementById('client-update-progress-msg');
+    const progressPct = document.getElementById('client-update-progress-pct');
+    const actions = document.getElementById('update-modal-actions');
+
+    if (progressSection) progressSection.style.display = 'block';
+    if (actions) actions.style.display = 'none';
+
+    if (progressBar) progressBar.style.width = '10%';
+    if (progressMsg) progressMsg.textContent = t('update_downloading');
+    if (progressPct) progressPct.textContent = '10%';
+
+    try {
+        const res = await window.mooAPI?.performClientUpdate();
+        if (res && res.success) {
+            if (progressBar) progressBar.style.width = '100%';
+            if (progressMsg) progressMsg.textContent = t('update_success_msg');
+            if (progressPct) progressPct.textContent = '100%';
+
+            showToast(t('update_success_msg'), 'success');
+
+            setTimeout(() => {
+                closeClientUpdateModal();
+                checkClientCoreUpdate(false);
+            }, 1200);
+        } else {
+            showToast(`Błąd aktualizacji: ${res?.error || 'Nieznany błąd'}`, 'error');
+            if (actions) actions.style.display = 'flex';
+            if (progressSection) progressSection.style.display = 'none';
+        }
+    } catch (err) {
+        showToast(`Błąd aktualizacji: ${err.message}`, 'error');
+        if (actions) actions.style.display = 'flex';
+        if (progressSection) progressSection.style.display = 'none';
+    }
+}
+
+// Progress listener from main process
+window.mooAPI?.onClientUpdateProgress?.((data) => {
+    const progressBar = document.getElementById('client-update-progress-bar');
+    const progressMsg = document.getElementById('client-update-progress-msg');
+    const progressPct = document.getElementById('client-update-progress-pct');
+
+    if (progressBar && data.percent !== undefined) {
+        progressBar.style.width = `${data.percent}%`;
+    }
+    if (progressPct && data.percent !== undefined) {
+        progressPct.textContent = `${data.percent}%`;
+    }
+    if (progressMsg && data.status) {
+        progressMsg.textContent = data.status;
+    }
+});
+
+// Event Listeners for Update Pill & Modal
+document.getElementById('update-status-pill')?.addEventListener('click', (e) => {
+    if (e.target.closest('#btn-manual-update-check')) {
+        e.stopPropagation();
+        checkClientCoreUpdate(true);
+        return;
+    }
+    if (currentClientUpdateInfo) {
+        openClientUpdateModal(currentClientUpdateInfo);
+    } else {
+        checkClientCoreUpdate(true);
+    }
+});
+
+document.getElementById('btn-close-update-modal')?.addEventListener('click', closeClientUpdateModal);
+document.getElementById('btn-update-later')?.addEventListener('click', closeClientUpdateModal);
+document.getElementById('btn-update-now')?.addEventListener('click', performClientCoreUpdate);
+
+// =============================================
 // Initialize
 // =============================================
 document.addEventListener('DOMContentLoaded', () => {
@@ -1408,6 +1580,7 @@ document.addEventListener('DOMContentLoaded', () => {
     initParticles();
     loadAccount();
     loadSettings();
+    checkClientCoreUpdate(false);
     refreshInstalledMods().then(() => {
         checkAndApplyUpdatesSilently(true);
     });

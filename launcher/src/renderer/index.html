@@ -19,8 +19,16 @@
             <img src="logo.png" class="titlebar-logo-img" alt="Moo">
             <span class="titlebar-title">Moo Client</span>
             <span class="titlebar-version">v1.0.0</span>
-        </div>
         <div class="titlebar-right">
+            <!-- Moo Client Update Status Pill -->
+            <div class="update-status-pill" id="update-status-pill" title="Sprawdź stan aktualizacji">
+                <span class="update-dot" id="update-dot"></span>
+                <span class="update-text" id="update-text">v1.0.0</span>
+                <button class="update-check-btn" id="btn-manual-update-check" title="Sprawdź aktualizacje">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M23 4v6h-6M1 20v-6h6"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg>
+                </button>
+            </div>
+
             <!-- Language Toggle -->
             <div class="lang-toggle" id="lang-toggle" title="Switch language">
                 <button class="lang-btn active" data-lang="pl">PL</button>
@@ -402,9 +410,50 @@
                 <h3 class="modal-title" id="modal-title">Potwierdzenie</h3>
                 <p class="modal-message" id="modal-message">Czy na pewno chcesz wykonać tę akcję?</p>
             </div>
-            <div class="modal-actions">
-                <button class="btn-modal-cancel" id="btn-modal-cancel">Anuluj</button>
-                <button class="btn-modal-confirm" id="btn-modal-confirm">Usuń</button>
+    <!-- MOO CLIENT UPDATE PROMPT MODAL -->
+    <div class="modal-overlay hidden" id="modal-client-update">
+        <div class="modal-card update-modal-card">
+            <div class="update-modal-header">
+                <div class="update-modal-icon-badge">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                        <polyline points="7 10 12 15 17 10"/>
+                        <line x1="12" y1="15" x2="12" y2="3"/>
+                    </svg>
+                </div>
+                <div class="update-modal-header-text">
+                    <h3 class="modal-title" data-i18n="update_modal_title">Dostępna nowa aktualizacja!</h3>
+                    <p class="update-modal-sub" id="update-modal-version-tag">Moo Client v1.0.0 ➔ v1.0.1</p>
+                </div>
+                <button class="update-modal-close" id="btn-close-update-modal" title="Zamknij">✕</button>
+            </div>
+            <div class="modal-body update-modal-body">
+                <div class="update-changelog-card">
+                    <div class="update-changelog-label">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+                        <span data-i18n="update_changelog_title">Co nowego w tej wersji:</span>
+                    </div>
+                    <div class="update-changelog-content" id="update-modal-changelog-text">
+                        Pobieranie listy zmian...
+                    </div>
+                </div>
+
+                <div class="update-progress-section" id="update-progress-section" style="display: none;">
+                    <div class="update-progress-bar-bg">
+                        <div class="update-progress-bar-fill" id="client-update-progress-bar" style="width: 0%"></div>
+                    </div>
+                    <div class="update-progress-status-row">
+                        <span class="update-progress-msg" id="client-update-progress-msg">Pobieranie plików...</span>
+                        <span class="update-progress-pct" id="client-update-progress-pct">0%</span>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-actions" id="update-modal-actions">
+                <button class="btn-modal-cancel" id="btn-update-later" data-i18n="btn_update_later">Przypomnij później</button>
+                <button class="btn-modal-confirm btn-update-confirm" id="btn-update-now">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                    <span data-i18n="btn_update_now">Zaktualizuj teraz</span>
+                </button>
             </div>
         </div>
     </div>

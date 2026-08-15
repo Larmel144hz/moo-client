@@ -43,9 +43,14 @@ contextBridge.exposeInMainWorld('mooAPI', {
     },
     openModsFolder: () => ipcRenderer.invoke('open-mods-folder'),
 
+    // Moo Client Core Update
+    checkClientUpdate: () => ipcRenderer.invoke('check-client-update'),
+    performClientUpdate: () => ipcRenderer.invoke('perform-client-update'),
+
     // Event listeners
     onLaunchStatus: (callback) => ipcRenderer.on('launch-status', (_, data) => callback(data)),
     onLaunchProgress: (callback) => ipcRenderer.on('launch-progress', (_, data) => callback(data)),
     onUpdaterStatus: (callback) => ipcRenderer.on('updater-status', (_, data) => callback(data)),
     onUpdaterProgress: (callback) => ipcRenderer.on('updater-progress', (_, data) => callback(data)),
+    onClientUpdateProgress: (callback) => ipcRenderer.on('client-update-progress', (_, data) => callback(data)),
 });

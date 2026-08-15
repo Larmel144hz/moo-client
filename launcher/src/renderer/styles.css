@@ -118,6 +118,93 @@ html, body {
     -webkit-app-region: no-drag;
 }
 
+/* Moo Client Update Status Pill */
+.update-status-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    user-select: none;
+}
+
+.update-status-pill:hover {
+    background: rgba(255, 255, 255, 0.08);
+    border-color: rgba(255, 255, 255, 0.2);
+    color: #ffffff;
+}
+
+.update-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: #10b981;
+    box-shadow: 0 0 8px rgba(16, 185, 129, 0.5);
+    transition: all 0.25s ease;
+}
+
+.update-text {
+    letter-spacing: 0.3px;
+}
+
+.update-check-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    border: none;
+    color: var(--text-muted);
+    padding: 2px;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    margin-left: 2px;
+}
+
+.update-check-btn:hover {
+    color: #ffffff;
+    background: rgba(255, 255, 255, 0.1);
+    transform: rotate(45deg);
+}
+
+.update-status-pill.has-update {
+    background: linear-gradient(135deg, rgba(56, 189, 248, 0.15), rgba(168, 85, 247, 0.15));
+    border-color: rgba(56, 189, 248, 0.5);
+    color: #38bdf8;
+    animation: updatePulse 2s infinite ease-in-out;
+}
+
+.update-status-pill.has-update .update-dot {
+    background: #38bdf8;
+    box-shadow: 0 0 10px #38bdf8;
+    animation: dotPulse 1.5s infinite;
+}
+
+.update-status-pill.checking .update-check-btn svg {
+    animation: spin 1s linear infinite;
+}
+
+@keyframes updatePulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(56, 189, 248, 0); }
+    50% { box-shadow: 0 0 12px rgba(56, 189, 248, 0.35); }
+}
+
+@keyframes dotPulse {
+    0%, 100% { transform: scale(1); opacity: 1; }
+    50% { transform: scale(1.3); opacity: 0.7; }
+}
+
+@keyframes spin {
+    100% { transform: rotate(360deg); }
+}
+
 /* Language Toggle */
 .lang-toggle {
     display: flex;
@@ -2274,6 +2361,144 @@ html, body {
 .toast.fade-out {
     opacity: 0;
     transform: translateY(-8px) scale(0.95);
+}
+
+/* === MOO CLIENT UPDATE PROMPT MODAL === */
+.update-modal-card {
+    max-width: 480px;
+    width: 90%;
+    background: #0f1015;
+    border: 1px solid rgba(56, 189, 248, 0.3);
+    box-shadow: 0 24px 60px rgba(0, 0, 0, 0.8), 0 0 30px rgba(56, 189, 248, 0.15);
+    border-radius: 16px;
+    padding: 24px;
+    position: relative;
+}
+
+.update-modal-header {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin-bottom: 18px;
+    position: relative;
+}
+
+.update-modal-icon-badge {
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
+    background: linear-gradient(135deg, rgba(56, 189, 248, 0.2), rgba(168, 85, 247, 0.2));
+    border: 1px solid rgba(56, 189, 248, 0.4);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #38bdf8;
+    flex-shrink: 0;
+}
+
+.update-modal-header-text .modal-title {
+    font-size: 17px;
+    font-weight: 700;
+    color: #ffffff;
+    margin: 0 0 2px 0;
+}
+
+.update-modal-sub {
+    font-size: 12px;
+    color: #38bdf8;
+    font-weight: 600;
+    margin: 0;
+}
+
+.update-modal-close {
+    position: absolute;
+    top: -4px;
+    right: -4px;
+    background: transparent;
+    border: none;
+    color: var(--text-muted);
+    font-size: 15px;
+    cursor: pointer;
+    padding: 6px;
+    border-radius: 6px;
+    transition: all 0.2s ease;
+}
+
+.update-modal-close:hover {
+    color: #ffffff;
+    background: rgba(255, 255, 255, 0.08);
+}
+
+.update-changelog-card {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 10px;
+    padding: 14px;
+    margin-bottom: 16px;
+}
+
+.update-changelog-label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 8px;
+}
+
+.update-changelog-content {
+    font-size: 13px;
+    line-height: 1.5;
+    color: var(--text-secondary);
+    max-height: 140px;
+    overflow-y: auto;
+    white-space: pre-line;
+}
+
+.update-progress-section {
+    margin-top: 14px;
+    padding-top: 14px;
+    border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.update-progress-bar-bg {
+    height: 8px;
+    border-radius: 4px;
+    background: rgba(255, 255, 255, 0.08);
+    overflow: hidden;
+    margin-bottom: 6px;
+}
+
+.update-progress-bar-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #38bdf8, #818cf8);
+    border-radius: 4px;
+    transition: width 0.3s ease;
+}
+
+.update-progress-status-row {
+    display: flex;
+    justify-content: space-between;
+    font-size: 11px;
+    color: var(--text-muted);
+}
+
+.btn-update-confirm {
+    background: linear-gradient(135deg, #38bdf8, #6366f1) !important;
+    color: #ffffff !important;
+    border: none !important;
+    box-shadow: 0 4px 14px rgba(56, 189, 248, 0.4);
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.btn-update-confirm:hover {
+    box-shadow: 0 6px 20px rgba(56, 189, 248, 0.6);
+    transform: translateY(-1px);
 }
 
 /* === RESPONSIVE === */
