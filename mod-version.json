@@ -2,5 +2,5 @@
   "version": "1.0.1",
   "minecraft": "1.21.4",
   "download_url": "https://github.com/Larmel144hz/moo-client/releases/download/v1.0.1/moo-client-1.0.1.jar",
-  "changelog": "• Nowy mod: Macro / AutoText — automatyczne wykonywanie komend pod klawiszami i przyciskami myszy\n• 5 slotów makr z edycją komend i bindowaniem w menu Right Shift\n• Interaktywny wskaźnik i instalator aktualizacji"
+  "changelog": "• New Macro / AutoText Module — auto-execute chat commands with keybinds & mouse buttons\n• 5 customizable macro slots configured in Right Shift menu\n• Interactive launcher auto-updater & UI polish"
 }
