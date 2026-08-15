@@ -111,11 +111,80 @@ class ModManager {
     }
 
     /**
-     * Fetches the remote version info from GitHub (real-time without CDN caching).
+     * Fetches the remote version info from GitHub Releases API.
+     * This uses /releases/latest so we never need to manually update mod-version.json.
+     * The release tag (e.g. "v1.1.0") IS the version, changelog comes from the release body,
+     * and download URL is extracted from the release assets (moo-client-*.jar).
+     * Falls back to mod-version.json if the Releases API fails.
      */
     async getRemoteVersion() {
+        try {
+            return await this.fetchFromReleasesAPI();
+        } catch (e) {
+            console.warn('GitHub Releases API failed, falling back to mod-version.json:', e.message);
+            try {
+                return await this.fetchFromContentsAPI();
+            } catch (e2) {
+                return await this.fetchRawVersion();
+            }
+        }
+    }
+
+    /**
+     * PRIMARY: Fetches latest version from GitHub Releases API (/releases/latest).
+     * No manual file updates needed — creating a GitHub release is enough.
+     */
+    async fetchFromReleasesAPI() {
         return new Promise((resolve, reject) => {
-            // First try GitHub API for instant, non-cached data
+            const apiUrl = 'https://api.github.com/repos/Larmel144hz/moo-client/releases/latest';
+            https.get(apiUrl, { headers: { 'User-Agent': 'MooClient-Launcher', 'Accept': 'application/vnd.github.v3+json' } }, (res) => {
+                if (res.statusCode !== 200) {
+                    reject(new Error(`Releases API returned HTTP ${res.statusCode}`));
+                    return;
+                }
+                let data = '';
+                res.on('data', chunk => data += chunk);
+                res.on('end', () => {
+                    try {
+                        const release = JSON.parse(data);
+                        const version = (release.tag_name || '').replace(/^v/i, '');
+                        if (!version) {
+                            reject(new Error('No tag_name in release'));
+                            return;
+                        }
+
+                        // Find the .jar asset download URL
+                        let downloadUrl = '';
+                        if (release.assets && Array.isArray(release.assets)) {
+                            const jarAsset = release.assets.find(a => a.name && a.name.match(/^moo-client.*\.jar$/i));
+                            if (jarAsset) {
+                                downloadUrl = jarAsset.browser_download_url;
+                            }
+                        }
+                        // Fallback download URL if no asset found
+                        if (!downloadUrl) {
+                            downloadUrl = `https://github.com/Larmel144hz/moo-client/releases/download/v${version}/moo-client-${version}.jar`;
+                        }
+
+                        resolve({
+                            version: version,
+                            minecraft: '1.21.4',
+                            download_url: downloadUrl,
+                            changelog: release.body || ''
+                        });
+                    } catch (e) {
+                        reject(new Error('Failed to parse releases API response'));
+                    }
+                });
+            }).on('error', reject);
+        });
+    }
+
+    /**
+     * FALLBACK 1: Fetches mod-version.json via GitHub Contents API.
+     */
+    async fetchFromContentsAPI() {
+        return new Promise((resolve, reject) => {
             const apiUrl = 'https://api.github.com/repos/Larmel144hz/moo-client/contents/mod-version.json';
             https.get(apiUrl, { headers: { 'User-Agent': 'MooClient-Launcher' } }, (res) => {
                 if (res.statusCode === 200) {
@@ -129,19 +198,18 @@ class ModManager {
                                 return resolve(JSON.parse(decoded));
                             }
                         } catch (e) {}
-                        // If parsing failed, fallback
-                        this.fetchRawVersion().then(resolve).catch(reject);
+                        reject(new Error('Could not parse contents API response'));
                     });
                 } else {
-                    // Fallback to cache-busted raw URL
-                    this.fetchRawVersion().then(resolve).catch(reject);
+                    reject(new Error(`Contents API returned HTTP ${res.statusCode}`));
                 }
-            }).on('error', () => {
-                this.fetchRawVersion().then(resolve).catch(reject);
-            });
+            }).on('error', reject);
         });
     }
 
+    /**
+     * FALLBACK 2: Fetches mod-version.json via raw.githubusercontent.com.
+     */
     async fetchRawVersion() {
         return new Promise((resolve, reject) => {
             const fetch = (url) => {
