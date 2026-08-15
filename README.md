@@ -10,27 +10,26 @@
 |---|---|
 | **Gamma (Fullbright)** | Pełne widzenie w ciemności bez używania pochodni. |
 | **FPS Counter** | Licznik klatek na sekundę z możliwością przeciągania na ekranie (Draggable HUD), stylami i prefiksem. |
+| **Ping HUD** | Dedykowany licznik opóźnienia sieciowego (Ping) na ekranie w stylach: *Moo Client*, *Simple* i *Brackets*. |
 | **Toggle Sprint** | Automatyczny, ciągły bieg gracza z wskaźnikiem na ekranie oraz konfigurowalnym klawiszem. |
 | **Freelook** | Swobodny obrót kamery 360° w trzeciej osobie (klawisz `V`, tryby Hold / Toggle). |
 | **Potion Effects** | Wyświetlanie aktywnych mikstur i czasu trwania w 3 unikalnych stylach: *Moo Client*, *Simple* i *Compact*. |
-| **Nametags** | Kolorowy wskaźnik pingu (opóźnienia), usuwanie tła nicków, cień tekstu oraz **permanentne logo Moo Client przed nickiem** do rozpoznawania graczy klienta w grze wieloosobowej. |
+| **Nametags & Tablist Logo** | Kolorowy wskaźnik pingu (opóźnienia), usuwanie tła nicków, cień tekstu oraz **permanentne logo Moo Client przed nickiem i na tabliście** z błyskawicznym wykrywaniem graczy przez WebSocket w czasie rzeczywistym. |
+| **Chat Module** | Przezroczyste tło czatu, nielimitowana historia linii (16384). |
 | **Zoom** | Płynne, kinowe przybliżenie widoku (OptiFine/Lunar zoom) z wyborem mnożnika (2x - 6x) i obsługą **przycisku kółka myszy (`SCROLL`)**. |
-| **Mod Manager (Modrinth)** | Wbudowany instalator i menedżer modów z bazy Modrinth z automatycznym pobieraniem zależności i sprawdzaniem aktualizacji. |
-| **Auto-Updater** | Automatyczne pobieranie najnowszej wersji moda i launchera bezpośrednio z GitHub Releases. |
+| **Multi-Account Manager** | Zarządzanie wieloma kontami Microsoft / Offline i szybkie przełączanie 1-kliknięciem w launcherze. |
+| **Momomo Video Background** | Animowane tło wideo Momomo w menu głównym klienta z możliwością przełączania na tryb Classic. |
+| **Mod Manager (Modrinth)** | Wbudowany instalator i menedżer modów z bazy Modrinth oraz przeciąganie modów bezpośrednio z archiwów WinRAR. |
+| **Hot-ASAR Auto-Updater** | Błyskawiczne aktualizacje delty w 1 sekundę w tle bez konieczności pobierania instalatorów. |
 
 ---
 
-## 🚀 Jak uruchomić
+## 🚀 Jak pobrać i uruchomić
 
-### 1. Przez Moo Client Launcher:
-1. Pobierz instalator launchera z [GitHub Releases](https://github.com/Larmel144hz/moo-client/releases).
+1. Pobierz oficjalny instalator **Moo Client** z [GitHub Releases](https://github.com/Larmel144hz/moo-client/releases/latest).
 2. Zainstaluj i uruchom **Moo Client**.
-3. Launcher automatycznie pobierze Fabric 1.21.4 oraz najnowszą wersję modyfikacji i uruchomi grę!
-
-### 2. Samodzielny mod (Fabric Mod):
-1. Pobierz plik `moo-client-1.0.0.jar` z [Releases](https://github.com/Larmel144hz/moo-client/releases).
-2. Wrzuć plik do swojego folderu `.minecraft/mods/` (wymaga Fabric Loader dla 1.21.4 oraz Fabric API).
-3. Uruchom grę i naciśnij **PRAWY SHIFT**, aby otworzyć menu klienta!
+3. Zaloguj się kontem Microsoft (lub graj Offline) i kliknij **GRAJ** — launcher automatycznie skonfiguruje środowisko, pobierze wszystkie wymagane pliki i uruchomi klienta!
+4. W grze naciśnij **PRAWY SHIFT**, aby otworzyć menu modyfikacji i personalizacji HUD.
 
 ---
 
