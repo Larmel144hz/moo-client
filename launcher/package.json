@@ -39,14 +39,19 @@
           ]
         }
       ],
-      "icon": "src/renderer/icon.ico",
+      "icon": "build/icon.ico",
       "signAndEditExecutable": false
     },
     "nsis": {
       "oneClick": true,
       "allowToChangeInstallationDirectory": false,
       "createDesktopShortcut": true,
-      "shortcutName": "Moo Client"
+      "createStartMenuShortcut": true,
+      "shortcutName": "Moo Client",
+      "installerIcon": "build/icon.ico",
+      "uninstallerIcon": "build/icon.ico",
+      "installerHeaderIcon": "build/icon.ico",
+      "uninstallDisplayName": "Moo Client ${version}"
     },
     "publish": {
       "provider": "github",
