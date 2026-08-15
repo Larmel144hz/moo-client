@@ -1,0 +1,36 @@
+# Gradle & Loom
+.gradle/
+build/
+out/
+bin/
+.loom/
+run/
+
+# IDE files
+.idea/
+*.iml
+*.ipr
+*.iws
+.vscode/
+.settings/
+.classpath
+.project
+
+# Electron & Node
+node_modules/
+launcher/node_modules/
+launcher/dist/
+dist/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Agent/Brain files
+.gemini/
+.antigravity/
+.system_generated/

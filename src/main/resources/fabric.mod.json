@@ -1,0 +1,28 @@
+{
+  "schemaVersion": 1,
+  "id": "mooclient",
+  "version": "${version}",
+  "name": "Moo Client",
+  "description": "A premium Minecraft client mod inspired by Lunar Client. Press Right Shift to open the client menu.",
+  "authors": [
+    "MooTeam"
+  ],
+  "contact": {},
+  "license": "All-Rights-Reserved",
+  "icon": "assets/mooclient/icon.png",
+  "environment": "client",
+  "entrypoints": {
+    "client": [
+      "com.mooclient.MooClient"
+    ]
+  },
+  "mixins": [
+    "mooclient.mixins.json"
+  ],
+  "depends": {
+    "fabricloader": ">=0.16.0",
+    "minecraft": "~1.21.4",
+    "java": ">=21",
+    "fabric-api": "*"
+  }
+}

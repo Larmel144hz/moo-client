@@ -1,0 +1,154 @@
+package com.mooclient;
+
+import com.mooclient.discord.DiscordRPC;
+import com.mooclient.gui.MooClientScreen;
+import com.mooclient.module.ModuleManager;
+import com.mooclient.module.modules.ToggleSprintModule;
+import com.mooclient.util.MooConfig;
+import net.fabricmc.api.ClientModInitializer;
+import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
+import net.fabricmc.fabric.api.client.keybinding.v1.KeyBindingHelper;
+import net.minecraft.client.option.KeyBinding;
+import net.minecraft.client.util.InputUtil;
+import org.lwjgl.glfw.GLFW;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+/**
+ * Moo Client — Main entry point.
+ */
+public class MooClient implements ClientModInitializer {
+
+    public static final String MOD_ID = "mooclient";
+    public static final String MOD_NAME = "Moo Client";
+    public static final String VERSION = "1.0.0";
+    public static final Logger LOGGER = LoggerFactory.getLogger(MOD_NAME);
+
+    private static MooClient instance;
+
+    /** Keybinding: Right Shift opens the client menu */
+    private static KeyBinding menuKeyBinding;
+    private static boolean sprintKeyWasDown = false;
+    private static boolean freelookKeyWasDown = false;
+    private static boolean zoomKeyWasDown = false;
+    private static int tickCounter = 0;
+
+    @Override
+    public void onInitializeClient() {
+        instance = this;
+        LOGGER.info("===========================================");
+        LOGGER.info("  {} v{} — Initializing...", MOD_NAME, VERSION);
+        LOGGER.info("===========================================");
+
+        // Initialize the module system
+        ModuleManager.getInstance().init();
+        LOGGER.info("Loaded {} modules.", ModuleManager.getInstance().getModules().size());
+
+        // Load saved config from disk
+        MooConfig.load();
+
+        // Initialize Moo Client Network & Discovery Handler
+        com.mooclient.network.MooNetworkHandler.init();
+
+        // Initialize Discord Rich Presence
+        DiscordRPC.getInstance().init();
+
+        // Register the Right Shift keybinding for the client menu
+        menuKeyBinding = KeyBindingHelper.registerKeyBinding(new KeyBinding(
+                "key.mooclient.menu",
+                InputUtil.Type.KEYSYM,
+                GLFW.GLFW_KEY_RIGHT_SHIFT,
+                "category.mooclient.general"
+        ));
+
+        // Listen for ticks and input
+        ClientTickEvents.END_CLIENT_TICK.register(client -> {
+            // Menu key press
+            while (menuKeyBinding.wasPressed()) {
+                if (client.currentScreen == null) {
+                    client.setScreen(new MooClientScreen());
+                } else if (client.currentScreen instanceof MooClientScreen) {
+                    client.setScreen(null);
+                    MooConfig.save(); // Save settings when closing the menu
+                }
+            }
+
+            // In-game Toggle Sprint key detection
+            if (client.player != null && client.currentScreen == null) {
+                long window = client.getWindow().getHandle();
+                int sprintKeyCode = ToggleSprintModule.getKeyCode();
+                if (sprintKeyCode > 0) {
+                    boolean isKeyDown = GLFW.glfwGetKey(window, sprintKeyCode) == GLFW.GLFW_PRESS;
+                    if (isKeyDown && !sprintKeyWasDown) {
+                        if (ToggleSprintModule.isSprintEnabled()) {
+                            ToggleSprintModule.toggleSprintActive();
+                        }
+                    }
+                    sprintKeyWasDown = isKeyDown;
+                }
+
+                // In-game Freelook key detection
+                int freelookKeyCode = com.mooclient.module.modules.FreelookModule.getKeyCode();
+                if (freelookKeyCode > 0 && com.mooclient.module.modules.FreelookModule.isFreelookEnabled()) {
+                    boolean isKeyDown = GLFW.glfwGetKey(window, freelookKeyCode) == GLFW.GLFW_PRESS;
+                    if (com.mooclient.module.modules.FreelookModule.getMode() == com.mooclient.module.modules.FreelookModule.ActivationMode.HOLD) {
+                        if (isKeyDown) {
+                            com.mooclient.module.modules.FreelookModule.start();
+                        } else {
+                            com.mooclient.module.modules.FreelookModule.stop();
+                        }
+                    } else { // TOGGLE mode
+                        if (isKeyDown && !freelookKeyWasDown) {
+                            com.mooclient.module.modules.FreelookModule.toggleFreelookActive();
+                        }
+                    }
+                    freelookKeyWasDown = isKeyDown;
+                }
+
+                // In-game Zoom key / mouse button detection
+                int zoomKeyCode = com.mooclient.module.modules.ZoomModule.getKeyCode();
+                if (zoomKeyCode >= 0 && com.mooclient.module.modules.ZoomModule.isZoomEnabled()) {
+                    boolean isKeyDown;
+                    if (com.mooclient.module.modules.ZoomModule.isMouseButton()) {
+                        isKeyDown = GLFW.glfwGetMouseButton(window, zoomKeyCode) == GLFW.GLFW_PRESS;
+                    } else {
+                        isKeyDown = GLFW.glfwGetKey(window, zoomKeyCode) == GLFW.GLFW_PRESS;
+                    }
+
+                    if (com.mooclient.module.modules.ZoomModule.getMode() == com.mooclient.module.modules.ZoomModule.ActivationMode.HOLD) {
+                        if (isKeyDown) {
+                            com.mooclient.module.modules.ZoomModule.start();
+                        } else {
+                            com.mooclient.module.modules.ZoomModule.stop();
+                        }
+                    } else { // TOGGLE mode
+                        if (isKeyDown && !zoomKeyWasDown) {
+                            com.mooclient.module.modules.ZoomModule.toggleZoomActive();
+                        }
+                    }
+                    zoomKeyWasDown = isKeyDown;
+                }
+            }
+
+            // Always tick Zoom animation
+            com.mooclient.module.modules.ZoomModule.onTick();
+
+            // Update Discord RPC State every ~2 seconds (40 ticks)
+            tickCounter++;
+            if (tickCounter % 40 == 0) {
+                if (client.world == null) {
+                    DiscordRPC.getInstance().updatePresence("Moo Client 1.21.4", "W menu głównym");
+                } else if (client.isInSingleplayer()) {
+                    DiscordRPC.getInstance().updatePresence("Tryb jednoosobowy", "Moo Client 1.21.4");
+                } else if (client.getCurrentServerEntry() != null) {
+                    String serverIp = client.getCurrentServerEntry().address;
+                    DiscordRPC.getInstance().updatePresence("Serwer: " + serverIp, "Moo Client 1.21.4");
+                } else {
+                    DiscordRPC.getInstance().updatePresence("W grze", "Moo Client 1.21.4");
+                }
+            }
+        });
+
+        LOGGER.info("{} initialized successfully! Press Right Shift to open menu.", MOD_NAME);
+    }
+}

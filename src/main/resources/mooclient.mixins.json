@@ -1,0 +1,24 @@
+{
+  "required": true,
+  "minVersion": "0.8",
+  "package": "com.mooclient.mixin",
+  "compatibilityLevel": "JAVA_21",
+  "client": [
+    "FullbrightMixin",
+    "MinecraftClientMixin",
+    "WindowMixin",
+    "TitleScreenMixin",
+    "GameRendererMixin",
+    "InGameHudMixin",
+    "ClientPlayerEntityMixin",
+    "SplashOverlayMixin",
+    "CameraMixin",
+    "MouseMixin",
+    "PlayerEntityRendererMixin",
+    "EntityRendererMixin",
+    "NametagBackgroundMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}

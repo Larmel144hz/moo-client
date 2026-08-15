@@ -1,0 +1,54 @@
+package com.mooclient.module;
+
+import com.mooclient.module.modules.FpsModule;
+import com.mooclient.module.modules.FreelookModule;
+import com.mooclient.module.modules.FullbrightModule;
+import com.mooclient.module.modules.ToggleSprintModule;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
+
+/**
+ * Singleton manager for Moo Client modules.
+ */
+public class ModuleManager {
+
+    private static ModuleManager instance;
+    private final List<Module> modules;
+
+    private ModuleManager() {
+        this.modules = new ArrayList<>();
+    }
+
+    public static ModuleManager getInstance() {
+        if (instance == null) {
+            instance = new ModuleManager();
+        }
+        return instance;
+    }
+
+    public void init() {
+        register(new FullbrightModule());   // "Gamma"
+        register(new FpsModule());          // "FPS"
+        register(new ToggleSprintModule()); // "Sprint"
+        register(new FreelookModule());     // "Freelook"
+        register(new com.mooclient.module.modules.PotionEffectsModule()); // "Potion Effects"
+        register(new com.mooclient.module.modules.NametagsModule());      // "Nametags"
+        register(new com.mooclient.module.modules.ZoomModule());          // "Zoom"
+    }
+
+    public void register(Module module) {
+        modules.add(module);
+    }
+
+    public List<Module> getModules() {
+        return modules;
+    }
+
+    public Optional<Module> getModule(String name) {
+        return modules.stream()
+                .filter(m -> m.getName().equalsIgnoreCase(name))
+                .findFirst();
+    }
+}

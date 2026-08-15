@@ -1,0 +1,51 @@
+const { contextBridge, ipcRenderer } = require('electron');
+
+/**
+ * Preload script — exposes a safe API to the renderer process.
+ * This is the bridge between Electron's main process and the UI.
+ */
+contextBridge.exposeInMainWorld('mooAPI', {
+    // Window controls
+    minimize: () => ipcRenderer.send('window-minimize'),
+    maximize: () => ipcRenderer.send('window-maximize'),
+    close: () => ipcRenderer.send('window-close'),
+
+    // Game
+    launchGame: (options) => ipcRenderer.invoke('launch-game', options),
+
+    // Account & Authentication (Microsoft Premium)
+    loginMicrosoft: () => ipcRenderer.invoke('login-microsoft'),
+    logoutMicrosoft: () => ipcRenderer.invoke('logout-microsoft'),
+    getAccount: () => ipcRenderer.invoke('get-account'),
+
+    // Settings
+    getSettings: () => ipcRenderer.invoke('get-settings'),
+    saveSettings: (settings) => ipcRenderer.invoke('save-settings', settings),
+    selectJavaPath: () => ipcRenderer.invoke('select-java-path'),
+
+    // Mod info & Modrinth Integration
+    getModInfo: () => ipcRenderer.invoke('get-mod-info'),
+    searchModrinth: (params) => ipcRenderer.invoke('search-modrinth', params),
+    installMod: (projectId) => ipcRenderer.invoke('install-mod', projectId),
+    getInstalledMods: () => ipcRenderer.invoke('get-installed-mods'),
+    uninstallMod: (filename) => ipcRenderer.invoke('uninstall-mod', filename),
+    toggleMod: (filename, enabled) => ipcRenderer.invoke('toggle-mod', { filename, enabled }),
+    installLocalMods: (filePaths) => ipcRenderer.invoke('install-local-mods', filePaths),
+    getModVersions: (projectId, allVersions = false) => ipcRenderer.invoke('get-mod-versions', { projectId, allVersions }),
+    installModVersion: (versionId, oldFilename) => ipcRenderer.invoke('install-mod-version', { versionId, oldFilename }),
+    checkModUpdates: () => ipcRenderer.invoke('check-mod-updates'),
+    getFilePath: (file) => {
+        try {
+            const { webUtils } = require('electron');
+            if (webUtils && webUtils.getPathForFile) return webUtils.getPathForFile(file);
+        } catch (e) {}
+        return file.path;
+    },
+    openModsFolder: () => ipcRenderer.invoke('open-mods-folder'),
+
+    // Event listeners
+    onLaunchStatus: (callback) => ipcRenderer.on('launch-status', (_, data) => callback(data)),
+    onLaunchProgress: (callback) => ipcRenderer.on('launch-progress', (_, data) => callback(data)),
+    onUpdaterStatus: (callback) => ipcRenderer.on('updater-status', (_, data) => callback(data)),
+    onUpdaterProgress: (callback) => ipcRenderer.on('updater-progress', (_, data) => callback(data)),
+});

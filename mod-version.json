@@ -1,0 +1,6 @@
+{
+  "version": "1.0.0",
+  "minecraft": "1.21.4",
+  "download_url": "https://github.com/Larmel144hz/moo-client/releases/download/v1.0.0/moo-client-1.0.0.jar",
+  "changelog": "Moo Client v1.0.0 (Minecraft 1.21.4 Fabric) - Fullbright, FPS counter with draggable HUD, Toggle Sprint, 360 Freelook, Potion Effects (Moo Client / Simple / Compact styles), Nametags with ping latency and permanent client logo badge, Smooth Zoom with scroll bind, built-in Modrinth Mod Manager, and Auto-Updater."
+}

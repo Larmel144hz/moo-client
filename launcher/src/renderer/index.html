@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Moo Client</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Outfit:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <!-- ANIMATED BACKGROUND PARTICLES -->
+    <canvas id="particles-canvas"></canvas>
+
+    <!-- ============ CUSTOM TITLEBAR ============ -->
+    <div class="titlebar" id="titlebar">
+        <div class="titlebar-left">
+            <img src="logo.png" class="titlebar-logo-img" alt="Moo">
+            <span class="titlebar-title">Moo Client</span>
+            <span class="titlebar-version">v1.0.0</span>
+        </div>
+        <div class="titlebar-right">
+            <!-- Language Toggle -->
+            <div class="lang-toggle" id="lang-toggle" title="Switch language">
+                <button class="lang-btn active" data-lang="pl">PL</button>
+                <button class="lang-btn" data-lang="en">EN</button>
+            </div>
+            <div class="titlebar-controls">
+                <button class="titlebar-btn" id="btn-minimize" title="Minimize">
+                    <svg width="12" height="12" viewBox="0 0 12 12"><rect y="5" width="12" height="2" fill="currentColor"/></svg>
+                </button>
+                <button class="titlebar-btn" id="btn-maximize" title="Maximize">
+                    <svg width="12" height="12" viewBox="0 0 12 12"><rect x="1" y="1" width="10" height="10" stroke="currentColor" stroke-width="1.5" fill="none"/></svg>
+                </button>
+                <button class="titlebar-btn titlebar-btn-close" id="btn-close" title="Close">
+                    <svg width="12" height="12" viewBox="0 0 12 12"><path d="M1 1L11 11M11 1L1 11" stroke="currentColor" stroke-width="1.5"/></svg>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============ MAIN LAYOUT ============ -->
+    <div class="app-container">
+        <!-- SIDEBAR -->
+        <nav class="sidebar" id="sidebar">
+            <div class="sidebar-logo">
+                <div class="logo-wrapper">
+                    <img src="logo.png" class="logo-img" alt="Moo Client">
+                    <div class="logo-ring"></div>
+                </div>
+                <div class="logo-text">MOO</div>
+                <div class="logo-subtext">CLIENT</div>
+            </div>
+
+            <div class="sidebar-nav">
+                <button class="nav-item active" data-page="home" id="nav-home">
+                    <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+                    <span data-i18n="nav_home">Strona główna</span>
+                </button>
+                <button class="nav-item" data-page="mods" id="nav-mods">
+                    <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
+                    <span data-i18n="nav_mods">Modyfikacje</span>
+                </button>
+            </div>
+
+            <div class="sidebar-bottom">
+                <button class="nav-item" data-page="settings" id="nav-settings">
+                    <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+                    <span data-i18n="nav_settings">Ustawienia</span>
+                </button>
+            </div>
+        </nav>
+
+        <!-- MAIN CONTENT -->
+        <main class="content">
+            <!-- HOME PAGE -->
+            <div class="page active" id="page-home">
+                <div class="hero-section">
+                    <div class="hero-content">
+                        <h1 class="hero-title">
+                            <span class="title-moo">MOO</span>
+                            <span class="title-client">CLIENT</span>
+                        </h1>
+                    </div>
+
+                    <!-- PLAY SECTION -->
+                    <div class="play-section">
+                        <div class="play-action-row">
+                            <button class="play-btn" id="btn-play">
+                                <div class="play-btn-shimmer"></div>
+                                <div class="play-btn-content">
+                                    <svg class="play-icon" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                                    <span class="play-text" data-i18n="btn_play">GRAJ</span>
+                                </div>
+                            </button>
+
+                            <div class="custom-dropdown" id="version-dropdown">
+                                <button class="dropdown-trigger" id="version-dropdown-trigger" type="button">
+                                    <span class="dropdown-selected-text" id="selected-version-text">1.21.4 (Fabric)</span>
+                                    <svg class="dropdown-chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+                                </button>
+                                <div class="dropdown-menu" id="version-dropdown-menu">
+                                    <div class="dropdown-item active" data-value="1.21.4">
+                                        <span>1.21.4 (Fabric)</span>
+                                        <svg class="item-check" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                                    </div>
+                                </div>
+                                <input type="hidden" id="version-select" value="1.21.4">
+                            </div>
+                        </div>
+
+                        <div class="player-card" id="player-card">
+                            <div class="player-avatar">
+                                <img src="logo.png" class="avatar-img" alt="">
+                            </div>
+                            <div class="player-details">
+                                <span class="player-name" id="player-name">MooPlayer</span>
+                                <span class="player-status" id="player-status" data-i18n="status_ready_play">Gotowy do gry</span>
+                            </div>
+                            <div class="player-ping" id="player-ping">
+                                <div class="ping-bar"></div>
+                                <div class="ping-bar"></div>
+                                <div class="ping-bar"></div>
+                                <div class="ping-bar"></div>
+                            </div>
+                            <button class="btn-card-logout hidden" id="btn-card-logout" title="Wyloguj" type="button">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- PROGRESS BAR -->
+                    <div class="progress-section hidden" id="progress-section">
+                        <div class="progress-bar">
+                            <div class="progress-fill" id="progress-fill"></div>
+                            <div class="progress-glow" id="progress-glow"></div>
+                        </div>
+                        <div class="progress-info">
+                            <span class="progress-status" id="progress-status">Preparing...</span>
+                            <span class="progress-percent" id="progress-percent">0%</span>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- MODS PAGE (MODRINTH INTEGRATION) -->
+            <div class="page" id="page-mods">
+                <div class="mods-header">
+                    <div>
+                        <h2 class="settings-title" data-i18n="mods_title">Modyfikacje</h2>
+                        <p class="settings-subtitle" data-i18n="mods_subtitle">Przeglądaj i instaluj mody z Modrinth</p>
+                        <div class="custom-dropdown mods-version-dropdown" id="mods-version-dropdown">
+                            <button class="dropdown-trigger mods-dropdown-trigger" id="mods-version-dropdown-trigger" type="button">
+                                <span class="dropdown-selected-text" id="mods-selected-version-text">1.21.4 (Fabric)</span>
+                                <svg class="dropdown-chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+                            </button>
+                            <div class="dropdown-menu" id="mods-version-dropdown-menu">
+                                <div class="dropdown-item active" data-value="1.21.4">
+                                    <span>1.21.4 (Fabric)</span>
+                                    <svg class="item-check" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mods-actions">
+                        <button class="btn-check-updates" id="btn-check-mod-updates" title="Sprawdź czy są nowsze wersje modów">
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg>
+                            <span data-i18n="btn_check_updates">Sprawdź aktualizacje</span>
+                        </button>
+                        <button class="btn-open-folder" id="btn-open-mods-folder">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+                            <span data-i18n="btn_open_folder">Otwórz folder modów</span>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="mods-toolbar">
+                    <div class="mods-search-wrap">
+                        <svg class="search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                        <input type="text" id="mods-search-input" class="mods-search-input" placeholder="Szukaj modów na Modrinth..." data-i18n-placeholder="search_mods_placeholder">
+                    </div>
+                    <div class="mods-tabs">
+                        <button class="mods-tab active" data-tab="browse" id="tab-browse-mods" data-i18n="tab_browse">Przeglądaj</button>
+                        <button class="mods-tab" data-tab="installed" id="tab-installed-mods" data-i18n="tab_installed">Zainstalowane (<span id="installed-count">0</span>)</button>
+                    </div>
+                </div>
+
+                <!-- MODS GRID / LIST -->
+                <div class="mods-content" id="mods-content">
+                    <div class="mods-grid" id="mods-grid">
+                        <!-- Dynamic mod cards inserted here -->
+                    </div>
+                    <div class="mods-loading hidden" id="mods-loading">
+                        <div class="spinner"></div>
+                        <span data-i18n="loading_mods">Ładowanie modyfikacji z Modrinth...</span>
+                    </div>
+                    <div class="mods-empty hidden" id="mods-empty">
+                        <p data-i18n="no_mods_found">Nie znaleziono modyfikacji.</p>
+                    </div>
+
+                    <!-- DRAG & DROP OVERLAY -->
+                    <div class="mods-dropzone hidden" id="mods-dropzone">
+                        <div class="dropzone-content">
+                            <svg class="dropzone-icon" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                                <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/>
+                                <polyline points="17 8 12 3 7 8"/>
+                                <line x1="12" y1="3" x2="12" y2="15"/>
+                            </svg>
+                            <h3 data-i18n="dropzone_title">Upuść pliki .jar tutaj</h3>
+                            <p data-i18n="dropzone_subtitle">Mody zostaną automatycznie dodane do gry</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SETTINGS PAGE -->
+            <div class="page" id="page-settings">
+                <div class="settings-header">
+                    <h2 class="settings-title" data-i18n="settings_title">Ustawienia</h2>
+                    <p class="settings-subtitle" data-i18n="settings_subtitle">Skonfiguruj swoje doświadczenie Moo Client</p>
+                </div>
+
+                <div class="settings-grid">
+
+                    <div class="setting-card">
+                        <div class="setting-header">
+                            <div class="setting-icon-wrap">
+                                <svg class="setting-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="6" width="20" height="12" rx="2"/><line x1="6" y1="10" x2="6" y2="14"/><line x1="10" y1="10" x2="10" y2="14"/><line x1="14" y1="10" x2="14" y2="14"/><line x1="18" y1="10" x2="18" y2="14"/></svg>
+                            </div>
+                            <div>
+                                <h3 data-i18n="setting_ram">Pamięć RAM</h3>
+                                <p data-i18n="setting_ram_desc">Pamięć przydzielona do Minecraft</p>
+                            </div>
+                        </div>
+                        <div class="ram-selector">
+                            <input type="range" class="setting-range" id="setting-ram" min="2" max="16" value="4" step="1">
+                            <span class="ram-value" id="ram-value">4 GB</span>
+                        </div>
+                    </div>
+
+                    <div class="setting-card">
+                        <div class="setting-header">
+                            <div class="setting-icon-wrap">
+                                <svg class="setting-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                            </div>
+                            <div>
+                                <h3 data-i18n="setting_java">Ścieżka Java</h3>
+                                <p data-i18n="setting_java_desc">Własna instalacja Java (puste = auto)</p>
+                            </div>
+                        </div>
+                        <div class="java-path-row">
+                            <input type="text" class="setting-input" id="setting-java" placeholder="Auto-detect" readonly>
+                            <button class="btn-browse" id="btn-browse-java" data-i18n="btn_browse">Przeglądaj</button>
+                        </div>
+                    </div>
+
+                    <div class="setting-card">
+                        <div class="setting-header">
+                            <div class="setting-icon-wrap">
+                                <svg class="setting-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+                            </div>
+                            <div>
+                                <h3 data-i18n="setting_resolution">Rozdzielczość</h3>
+                                <p data-i18n="setting_resolution_desc">Rozmiar okna gry</p>
+                            </div>
+                        </div>
+                        <div class="resolution-row">
+                            <input type="number" class="setting-input small" id="setting-width" value="1280" min="800">
+                            <span class="resolution-x">×</span>
+                            <input type="number" class="setting-input small" id="setting-height" value="720" min="600">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="settings-actions">
+                    <button class="btn-save" id="btn-save-settings">
+                        <span data-i18n="btn_save">Zapisz ustawienia</span>
+                    </button>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- VERSION PICKER MODAL (MODRINTH / PRISM STYLE) -->
+    <div class="modal-overlay hidden" id="version-picker-modal">
+        <div class="version-dialog">
+            <!-- Modal Header -->
+            <div class="version-dialog-header">
+                <div class="version-dialog-title-group">
+                    <img id="version-dialog-icon" src="logo.png" class="version-dialog-icon" alt="" onerror="this.src='logo.png'">
+                    <div>
+                        <h3 class="version-dialog-title" id="version-dialog-title">Zmień wersję</h3>
+                        <p class="version-dialog-modname" id="version-dialog-modname">AppleSkin</p>
+                    </div>
+                </div>
+                <button class="btn-close-modal" id="btn-close-version-modal" title="Zamknij">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="18" y1="6" x2="6" y2="18"></line>
+                        <line x1="6" y1="6" x2="18" y2="18"></line>
+                    </svg>
+                </button>
+            </div>
+
+            <!-- Modal Body (2 Columns) -->
+            <div class="version-dialog-body">
+                <!-- Left Sidebar: List & Search -->
+                <div class="version-sidebar">
+                    <div class="version-search-wrap">
+                        <svg class="search-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                        <input type="text" id="version-search-input" class="version-search-input" placeholder="Szukaj wersji...">
+                    </div>
+                    <div class="version-list-scroll" id="version-modal-list">
+                        <!-- Dynamic version list items -->
+                    </div>
+                    <div class="version-sidebar-footer">
+                        <label class="version-checkbox-label">
+                            <input type="checkbox" id="toggle-show-all-versions">
+                            <span>Pokaż wszystkie wersje gry</span>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Right Detail Pane: Changelog & Metadata -->
+                <div class="version-detail-pane" id="version-detail-pane">
+                    <div class="version-detail-header" id="version-detail-header">
+                        <div class="version-detail-title-row">
+                            <h2 class="version-detail-number" id="version-detail-number">Wybierz wersję</h2>
+                            <span class="version-detail-badge release hidden" id="version-detail-badge">Release</span>
+                            <span class="version-detail-date" id="version-detail-date"></span>
+                        </div>
+                        <div class="version-detail-meta" id="version-detail-meta">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+                            <span id="version-detail-loaders">Fabric 1.21.4</span>
+                        </div>
+                    </div>
+
+                    <div class="version-changelog-container" id="version-changelog-container">
+                        <div class="version-changelog-text" id="version-changelog-text">
+                            Wybierz wersję z listy po lewej stronie, aby zobaczyć opis i listę zmian.
+                        </div>
+                    </div>
+
+                    <div class="version-loading-overlay hidden" id="version-modal-loading">
+                        <div class="spinner"></div>
+                        <span>Pobieranie wersji z Modrinth...</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Modal Footer -->
+            <div class="version-dialog-footer">
+                <div class="version-dialog-warning">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                    <span>Zmiana wersji może wpłynąć na zgodność. Sprawdź listę zmian przed instalacją.</span>
+                </div>
+                <div class="version-dialog-actions">
+                    <button class="btn-version-cancel" id="btn-cancel-version">Anuluj</button>
+                    <button class="btn-version-apply" id="btn-apply-version" disabled>
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                        <span id="btn-apply-version-text">Wybierz wersję</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- TOAST NOTIFICATIONS CONTAINER -->
+    <div class="toast-container" id="toast-container"></div>
+
+    <!-- CUSTOM INFO / NOTIFICATION MODAL -->
+    <div class="modal-overlay hidden" id="info-modal">
+        <div class="modal-card">
+            <div class="modal-icon-wrap" id="info-modal-icon-wrap" style="background: rgba(34, 197, 94, 0.12); border-color: rgba(34, 197, 94, 0.3);">
+                <svg id="info-modal-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2">
+                    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+                    <polyline points="22 4 12 14.01 9 11.01"/>
+                </svg>
+            </div>
+            <div class="modal-body">
+                <h3 class="modal-title" id="info-modal-title">Powiadomienie</h3>
+                <p class="modal-message" id="info-modal-message">Treść powiadomienia</p>
+            </div>
+            <div class="modal-actions">
+                <button class="btn-modal-confirm" id="btn-info-modal-ok" style="background: var(--accent-gradient-btn); color: #09090b; border: 1px solid rgba(255,255,255,0.8); width: 100%;">OK</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- CUSTOM CONFIRMATION MODAL -->
+    <div class="modal-overlay hidden" id="custom-modal">
+        <div class="modal-card">
+            <div class="modal-icon-wrap">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2">
+                    <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+                    <line x1="12" y1="9" x2="12" y2="13"/>
+                    <line x1="12" y1="17" x2="12.01" y2="17"/>
+                </svg>
+            </div>
+            <div class="modal-body">
+                <h3 class="modal-title" id="modal-title">Potwierdzenie</h3>
+                <p class="modal-message" id="modal-message">Czy na pewno chcesz wykonać tę akcję?</p>
+            </div>
+            <div class="modal-actions">
+                <button class="btn-modal-cancel" id="btn-modal-cancel">Anuluj</button>
+                <button class="btn-modal-confirm" id="btn-modal-confirm">Usuń</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>

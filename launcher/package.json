@@ -1,0 +1,57 @@
+{
+  "name": "moo-client-launcher",
+  "version": "1.0.0",
+  "description": "Moo Client Launcher — Premium Minecraft Client inspired by Lunar Client",
+  "main": "src/main.js",
+  "scripts": {
+    "start": "electron .",
+    "dev": "electron .",
+    "build": "electron-builder --win",
+    "publish": "electron-builder --win --publish always"
+  },
+  "author": "MooTeam",
+  "license": "MIT",
+  "devDependencies": {
+    "electron": "^33.0.0",
+    "electron-builder": "^25.1.8"
+  },
+  "dependencies": {
+    "electron-updater": "^6.3.9",
+    "minecraft-launcher-core": "^3.18.1",
+    "msmc": "^5.0.5",
+    "node-fetch": "^2.7.0",
+    "pngjs": "^7.0.0"
+  },
+  "build": {
+    "appId": "com.mooclient.launcher",
+    "productName": "Moo Client",
+    "directories": {
+      "output": "dist"
+    },
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "src/renderer/icon.ico"
+    },
+    "nsis": {
+      "oneClick": true,
+      "allowToChangeInstallationDirectory": false,
+      "createDesktopShortcut": true,
+      "shortcutName": "Moo Client"
+    },
+    "publish": {
+      "provider": "github",
+      "owner": "Larmel144hz",
+      "repo": "moo-client"
+    }
+  },
+  "allowScripts": {
+    "electron@33.4.11": true
+  }
+}
