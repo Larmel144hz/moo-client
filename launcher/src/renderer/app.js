@@ -208,20 +208,78 @@ function t(key) {
 }
 
 // =============================================
-// Online Players Counter (Top Right)
+// Real-Time Online Players Counter (Live Presence)
 // =============================================
-let baseOnlineCount = 1;
+const PRESENCE_TOPIC = 'mooclient_presence_live_2026';
+let onlineCount = 1;
+let heartbeatInterval = null;
+
+function getClientPresenceId() {
+    let id = localStorage.getItem('moo_client_presence_id');
+    if (!id) {
+        id = 'moo_' + Math.random().toString(36).substring(2, 12) + '_' + Date.now().toString(36);
+        localStorage.setItem('moo_client_presence_id', id);
+    }
+    return id;
+}
 
 function updateOnlineUsersDisplay() {
     const countEl = document.getElementById('online-users-count');
     if (!countEl) return;
     const suffix = t('online_users_suffix');
-    countEl.textContent = `${baseOnlineCount} ${suffix}`;
+    countEl.textContent = `${onlineCount} ${suffix}`;
+}
+
+async function performPresenceHeartbeat() {
+    const myId = getClientPresenceId();
+    try {
+        // 1. Send our presence heartbeat
+        fetch(`https://ntfy.sh/${PRESENCE_TOPIC}`, {
+            method: 'POST',
+            body: JSON.stringify({ id: myId, t: Date.now() }),
+            headers: { 'Content-Type': 'application/json' }
+        }).catch(() => {});
+
+        // 2. Query active users in the last 45 seconds
+        const res = await fetch(`https://ntfy.sh/${PRESENCE_TOPIC}/json?poll=1&since=45s`);
+        if (res.ok) {
+            const text = await res.text();
+            const lines = text.trim().split('\n').filter(Boolean);
+            const activeSet = new Set();
+            const now = Date.now();
+
+            for (const line of lines) {
+                try {
+                    const msg = JSON.parse(line);
+                    if (msg.message) {
+                        const data = JSON.parse(msg.message);
+                        if (data.id && (now - data.t < 45000 || !data.t)) {
+                            activeSet.add(data.id);
+                        }
+                    }
+                } catch (err) {}
+            }
+
+            activeSet.add(myId); // Always include local player
+            onlineCount = Math.max(1, activeSet.size);
+            updateOnlineUsersDisplay();
+        }
+    } catch (e) {
+        console.warn('Presence heartbeat error:', e);
+        updateOnlineUsersDisplay();
+    }
 }
 
 function initOnlineUsersCounter() {
-    baseOnlineCount = 1;
+    onlineCount = 1;
     updateOnlineUsersDisplay();
+
+    // Initial heartbeat after 1s
+    setTimeout(performPresenceHeartbeat, 1000);
+
+    // Regular heartbeat every 15 seconds
+    if (heartbeatInterval) clearInterval(heartbeatInterval);
+    heartbeatInterval = setInterval(performPresenceHeartbeat, 15000);
 }
 
 // =============================================
