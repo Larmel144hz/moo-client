@@ -643,43 +643,104 @@ class ModManager {
     /**
      * Install local .jar mods by copying them from disk into .mooclient/mods/
      */
-    installLocalMods(filePaths) {
+    /**
+     * Copy local .jar files into .mooclient/mods/
+     * Includes intelligent multi-file archive extraction detection for WinRAR, 7-Zip, etc.
+     */
+    async installLocalMods(filePaths) {
         try {
             this.ensureDir(this.modsDir);
             const installed = [];
-            const processedPaths = new Set();
+            const processedNames = new Set();
+            const tmpDir = os.tmpdir();
+            const tmpLower = tmpDir.toLowerCase();
 
+            // 1. Process passed filePaths
             for (const srcPath of filePaths) {
-                if (typeof srcPath === 'string' && fs.existsSync(srcPath)) {
-                    const dir = path.dirname(srcPath);
-                    const dirLower = dir.toLowerCase();
-                    const isArchiveTemp = dirLower.includes('rar$') || dirLower.includes('7z') || dirLower.includes('temp\\rar') || dirLower.includes('temp\\wz') || dirLower.includes('temp\\7z');
+                if (typeof srcPath !== 'string' || !srcPath.trim()) continue;
 
-                    if (isArchiveTemp && fs.existsSync(dir)) {
-                        // WinRAR / 7-Zip extracts ALL selected files into this temporary directory
-                        const siblingFiles = fs.readdirSync(dir);
-                        for (const sFile of siblingFiles) {
+                const dir = path.dirname(srcPath);
+                const dirLower = dir.toLowerCase();
+                const isArchiveTemp = dirLower.includes('rar') || 
+                                      dirLower.includes('7z') || 
+                                      dirLower.includes('zip') || 
+                                      dirLower.includes('.rartemp') || 
+                                      dirLower.startsWith(tmpLower);
+
+                // Wait up to 2.5 seconds for WinRAR extraction to complete
+                for (let attempt = 0; attempt < 25; attempt++) {
+                    if (fs.existsSync(dir)) {
+                        try {
+                            const foundJars = fs.readdirSync(dir).filter(f => f.toLowerCase().endsWith('.jar'));
+                            if (foundJars.length > 0) {
+                                await new Promise(r => setTimeout(r, 150));
+                                break;
+                            }
+                        } catch (e) {}
+                    }
+                    if (fs.existsSync(srcPath)) break;
+                    await new Promise(r => setTimeout(r, 100));
+                }
+
+                if (isArchiveTemp && fs.existsSync(dir) && dirLower !== tmpLower) {
+                    try {
+                        const allSiblingFiles = fs.readdirSync(dir);
+                        for (const sFile of allSiblingFiles) {
                             if (sFile.toLowerCase().endsWith('.jar')) {
                                 const fullSiblingPath = path.join(dir, sFile);
-                                if (!processedPaths.has(fullSiblingPath)) {
-                                    processedPaths.add(fullSiblingPath);
-                                    const destPath = path.join(this.modsDir, sFile);
+                                const filename = path.basename(sFile);
+                                if (!processedNames.has(filename.toLowerCase())) {
+                                    processedNames.add(filename.toLowerCase());
+                                    const destPath = path.join(this.modsDir, filename);
                                     fs.copyFileSync(fullSiblingPath, destPath);
-                                    installed.push(sFile);
+                                    installed.push(filename);
                                 }
                             }
                         }
-                    } else if (srcPath.toLowerCase().endsWith('.jar')) {
-                        if (!processedPaths.has(srcPath)) {
-                            processedPaths.add(srcPath);
-                            const filename = path.basename(srcPath);
-                            const destPath = path.join(this.modsDir, filename);
-                            fs.copyFileSync(srcPath, destPath);
-                            installed.push(filename);
-                        }
+                    } catch (e) {
+                        console.error('Error reading temp archive directory:', e);
+                    }
+                } else if (fs.existsSync(srcPath) && srcPath.toLowerCase().endsWith('.jar')) {
+                    const filename = path.basename(srcPath);
+                    if (!processedNames.has(filename.toLowerCase())) {
+                        processedNames.add(filename.toLowerCase());
+                        const destPath = path.join(this.modsDir, filename);
+                        fs.copyFileSync(srcPath, destPath);
+                        installed.push(filename);
                     }
                 }
             }
+
+            // 2. Also check if WinRAR created a recent temp folder in %TEMP% in the last 15 seconds
+            try {
+                const now = Date.now();
+                const tempEntries = fs.readdirSync(tmpDir);
+                for (const entry of tempEntries) {
+                    const entryLower = entry.toLowerCase();
+                    if (entryLower.includes('rar$') || entryLower.includes('.rartemp') || entryLower.includes('7z')) {
+                        const fullTempFolder = path.join(tmpDir, entry);
+                        const stat = fs.statSync(fullTempFolder);
+                        if (stat.isDirectory() && (now - stat.mtimeMs) < 15000) {
+                            const subFiles = fs.readdirSync(fullTempFolder);
+                            for (const sFile of subFiles) {
+                                if (sFile.toLowerCase().endsWith('.jar')) {
+                                    const fullPath = path.join(fullTempFolder, sFile);
+                                    const filename = path.basename(sFile);
+                                    if (!processedNames.has(filename.toLowerCase())) {
+                                        processedNames.add(filename.toLowerCase());
+                                        const destPath = path.join(this.modsDir, filename);
+                                        fs.copyFileSync(fullPath, destPath);
+                                        installed.push(filename);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            } catch (err) {
+                console.warn('Temp directory scan error:', err);
+            }
+
             return { success: true, installed, count: installed.length };
         } catch (e) {
             console.error('Error copying local mods:', e);

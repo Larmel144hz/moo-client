@@ -1609,16 +1609,23 @@ window.addEventListener('drop', async (e) => {
     const pathList = [];
 
     for (const file of fileList) {
-        const name = file.name || '';
-        const fullPath = window.mooAPI?.getFilePath ? window.mooAPI.getFilePath(file) : (file.path || '');
+        let fullPath = '';
+        try {
+            if (window.mooAPI?.getFilePath) {
+                fullPath = window.mooAPI.getFilePath(file);
+            }
+        } catch (e) {}
+        if (!fullPath && file.path) fullPath = file.path;
 
-        if (fullPath && fullPath.toLowerCase().endsWith('.jar')) {
+        if (fullPath) {
             pathList.push(fullPath);
-        } else if (name.toLowerCase().endsWith('.jar')) {
+        } else {
+            const name = file.name || 'custom-mod.jar';
+            const safeName = name.toLowerCase().endsWith('.jar') ? name : `${name}.jar`;
             try {
                 const arrayBuffer = await file.arrayBuffer();
                 const uint8 = new Uint8Array(arrayBuffer);
-                const res = await window.mooAPI?.saveModFile(name, uint8);
+                const res = await window.mooAPI?.saveModFile(safeName, uint8);
                 if (res?.success) {
                     installedCount++;
                 }
@@ -1628,15 +1635,14 @@ window.addEventListener('drop', async (e) => {
         }
     }
 
-    if (pathList.length > 0) {
-        try {
-            const res = await window.mooAPI?.installLocalMods(pathList);
-            if (res?.success && res.count > 0) {
-                installedCount += res.count;
-            }
-        } catch (err) {
-            console.error('Error installing local mod paths:', err);
+    // Always call installLocalMods with pathList or empty list so it can scan recent temp folders!
+    try {
+        const res = await window.mooAPI?.installLocalMods(pathList);
+        if (res?.success && res.count > 0) {
+            installedCount += res.count;
         }
+    } catch (err) {
+        console.error('Error installing local mod paths:', err);
     }
 
     if (installedCount > 0) {

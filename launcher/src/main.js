@@ -277,7 +277,7 @@ function setupIPC() {
     });
 
     ipcMain.handle('install-local-mods', async (event, filePaths) => {
-        return modManager.installLocalMods(filePaths);
+        return await modManager.installLocalMods(filePaths);
     });
 
     ipcMain.handle('save-mod-file', async (event, { filename, buffer }) => {

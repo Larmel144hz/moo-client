@@ -17,7 +17,8 @@
     "PlayerEntityRendererMixin",
     "EntityRendererMixin",
     "NametagBackgroundMixin",
-    "ChatHudMixin"
+    "ChatHudMixin",
+    "PlayerListHudMixin"
   ],
   "injectors": {
     "defaultRequire": 1

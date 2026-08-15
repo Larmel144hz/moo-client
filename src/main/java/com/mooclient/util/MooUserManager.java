@@ -50,6 +50,40 @@ public class MooUserManager {
     }
 
     /**
+     * Checks if the player represented by the Tab list entry is a confirmed Moo Client user.
+     */
+    public static boolean isMooUser(PlayerListEntry entry) {
+        if (entry == null || entry.getProfile() == null) return false;
+        if (!com.mooclient.module.modules.NametagsModule.isNametagsEnabled() || !com.mooclient.module.modules.NametagsModule.isShowLogo()) {
+            return false;
+        }
+
+        MinecraftClient client = MinecraftClient.getInstance();
+
+        // Check local player
+        if (client.getSession() != null && client.getSession().getUsername().equalsIgnoreCase(entry.getProfile().getName())) {
+            return true;
+        }
+        if (client.player != null && client.player.getUuid() != null && client.player.getUuid().equals(entry.getProfile().getId())) {
+            return true;
+        }
+
+        if (entry.getProfile().getId() != null && MOO_USERS_UUIDS.contains(entry.getProfile().getId())) {
+            return true;
+        }
+
+        String nameClean = cleanName(entry.getProfile().getName());
+        if (!nameClean.isEmpty()) {
+            if (MOO_USERS_NAMES.contains(nameClean)) return true;
+            for (String reg : MOO_USERS_NAMES) {
+                if (nameClean.contains(reg) || reg.contains(nameClean)) return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
      * Checks if the given player is a confirmed Moo Client user.
      */
     public static boolean isMooUser(String playerName, int entityId) {
