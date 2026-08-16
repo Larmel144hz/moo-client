@@ -3,6 +3,8 @@ const https = require('https');
 const fs = require('fs');
 const path = require('path');
 
+const VERSION = '1.3.2';
+
 function getGitHubToken() {
     try {
         const input = 'protocol=https\nhost=github.com\n\n';
@@ -68,30 +70,41 @@ function uploadAsset(uploadUrl, token, filePath, fileName, contentType) {
     const token = getGitHubToken();
     if (!token) { console.error('No token'); process.exit(1); }
 
-    let res = await apiRequest('GET', '/repos/Larmel144hz/moo-client/releases/tags/v1.3.1', token);
+    let res = await apiRequest('GET', `/repos/Larmel144hz/moo-client/releases/tags/v${VERSION}`, token);
     if (res.status !== 200) {
-        console.error('Release v1.3.1 not found:', res.status);
+        console.error('Release not found');
         process.exit(1);
     }
     const release = res.data;
     console.log('Found release:', release.html_url);
 
-    // Delete existing app.asar asset if any
+    // Delete old assets
     if (release.assets) {
         for (const asset of release.assets) {
-            if (asset.name === 'app.asar') {
-                console.log('Deleting old app.asar asset:', asset.id);
-                await apiRequest('DELETE', `/repos/Larmel144hz/moo-client/releases/assets/${asset.id}`, token);
-            }
+            console.log('Deleting old asset:', asset.name);
+            await apiRequest('DELETE', `/repos/Larmel144hz/moo-client/releases/assets/${asset.id}`, token);
         }
     }
 
-    // Upload app.asar
+    // Upload jar
+    const jarPath = path.join(__dirname, '..', 'build', 'libs', `moo-client-${VERSION}.jar`);
+    if (fs.existsSync(jarPath)) {
+        await uploadAsset(release.upload_url, token, jarPath, `moo-client-${VERSION}.jar`, 'application/java-archive');
+    }
+
+    // Upload asar
     const asarPath = path.join(__dirname, 'dist', 'win-unpacked', 'resources', 'app.asar');
     if (fs.existsSync(asarPath)) {
         console.log('Uploading app.asar (65MB)...');
         await uploadAsset(release.upload_url, token, asarPath, 'app.asar', 'application/octet-stream');
     }
 
-    console.log('ALL ASSETS UPLOADED SUCCESSFULLY!');
+    // Upload exe
+    const exePath = path.join(__dirname, 'dist', `Moo Client Setup ${VERSION}.exe`);
+    if (fs.existsSync(exePath)) {
+        console.log('Uploading exe (136MB)...');
+        await uploadAsset(release.upload_url, token, exePath, `Moo.Client.Setup.${VERSION}.exe`, 'application/octet-stream');
+    }
+
+    console.log('ALL v1.3.2 ASSETS UPLOADED AND OVERWRITTEN SUCCESSFULLY!');
 })();
