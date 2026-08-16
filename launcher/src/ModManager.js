@@ -119,11 +119,11 @@ class ModManager {
      */
     async getRemoteVersion() {
         try {
-            return await this.fetchRawVersion();
+            return await this.fetchFromReleasesAPI();
         } catch (e) {
-            console.warn('Raw version fetch failed, falling back to Releases API:', e.message);
+            console.warn('Releases API fetch failed, falling back to raw version:', e.message);
             try {
-                return await this.fetchFromReleasesAPI();
+                return await this.fetchRawVersion();
             } catch (e2) {
                 return await this.fetchFromContentsAPI();
             }

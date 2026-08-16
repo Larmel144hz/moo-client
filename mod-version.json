@@ -1,6 +1,6 @@
 {
-  "version": "1.3.5",
+  "version": "1.3.6",
   "minecraft": "1.21.4",
-  "download_url": "https://github.com/Larmel144hz/moo-client/releases/download/v1.3.5/moo-client-1.3.5.jar",
-  "changelog": "🚀 Moo Client v1.3.5:\n✓ Pełne wsparcie i automatyczne pobieranie Javy 21 (OpenJDK Adoptium) dla graczy posiadających starszą Javę (np. Java 8)\n✓ Koniec problemów ze środowiskiem Java na dowolnym komputerze\n✓ Bezpieczne przydzielanie pamięci RAM i optymalizacja wydajności"
+  "download_url": "https://github.com/Larmel144hz/moo-client/releases/download/v1.3.6/moo-client-1.3.6.jar",
+  "changelog": "🚀 Moo Client v1.3.6:\n✓ W 100% stabilne i błyskawiczne wykrywanie graczy Moo Client w Tab liście oraz nad nickami\n✓ Natychmiastowa synchronizacja bez opóźnień i bez względu na subdomeny serwera\n✓ Automatyczne pobieranie Javy 21 dla każdego gracza"
 }

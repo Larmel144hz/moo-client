@@ -53,8 +53,8 @@ public class MooNetworkHandler {
             MooUserManager.clear();
         });
 
-        // Periodic presence heartbeat every 8 seconds
-        SCHEDULER.scheduleAtFixedRate(MooNetworkHandler::sendHeartbeat, 1000, 8000, TimeUnit.MILLISECONDS);
+        // Periodic presence heartbeat every 4 seconds
+        SCHEDULER.scheduleAtFixedRate(MooNetworkHandler::sendHeartbeat, 1000, 4000, TimeUnit.MILLISECONDS);
 
         // Keep WebSocket alive
         SCHEDULER.scheduleAtFixedRate(MooNetworkHandler::ensureWsConnected, 5000, 10000, TimeUnit.MILLISECONDS);
@@ -144,24 +144,17 @@ public class MooNetworkHandler {
                 return;
             }
 
-            String currentServer = getCurrentServerAddress();
+            UUID parsedUuid = null;
+            if (uuidStr != null && !uuidStr.isBlank()) {
+                try {
+                    parsedUuid = UUID.fromString(uuidStr);
+                } catch (Exception ignored) {}
+            }
 
-            // Check if on the same server (or both singleplayer or empty)
-            boolean serverMatch = s == null || s.equalsIgnoreCase(currentServer) || s.contains(currentServer) || currentServer.contains(s);
-
-            if (serverMatch) {
-                UUID parsedUuid = null;
-                if (uuidStr != null && !uuidStr.isBlank()) {
-                    try {
-                        parsedUuid = UUID.fromString(uuidStr);
-                    } catch (Exception ignored) {}
-                }
-
-                if ("offline".equalsIgnoreCase(s)) {
-                    MooUserManager.unregisterUser(u, parsedUuid);
-                } else {
-                    MooUserManager.registerUser(u, parsedUuid);
-                }
+            if ("offline".equalsIgnoreCase(s)) {
+                MooUserManager.unregisterUser(u, parsedUuid);
+            } else {
+                MooUserManager.registerUser(u, parsedUuid);
             }
         } catch (Exception ignored) {
         }

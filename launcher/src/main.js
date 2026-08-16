@@ -292,7 +292,7 @@ function getActualLauncherVersion() {
         try {
             const remote = await modManager.getRemoteVersion();
             const localMod = modManager.getLocalVersion();
-            const launcherNeedsUpdate = app.isPackaged && ModManager.isNewerVersion(remote.version, launcherVersion);
+            const launcherNeedsUpdate = ModManager.isNewerVersion(remote.version, launcherVersion);
             const modNeedsUpdate = ModManager.isNewerVersion(remote.version, localMod.version);
             const hasUpdate = launcherNeedsUpdate || modNeedsUpdate;
 
@@ -319,7 +319,7 @@ function getActualLauncherVersion() {
             const remote = await modManager.getRemoteVersion();
             const launcherVersion = getActualLauncherVersion();
             const localMod = modManager.getLocalVersion();
-            const launcherNeedsUpdate = app.isPackaged && ModManager.isNewerVersion(remote.version, launcherVersion);
+            const launcherNeedsUpdate = ModManager.isNewerVersion(remote.version, launcherVersion);
             const modNeedsUpdate = ModManager.isNewerVersion(remote.version, localMod.version);
 
             // 1. Fast Delta Update for Fabric Mod Jar (only ~200 KB!)
