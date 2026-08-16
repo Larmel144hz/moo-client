@@ -21,7 +21,7 @@ public class MooClient implements ClientModInitializer {
 
     public static final String MOD_ID = "mooclient";
     public static final String MOD_NAME = "Moo Client";
-    public static final String VERSION = "1.3.9";
+    public static final String VERSION = "1.4.0";
     public static final Logger LOGGER = LoggerFactory.getLogger(MOD_NAME);
 
     private static MooClient instance;
@@ -162,11 +162,6 @@ public class MooClient implements ClientModInitializer {
                 } else {
                     DiscordRPC.getInstance().updatePresence("W grze", "Moo Client v" + VERSION);
                 }
-            }
-
-            // Broadcast Moo Client handshake every ~5 seconds (100 ticks) in multiplayer
-            if (tickCounter % 100 == 0 && client.world != null) {
-                com.mooclient.network.MooNetworkHandler.sendBroadcast();
             }
         });
 

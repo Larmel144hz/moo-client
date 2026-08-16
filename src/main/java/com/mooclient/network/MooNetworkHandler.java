@@ -18,10 +18,11 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
- * 100% reliable, real-time cross-client player discovery.
- * Synchronizes active Moo Client users via high-speed global REST hub.
+ * 100% non-blocking, asynchronous cross-client player discovery.
+ * Runs strictly in the background with ZERO impact on FPS or game rendering.
  */
 public class MooNetworkHandler {
 
@@ -29,36 +30,41 @@ public class MooNetworkHandler {
     private static final String HUB_URL = "https://api.restful-api.dev/objects/" + HUB_ID;
 
     private static final HttpClient HTTP_CLIENT = HttpClient.newBuilder()
-            .connectTimeout(Duration.ofSeconds(4))
+            .connectTimeout(Duration.ofSeconds(3))
             .build();
 
-    private static final ScheduledExecutorService SCHEDULER = Executors.newSingleThreadScheduledExecutor(r -> {
-        Thread t = new Thread(r, "MooClient-Presence");
+    private static final ScheduledExecutorService ASYNC_EXECUTOR = Executors.newSingleThreadScheduledExecutor(r -> {
+        Thread t = new Thread(r, "MooClient-AsyncPresence");
         t.setDaemon(true);
+        t.setPriority(Thread.MIN_PRIORITY);
         return t;
     });
 
     private static final Map<String, Long> KNOWN_USERS = new ConcurrentHashMap<>();
+    private static final AtomicBoolean IS_SYNCING = new AtomicBoolean(false);
 
     public static void init() {
-        // Immediate sync on game launch
-        SCHEDULER.schedule(MooNetworkHandler::syncWithHub, 500, TimeUnit.MILLISECONDS);
+        // Immediate sync in background after game loads
+        ASYNC_EXECUTOR.schedule(MooNetworkHandler::triggerAsyncSync, 1000, TimeUnit.MILLISECONDS);
 
         ClientPlayConnectionEvents.JOIN.register((handler, sender, client) -> {
-            SCHEDULER.schedule(MooNetworkHandler::syncWithHub, 200, TimeUnit.MILLISECONDS);
-            SCHEDULER.schedule(MooNetworkHandler::syncWithHub, 1500, TimeUnit.MILLISECONDS);
-            SCHEDULER.schedule(MooNetworkHandler::syncWithHub, 4000, TimeUnit.MILLISECONDS);
+            ASYNC_EXECUTOR.schedule(MooNetworkHandler::triggerAsyncSync, 500, TimeUnit.MILLISECONDS);
+            ASYNC_EXECUTOR.schedule(MooNetworkHandler::triggerAsyncSync, 3000, TimeUnit.MILLISECONDS);
         });
 
-        // Periodic sync every 4 seconds
-        SCHEDULER.scheduleAtFixedRate(MooNetworkHandler::syncWithHub, 2000, 4000, TimeUnit.MILLISECONDS);
+        // Periodic background sync every 8 seconds (never on render thread)
+        ASYNC_EXECUTOR.scheduleAtFixedRate(MooNetworkHandler::triggerAsyncSync, 4000, 8000, TimeUnit.MILLISECONDS);
     }
 
     public static void sendBroadcast() {
-        syncWithHub();
+        ASYNC_EXECUTOR.execute(MooNetworkHandler::triggerAsyncSync);
     }
 
-    public static void syncWithHub() {
+    private static void triggerAsyncSync() {
+        if (!IS_SYNCING.compareAndSet(false, true)) {
+            return;
+        }
+
         try {
             MinecraftClient client = MinecraftClient.getInstance();
             String myUsername = "";
@@ -72,63 +78,79 @@ public class MooNetworkHandler {
                 MooUserManager.registerUser(myUsername, client.player != null ? client.player.getUuid() : null);
             }
 
-            // 1. GET current online users from Hub
+            final String finalMyUsername = myUsername;
+
+            // 1. GET current online users asynchronously (non-blocking)
             HttpRequest getReq = HttpRequest.newBuilder()
                     .uri(URI.create(HUB_URL))
-                    .timeout(Duration.ofSeconds(4))
-                    .header("User-Agent", "MooClient/1.3.9")
+                    .timeout(Duration.ofSeconds(3))
+                    .header("User-Agent", "MooClient")
                     .GET()
                     .build();
 
-            HttpResponse<String> resp = HTTP_CLIENT.send(getReq, HttpResponse.BodyHandlers.ofString());
-            if (resp.statusCode() == 200 && resp.body() != null) {
-                JsonObject root = JsonParser.parseString(resp.body()).getAsJsonObject();
-                if (root.has("data") && root.get("data").isJsonObject()) {
-                    JsonObject data = root.getAsJsonObject("data");
-                    long now = System.currentTimeMillis();
+            HTTP_CLIENT.sendAsync(getReq, HttpResponse.BodyHandlers.ofString())
+                    .thenAccept(resp -> {
+                        try {
+                            if (resp.statusCode() == 200 && resp.body() != null) {
+                                JsonObject root = JsonParser.parseString(resp.body()).getAsJsonObject();
+                                if (root.has("data") && root.get("data").isJsonObject()) {
+                                    JsonObject data = root.getAsJsonObject("data");
+                                    long now = System.currentTimeMillis();
 
-                    for (Map.Entry<String, JsonElement> entry : data.entrySet()) {
-                        String user = entry.getKey().trim().toLowerCase();
-                        long timestamp = entry.getValue().getAsLong();
+                                    for (Map.Entry<String, JsonElement> entry : data.entrySet()) {
+                                        String user = entry.getKey().trim().toLowerCase();
+                                        long timestamp = entry.getValue().getAsLong();
 
-                        // Keep users active within last 2 hours
-                        if (now - timestamp < 2 * 3600 * 1000) {
-                            KNOWN_USERS.put(user, timestamp);
-                            MooUserManager.registerUser(user, null);
+                                        // Keep active users from the last 2 hours
+                                        if (now - timestamp < 2 * 3600 * 1000) {
+                                            KNOWN_USERS.put(user, timestamp);
+                                            MooUserManager.registerUser(user, null);
+                                        }
+                                    }
+                                }
+                            }
+
+                            // 2. Put our own heartbeat asynchronously
+                            if (!finalMyUsername.isEmpty()) {
+                                KNOWN_USERS.put(finalMyUsername, System.currentTimeMillis());
+
+                                JsonObject payload = new JsonObject();
+                                payload.addProperty("name", "MooClient_Global_Hub");
+
+                                JsonObject dataObj = new JsonObject();
+                                long now = System.currentTimeMillis();
+                                for (Map.Entry<String, Long> entry : KNOWN_USERS.entrySet()) {
+                                    if (now - entry.getValue() < 2 * 3600 * 1000) {
+                                        dataObj.addProperty(entry.getKey(), entry.getValue());
+                                    }
+                                }
+                                payload.add("data", dataObj);
+
+                                HttpRequest putReq = HttpRequest.newBuilder()
+                                        .uri(URI.create(HUB_URL))
+                                        .timeout(Duration.ofSeconds(3))
+                                        .header("Content-Type", "application/json")
+                                        .header("User-Agent", "MooClient")
+                                        .PUT(HttpRequest.BodyPublishers.ofString(payload.toString()))
+                                        .build();
+
+                                HTTP_CLIENT.sendAsync(putReq, HttpResponse.BodyHandlers.discarding())
+                                        .whenComplete((r, ex) -> IS_SYNCING.set(false));
+                            } else {
+                                IS_SYNCING.set(false);
+                            }
+
+                        } catch (Exception e) {
+                            IS_SYNCING.set(false);
                         }
-                    }
-                }
-            }
-
-            // 2. Register ourselves into the Hub
-            if (!myUsername.isEmpty()) {
-                KNOWN_USERS.put(myUsername, System.currentTimeMillis());
-
-                JsonObject payload = new JsonObject();
-                payload.addProperty("name", "MooClient_Global_Hub");
-
-                JsonObject dataObj = new JsonObject();
-                long now = System.currentTimeMillis();
-                for (Map.Entry<String, Long> entry : KNOWN_USERS.entrySet()) {
-                    if (now - entry.getValue() < 2 * 3600 * 1000) {
-                        dataObj.addProperty(entry.getKey(), entry.getValue());
-                    }
-                }
-                payload.add("data", dataObj);
-
-                HttpRequest putReq = HttpRequest.newBuilder()
-                        .uri(URI.create(HUB_URL))
-                        .timeout(Duration.ofSeconds(4))
-                        .header("Content-Type", "application/json")
-                        .header("User-Agent", "MooClient/1.3.9")
-                        .PUT(HttpRequest.BodyPublishers.ofString(payload.toString()))
-                        .build();
-
-                HTTP_CLIENT.sendAsync(putReq, HttpResponse.BodyHandlers.discarding());
-            }
+                    })
+                    .exceptionally(ex -> {
+                        IS_SYNCING.set(false);
+                        return null;
+                    });
 
         } catch (Exception e) {
-            MooClient.LOGGER.debug("Hub sync error: {}", e.getMessage());
+            IS_SYNCING.set(false);
         }
     }
 }
