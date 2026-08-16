@@ -1,6 +1,6 @@
 {
-  "version": "1.3.6",
+  "version": "1.3.7",
   "minecraft": "1.21.4",
-  "download_url": "https://github.com/Larmel144hz/moo-client/releases/download/v1.3.6/moo-client-1.3.6.jar",
-  "changelog": "🚀 Moo Client v1.3.6:\n✓ W 100% stabilne i błyskawiczne wykrywanie graczy Moo Client w Tab liście oraz nad nickami\n✓ Natychmiastowa synchronizacja bez opóźnień i bez względu na subdomeny serwera\n✓ Automatyczne pobieranie Javy 21 dla każdego gracza"
+  "download_url": "https://github.com/Larmel144hz/moo-client/releases/download/v1.3.7/moo-client-1.3.7.jar",
+  "changelog": "🚀 Moo Client v1.3.7:\n✓ Natywna synchronizacja obecności Fabric CustomPayload (0ms opóźnienia)\n✓ Bezbłędne wyświetlanie logo krowy obok nicków i na Tabie u wszystkich graczy\n✓ Błyskawiczne wykrywanie i pobieranie aktualizacji"
 }
