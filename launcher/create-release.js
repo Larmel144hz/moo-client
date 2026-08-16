@@ -3,7 +3,7 @@ const https = require('https');
 const fs = require('fs');
 const path = require('path');
 
-const VERSION = '1.3.2';
+const VERSION = '1.3.3';
 
 function getGitHubToken() {
     try {
@@ -106,5 +106,5 @@ function uploadAsset(uploadUrl, token, filePath, fileName, contentType) {
         await uploadAsset(release.upload_url, token, exePath, `Moo.Client.Setup.${VERSION}.exe`, 'application/octet-stream');
     }
 
-    console.log('ALL v1.3.2 ASSETS UPLOADED AND OVERWRITTEN SUCCESSFULLY!');
+    console.log('ALL v1.3.3 ASSETS RE-UPLOADED AND REPLACED SUCCESSFULLY!');
 })();
