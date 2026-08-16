@@ -214,24 +214,11 @@ class GameManager {
         });
     }
 
-    getMooClientVersion() {
-        try {
-            const vPath = path.join(this.gameDir, 'installed-mod-version.json');
-            if (fs.existsSync(vPath)) {
-                const j = JSON.parse(fs.readFileSync(vPath, 'utf8'));
-                if (j.version) return j.version;
-            }
-        } catch (e) {}
-        const pkg = require('../package.json');
-        return pkg.version || '1.4.3';
-    }
-
     async ensureFabricVersion(gameVersion = '1.21.4') {
         const loaderVersion = await this.getLatestStableLoader();
         const customVersionName = `fabric-loader-${gameVersion}`;
         const versionDir = path.join(this.gameDir, 'versions', customVersionName);
         const versionJsonPath = path.join(versionDir, `${customVersionName}.json`);
-        const mooVer = this.getMooClientVersion();
 
         // If cached profile exists, verify it uses the latest loader version and clean arguments
         if (fs.existsSync(versionJsonPath)) {
@@ -247,21 +234,11 @@ class GameManager {
                         return typeof arg === 'string' ? arg.trim() : arg;
                     });
                 }
-
-                // Ensure Moo Client is present in libraries
-                if (!Array.isArray(existing.libraries)) existing.libraries = [];
-                const hasMoo = existing.libraries.some(lib => lib.name?.includes(`com.mooclient:moo-client:${mooVer}`));
-                if (!hasMoo) {
-                    existing.libraries = existing.libraries.filter(lib => !lib.name?.includes('com.mooclient:moo-client'));
-                    existing.libraries.push({ name: `com.mooclient:moo-client:${mooVer}` });
-                    modified = true;
-                }
-
                 if (modified) {
                     fs.writeFileSync(versionJsonPath, JSON.stringify(existing, null, 2), 'utf8');
                 }
                 const hasLoader = existing.libraries?.some(lib => lib.name?.includes(`net.fabricmc:fabric-loader:${loaderVersion}`));
-                if (hasLoader && hasMoo) {
+                if (hasLoader) {
                     return customVersionName;
                 }
             } catch (e) {}
@@ -286,10 +263,6 @@ class GameManager {
                                 return arg;
                             });
                         }
-                        if (!Array.isArray(json.libraries)) json.libraries = [];
-                        json.libraries = json.libraries.filter(lib => !lib.name?.includes('com.mooclient:moo-client'));
-                        json.libraries.push({ name: `com.mooclient:moo-client:${mooVer}` });
-
                         fs.writeFileSync(versionJsonPath, JSON.stringify(json, null, 2));
                         resolve(customVersionName);
                     } catch (e) {
@@ -508,16 +481,6 @@ class GameManager {
 
         onProgress('Przygotowywanie profilu Fabric...', 30);
         const customFabric = await this.ensureFabricVersion(versionNumber);
-
-        // Ensure Moo Client core is in libraries and remove any stray moo-client jars from mods/ (Lunar style)
-        try {
-            const modsDir = path.join(this.gameDir, 'mods');
-            if (fs.existsSync(modsDir)) {
-                fs.readdirSync(modsDir).filter(f => f.toLowerCase().startsWith('moo-client')).forEach(f => {
-                    try { fs.unlinkSync(path.join(modsDir, f)); } catch(e){}
-                });
-            }
-        } catch (e) {}
 
         console.log(`[Launch] Using Java: ${javaExecutable}, RAM: max ${safeMaxRam}G (requested ${rawRam}G)`);
 

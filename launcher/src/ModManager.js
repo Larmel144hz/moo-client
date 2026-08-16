@@ -17,15 +17,12 @@ class ModManager {
     constructor() {
         this.gameDir = path.join(os.homedir(), '.mooclient');
         this.modsDir = path.join(this.gameDir, 'mods');
-        this.coreLibBase = path.join(this.gameDir, 'libraries', 'com', 'mooclient', 'moo-client');
         this.localVersionPath = path.join(this.gameDir, 'installed-mod-version.json');
 
         // GitHub raw URL for version check
         this.versionUrl = 'https://raw.githubusercontent.com/Larmel144hz/moo-client/main/mod-version.json';
 
         this.ensureDir(this.modsDir);
-        this.ensureDir(this.coreLibBase);
-        this.cleanOldMods();
         this.ensureBundledMod();
     }
 
@@ -50,86 +47,33 @@ class ModManager {
     }
 
     /**
-     * Installs Moo Client jar into the protected libraries directory and updates fabric version JSON.
-     */
-    installCoreMod(version, srcJarPath) {
-        try {
-            const targetDir = path.join(this.coreLibBase, version);
-            this.ensureDir(targetDir);
-            const targetJar = path.join(targetDir, `moo-client-${version}.jar`);
-
-            if (srcJarPath !== targetJar) {
-                fs.copyFileSync(srcJarPath, targetJar);
-            }
-
-            // Remove older versions from libraries directory
-            try {
-                const subdirs = fs.readdirSync(this.coreLibBase);
-                for (const sub of subdirs) {
-                    if (sub !== version) {
-                        try {
-                            fs.rmSync(path.join(this.coreLibBase, sub), { recursive: true, force: true });
-                        } catch (e) {}
-                    }
-                }
-            } catch (e) {}
-
-            // Clean any moo-client jars from the mods folder (Lunar-style hidden core)
-            this.cleanOldMods();
-
-            // Save installed version info
-            fs.writeFileSync(this.localVersionPath, JSON.stringify({
-                version: version,
-                minecraft: '1.21.4',
-                installedAt: new Date().toISOString(),
-            }, null, 2));
-
-            // Update fabric version profile JSON
-            this.updateFabricProfileLibrary(version);
-            console.log(`Core Moo Client v${version} installed in libraries!`);
-            return true;
-        } catch (e) {
-            console.error('Error installing core mod in libraries:', e);
-            return false;
-        }
-    }
-
-    /**
-     * Injects Moo Client library into fabric-loader version json
-     */
-    updateFabricProfileLibrary(version) {
-        try {
-            const vJsonPath = path.join(this.gameDir, 'versions', 'fabric-loader-1.21.4', 'fabric-loader-1.21.4.json');
-            if (fs.existsSync(vJsonPath)) {
-                const vJson = JSON.parse(fs.readFileSync(vJsonPath, 'utf8'));
-                if (!Array.isArray(vJson.libraries)) vJson.libraries = [];
-                vJson.libraries = vJson.libraries.filter(l => !l.name || !l.name.includes('com.mooclient:moo-client'));
-                vJson.libraries.push({ name: `com.mooclient:moo-client:${version}` });
-                fs.writeFileSync(vJsonPath, JSON.stringify(vJson, null, 2), 'utf8');
-            }
-        } catch (e) {
-            console.warn('Could not update fabric-loader profile JSON:', e.message);
-        }
-    }
-
-    /**
-     * Deploys the bundled mod jar from assets into libraries if not already installed.
+     * Deploys the bundled mod jar from assets if not already installed.
      */
     ensureBundledMod() {
         try {
             const pkg = require('../package.json');
-            const defaultVer = pkg.version || '1.4.3';
+            const defaultVer = pkg.version || '1.0.2';
             const bundledPath = path.join(__dirname, '..', 'assets', 'moo-client.jar');
+            const targetJar = path.join(this.modsDir, `moo-client-${defaultVer}.jar`);
 
-            const current = this.getLocalVersion();
-            if (!current.version || ModManager.isNewerVersion(defaultVer, current.version)) {
-                if (fs.existsSync(bundledPath)) {
-                    this.installCoreMod(defaultVer, bundledPath);
+            if (fs.existsSync(bundledPath)) {
+                const files = fs.existsSync(this.modsDir) ? fs.readdirSync(this.modsDir) : [];
+                const hasMatchingOrNewer = files.some(f => {
+                    const m = f.match(/^moo-client-([0-9.]+)\.jar$/i);
+                    return m && !ModManager.isNewerVersion(defaultVer, m[1]);
+                });
+
+                if (!hasMatchingOrNewer) {
+                    this.cleanOldMods();
+                    fs.copyFileSync(bundledPath, targetJar);
+                    fs.writeFileSync(this.localVersionPath, JSON.stringify({
+                        version: defaultVer,
+                        minecraft: '1.21.4',
+                        installedAt: new Date().toISOString(),
+                    }, null, 2));
+                    console.log(`Bundled mod moo-client-${defaultVer}.jar deployed successfully!`);
                 }
-            } else {
-                this.updateFabricProfileLibrary(current.version);
             }
-            this.cleanOldMods();
         } catch (e) {
             console.warn('Could not deploy bundled mod:', e.message);
         }
@@ -144,18 +88,26 @@ class ModManager {
                 const data = fs.readFileSync(this.localVersionPath, 'utf8');
                 return JSON.parse(data);
             }
-            if (fs.existsSync(this.coreLibBase)) {
-                const versions = fs.readdirSync(this.coreLibBase);
-                if (versions.length > 0) {
-                    versions.sort((a, b) => ModManager.isNewerVersion(a, b) ? 1 : -1);
-                    return { version: versions[versions.length - 1], minecraft: '1.21.4' };
+            if (fs.existsSync(this.modsDir)) {
+                const files = fs.readdirSync(this.modsDir);
+                let highest = null;
+                for (const file of files) {
+                    const match = file.match(/^moo-client-([0-9.]+)\.jar$/i);
+                    if (match) {
+                        if (!highest || ModManager.isNewerVersion(match[1], highest)) {
+                            highest = match[1];
+                        }
+                    }
+                }
+                if (highest) {
+                    return { version: highest, minecraft: '1.21.4' };
                 }
             }
         } catch (e) {
             console.error('Error reading local mod version:', e);
         }
         const pkg = require('../package.json');
-        return { version: pkg.version || '1.4.3', minecraft: '1.21.4' };
+        return { version: pkg.version || '1.0.2', minecraft: '1.21.4' };
     }
 
     /**
@@ -408,10 +360,11 @@ class ModManager {
             }
 
             // Download new version
-            onProgress(`Downloading core update v${remoteVersion.version}...`, 30);
+            onProgress(`Downloading mod v${remoteVersion.version}...`, 30);
             
-            const tempDir = os.tmpdir();
-            const tempJarPath = path.join(tempDir, `moo-client-${remoteVersion.version}-${Date.now()}.download`);
+            const jarFileName = `moo-client-${remoteVersion.version}.jar`;
+            const jarPath = path.join(this.modsDir, jarFileName);
+            const tempJarPath = path.join(this.modsDir, `${jarFileName}.download`);
 
             await this.downloadFile(remoteVersion.download_url, tempJarPath, (percent) => {
                 const scaledPercent = 30 + Math.round(percent * 0.4); // Scale to 30-70 range
@@ -419,8 +372,16 @@ class ModManager {
             });
 
             if (fs.existsSync(tempJarPath) && fs.statSync(tempJarPath).size > 10000) {
-                this.installCoreMod(remoteVersion.version, tempJarPath);
-                try { fs.unlinkSync(tempJarPath); } catch (e) {}
+                // Clean old mods first
+                this.cleanOldMods();
+                fs.renameSync(tempJarPath, jarPath);
+
+                // Save installed version info
+                fs.writeFileSync(this.localVersionPath, JSON.stringify({
+                    version: remoteVersion.version,
+                    minecraft: remoteVersion.minecraft || '1.21.4',
+                    installedAt: new Date().toISOString(),
+                }, null, 2));
 
                 onProgress(`Mod updated to v${remoteVersion.version}!`, 70);
                 return true;

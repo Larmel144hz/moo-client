@@ -19,14 +19,6 @@
   "mixins": [
     "mooclient.mixins.json"
   ],
-  "custom": {
-    "modmenu": {
-      "badges": [
-        "library"
-      ],
-      "parent": "minecraft"
-    }
-  },
   "depends": {
     "fabricloader": ">=0.16.0",
     "minecraft": "~1.21.4",

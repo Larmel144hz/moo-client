@@ -1,6 +1,6 @@
 {
-  "version": "1.4.3",
+  "version": "1.4.4",
   "minecraft": "1.21.4",
-  "download_url": "https://github.com/Larmel144hz/moo-client/releases/download/v1.4.3/moo-client-1.4.3.jar",
-  "changelog": "🚀 Moo Client v1.4.3 (Lunar-Style Hidden Core & Protected Architecture):\n✓ Rdzeń Moo Client przeniesiony do chronionego katalogu bibliotek (brak widoczności i możliwości usunięcia z folderu mods)\n✓ Całkowite ukrycie z menu Mod Menu w grze (czysty wygląd jak w Lunar Client)\n✓ Pełna odporność na przypadkowe usunięcie folderu mods"
+  "download_url": "https://github.com/Larmel144hz/moo-client/releases/download/v1.4.4/moo-client-1.4.4.jar",
+  "changelog": "🚀 Moo Client v1.4.4:\n✓ Przywrócono standardowy układ modów v1.4.2\n✓ Błyskawiczna synchronizacja obecności przez MQTT w czasie rzeczywistym\n✓ Pełna optymalizacja FPS i flagi pamięci G1GC"
 }
