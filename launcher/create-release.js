@@ -3,7 +3,7 @@ const https = require('https');
 const fs = require('fs');
 const path = require('path');
 
-const VERSION = '1.4.1';
+const VERSION = '1.4.2';
 
 function getGitHubToken() {
     try {
@@ -80,7 +80,7 @@ function uploadAsset(uploadUrl, token, filePath, fileName, contentType) {
         res = await apiRequest('POST', '/repos/Larmel144hz/moo-client/releases', token, {
             tag_name: `v${VERSION}`,
             name: `Moo Client v${VERSION}`,
-            body: '🚀 **Moo Client v1.4.1 (Instant Real-time Sync Update)**\n\n✓ Błyskawiczna, w 100% dwukierunkowa synchronizacja obecności przez broker HiveMQ MQTT\n✓ Wszyscy gracze natychmiast widzą swoje logo krowy bez opóźnień\n✓ 0ms lagów i zerowy wpływ na FPS',
+            body: '🚀 **Moo Client v1.4.2 (Maximum FPS & Zero-Lag Optimization Update)**\n\n✓ O(1) Cache dla renderowania NameTagów i Tablisty — zero alokacji pamięci w pętli renderowania\n✓ Zaawansowane flagi JVM Aikar/Lunar G1GC dla stabilnych 200+ FPS bez mikrozacięć\n✓ Błyskawiczna, w 100% płynna synchronizacja obecności graczy',
             draft: false,
             prerelease: false
         });
@@ -116,5 +116,5 @@ function uploadAsset(uploadUrl, token, filePath, fileName, contentType) {
         await uploadAsset(release.upload_url, token, exePath, `Moo.Client.Setup.${VERSION}.exe`, 'application/octet-stream');
     }
 
-    console.log('ALL v1.4.1 ASSETS UPLOADED AND REPLACED SUCCESSFULLY!');
+    console.log('ALL v1.4.2 ASSETS UPLOADED AND REPLACED SUCCESSFULLY!');
 })();
