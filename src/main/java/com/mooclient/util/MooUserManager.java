@@ -8,22 +8,19 @@ import net.minecraft.text.Text;
 
 import java.util.Collections;
 import java.util.HashSet;
-import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
- * High-performance, zero-allocation cache player recognition for Moo Client.
- * Optimized for maximum rendering FPS in multiplayer with 100+ players on screen.
+ * Tracks and confirms Moo Client users for nametag and tab list badges.
+ * The local player is ALWAYS recognized as a Moo Client user.
  */
 public class MooUserManager {
 
     private static final Set<String> MOO_USERS_NAMES = Collections.synchronizedSet(new HashSet<>());
     private static final Set<UUID> MOO_USERS_UUIDS = Collections.synchronizedSet(new HashSet<>());
-    private static final Map<String, Boolean> LOOKUP_CACHE = new ConcurrentHashMap<>();
     private static final Pattern USERNAME_PATTERN = Pattern.compile("[a-zA-Z0-9_]{3,16}");
 
     public static void registerUser(String username, UUID uuid) {
@@ -31,12 +28,10 @@ public class MooUserManager {
             String clean = cleanName(username);
             if (!clean.isEmpty()) {
                 MOO_USERS_NAMES.add(clean);
-                LOOKUP_CACHE.clear();
             }
         }
         if (uuid != null) {
             MOO_USERS_UUIDS.add(uuid);
-            LOOKUP_CACHE.clear();
         }
     }
 
@@ -45,36 +40,27 @@ public class MooUserManager {
             String clean = cleanName(username);
             if (!clean.isEmpty()) {
                 MOO_USERS_NAMES.remove(clean);
-                LOOKUP_CACHE.clear();
             }
         }
         if (uuid != null) {
             MOO_USERS_UUIDS.remove(uuid);
-            LOOKUP_CACHE.clear();
         }
     }
 
     public static void clear() {
         MOO_USERS_NAMES.clear();
         MOO_USERS_UUIDS.clear();
-        LOOKUP_CACHE.clear();
     }
 
     public static String cleanName(String name) {
         if (name == null || name.isEmpty()) return "";
-
-        // Fast path: if string contains no formatting codes, just trim and lowercase
-        if (name.indexOf('§') == -1 && !name.startsWith("literal{")) {
-            return name.trim().toLowerCase();
-        }
-
         return name.replaceAll("(?i)§[0-9a-fk-or]", "")
                    .replaceAll("(?i)literal\\{text='(.*?)'\\}", "$1")
                    .trim().toLowerCase();
     }
 
     /**
-     * Fast Tab List Entry check with O(1) profile UUID and name matching.
+     * Checks if the player represented by the Tab list entry is a confirmed Moo Client user.
      */
     public static boolean isMooUser(PlayerListEntry entry) {
         if (entry == null || entry.getProfile() == null) return false;
@@ -84,26 +70,34 @@ public class MooUserManager {
 
         MinecraftClient client = MinecraftClient.getInstance();
 
-        // 1. Always check local player (O(1))
-        if (client.getSession() != null && client.getSession().getUsername().equalsIgnoreCase(entry.getProfile().getName())) {
+        // 1. Always check local player
+        if (client.getSession() != null && client.getSession().getUsername() != null && client.getSession().getUsername().equalsIgnoreCase(entry.getProfile().getName())) {
             return true;
         }
         if (client.player != null && client.player.getUuid() != null && client.player.getUuid().equals(entry.getProfile().getId())) {
             return true;
         }
 
-        // 2. UUID Match (O(1))
+        // 2. UUID Match
         if (entry.getProfile().getId() != null && MOO_USERS_UUIDS.contains(entry.getProfile().getId())) {
             return true;
         }
 
-        // 3. Cached name check
-        String rawName = entry.getProfile().getName();
-        if (rawName != null) {
-            return isMooUser(rawName, -1);
+        // 3. Exact profile name match
+        String nameClean = cleanName(entry.getProfile().getName());
+        if (!nameClean.isEmpty() && MOO_USERS_NAMES.contains(nameClean)) {
+            return true;
         }
 
-        return false;
+        // 4. Match any words in display name
+        if (entry.getDisplayName() != null) {
+            String display = cleanName(entry.getDisplayName().getString());
+            if (matchesAnyUser(display)) {
+                return true;
+            }
+        }
+
+        return matchesAnyUser(nameClean);
     }
 
     public static boolean isMooUser(Text text, int entityId) {
@@ -112,53 +106,47 @@ public class MooUserManager {
     }
 
     /**
-     * Checks if player is a confirmed Moo user with instant O(1) concurrent cache.
+     * Checks if the given player is a confirmed Moo Client user.
      */
     public static boolean isMooUser(String playerName, int entityId) {
-        if (playerName == null || playerName.isEmpty()) return false;
         if (!com.mooclient.module.modules.NametagsModule.isNametagsEnabled() || !com.mooclient.module.modules.NametagsModule.isShowLogo()) {
             return false;
         }
 
         MinecraftClient client = MinecraftClient.getInstance();
 
-        // 1. Local Player Fast Path
+        // 1. Local Player Check (ALWAYS TRUE FOR LOCAL PLAYER)
         if (client.player != null && client.player.getId() == entityId) {
             return true;
         }
-        if (client.getSession() != null && playerName.equalsIgnoreCase(client.getSession().getUsername())) {
-            return true;
-        }
 
-        // 2. Check LRU / Cache
-        Boolean cached = LOOKUP_CACHE.get(playerName);
-        if (cached != null) {
-            return cached;
-        }
-
-        boolean result = evaluateUser(playerName, entityId, client);
-        if (LOOKUP_CACHE.size() > 500) {
-            LOOKUP_CACHE.clear();
-        }
-        LOOKUP_CACHE.put(playerName, result);
-        return result;
-    }
-
-    private static boolean evaluateUser(String playerName, int entityId, MinecraftClient client) {
         String targetClean = cleanName(playerName);
         if (targetClean.isEmpty()) return false;
 
-        // Direct username match (O(1))
+        if (client.getSession() != null && client.getSession().getUsername() != null) {
+            String myClean = cleanName(client.getSession().getUsername());
+            if (!myClean.isEmpty() && (targetClean.equals(myClean) || targetClean.contains(myClean) || myClean.contains(targetClean))) {
+                return true;
+            }
+        }
+        if (client.player != null && client.player.getName() != null) {
+            String myNameClean = cleanName(client.player.getName().getString());
+            if (!myNameClean.isEmpty() && (targetClean.equals(myNameClean) || targetClean.contains(myNameClean) || myNameClean.contains(targetClean))) {
+                return true;
+            }
+        }
+
+        // 2. Direct username match in registered Moo users
         if (MOO_USERS_NAMES.contains(targetClean)) {
             return true;
         }
 
-        // Word token matcher (handles ranks like "[VIP] Player", "★ Nick ★", etc.)
+        // 3. Word token matcher (handles prefixes like "[VIP] Player", "★ Nick ★", etc.)
         if (matchesAnyUser(targetClean)) {
             return true;
         }
 
-        // Entity check
+        // 4. Check entity in world
         if (client.world != null && entityId >= 0) {
             Entity entity = client.world.getEntityById(entityId);
             if (entity instanceof PlayerEntity player) {
@@ -168,6 +156,26 @@ public class MooUserManager {
                 String entityClean = cleanName(player.getNameForScoreboard());
                 if (!entityClean.isEmpty() && (MOO_USERS_NAMES.contains(entityClean) || matchesAnyUser(entityClean))) {
                     return true;
+                }
+            }
+        }
+
+        // 5. Tab list entry match
+        if (client.getNetworkHandler() != null) {
+            for (PlayerListEntry entry : client.getNetworkHandler().getPlayerList()) {
+                if (entry.getProfile() != null) {
+                    if (MOO_USERS_UUIDS.contains(entry.getProfile().getId())) {
+                        String profileClean = cleanName(entry.getProfile().getName());
+                        if (targetClean.contains(profileClean) || profileClean.contains(targetClean)) {
+                            return true;
+                        }
+                    }
+                    String profileClean = cleanName(entry.getProfile().getName());
+                    if (MOO_USERS_NAMES.contains(profileClean)) {
+                        if (targetClean.contains(profileClean) || profileClean.contains(targetClean)) {
+                            return true;
+                        }
+                    }
                 }
             }
         }

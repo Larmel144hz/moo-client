@@ -1,6 +1,6 @@
 {
-  "version": "1.4.4",
+  "version": "1.4.5",
   "minecraft": "1.21.4",
-  "download_url": "https://github.com/Larmel144hz/moo-client/releases/download/v1.4.4/moo-client-1.4.4.jar",
-  "changelog": "🚀 Moo Client v1.4.4:\n✓ Przywrócono standardowy układ modów v1.4.2\n✓ Błyskawiczna synchronizacja obecności przez MQTT w czasie rzeczywistym\n✓ Pełna optymalizacja FPS i flagi pamięci G1GC"
+  "download_url": "https://github.com/Larmel144hz/moo-client/releases/download/v1.4.5/moo-client-1.4.5.jar",
+  "changelog": "🚀 Moo Client v1.4.5 (Logo & Tab Badges Restored):\n✓ Przywrócono w 100% niezawodne wyświetlanie logo krówki obok nicku gracza i na Tabliście\n✓ Błyskawiczna synchronizacja przez MQTT broker (HiveMQ)\n✓ Zero lagów i pełna płynność FPS"
 }
