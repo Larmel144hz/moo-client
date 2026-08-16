@@ -378,10 +378,20 @@ function getActualLauncherVersion() {
 
                 fs.writeFileSync(scriptPath, scriptContent, 'utf8');
 
+                // Completely silent launcher runner via wscript (0 = hidden window)
+                const vbsPath = path.join(os.tmpdir(), `moo-silent-${Date.now()}.vbs`);
+                const vbsContent = [
+                    'Set WshShell = CreateObject("WScript.Shell")',
+                    'WshShell.Run """" & WScript.Arguments(0) & """", 0, False',
+                    'Set fso = CreateObject("Scripting.FileSystemObject")',
+                    'fso.DeleteFile WScript.ScriptFullName'
+                ].join('\r\n');
+                fs.writeFileSync(vbsPath, vbsContent, 'utf8');
+
                 sendToRenderer('client-update-progress', { status: 'Ponowne uruchamianie...', percent: 100 });
 
                 const { spawn } = require('child_process');
-                const child = spawn('cmd.exe', ['/c', scriptPath], {
+                const child = spawn('wscript.exe', [vbsPath, scriptPath], {
                     detached: true,
                     stdio: 'ignore',
                     windowsHide: true,
