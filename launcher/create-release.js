@@ -3,7 +3,7 @@ const https = require('https');
 const fs = require('fs');
 const path = require('path');
 
-const VERSION = '1.3.8';
+const VERSION = '1.3.9';
 
 function getGitHubToken() {
     try {
@@ -80,7 +80,7 @@ function uploadAsset(uploadUrl, token, filePath, fileName, contentType) {
         res = await apiRequest('POST', '/repos/Larmel144hz/moo-client/releases', token, {
             tag_name: `v${VERSION}`,
             name: `Moo Client v${VERSION}`,
-            body: '🚀 **Moo Client v1.3.8**\n\n✓ Pełna synchronizacja logo Moo Client obok nicku oraz na Tabliście u wszystkich graczy\n✓ 0ms opóźnienia dzięki Fabric CustomPayload networking\n✓ Automatyczne pobieranie środowiska Java 21 w razie potrzeby',
+            body: '🚀 **Moo Client v1.3.9**\n\n✓ Błyskawiczna, w 100% niezawodna synchronizacja graczy Moo Client przez Global Hub\n✓ Perfekcyjne wyświetlanie logo krowy na Tabie oraz nad nickami graczy\n✓ Automatyczne aktualizacje w locie',
             draft: false,
             prerelease: false
         });
@@ -116,5 +116,5 @@ function uploadAsset(uploadUrl, token, filePath, fileName, contentType) {
         await uploadAsset(release.upload_url, token, exePath, `Moo.Client.Setup.${VERSION}.exe`, 'application/octet-stream');
     }
 
-    console.log('ALL v1.3.8 ASSETS UPLOADED AND REPLACED SUCCESSFULLY!');
+    console.log('ALL v1.3.9 ASSETS UPLOADED AND REPLACED SUCCESSFULLY!');
 })();
