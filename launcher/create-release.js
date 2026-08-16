@@ -3,7 +3,7 @@ const https = require('https');
 const fs = require('fs');
 const path = require('path');
 
-const VERSION = '1.4.4';
+const VERSION = '1.4.5';
 
 function getGitHubToken() {
     try {
@@ -80,7 +80,7 @@ function uploadAsset(uploadUrl, token, filePath, fileName, contentType) {
         res = await apiRequest('POST', '/repos/Larmel144hz/moo-client/releases', token, {
             tag_name: `v${VERSION}`,
             name: `Moo Client v${VERSION}`,
-            body: '🚀 **Moo Client v1.4.4**\n\n✓ Przywrócono standardowy układ modów z wersji 1.4.2\n✓ Błyskawiczna synchronizacja obecności przez MQTT w czasie rzeczywistym\n✓ Pełna optymalizacja FPS i flagi pamięci G1GC',
+            body: '🚀 **Moo Client v1.4.5 (Logo & Tab Badges Restored)**\n\n✓ Przywrócono w 100% niezawodne wyświetlanie logo krówki obok nicku gracza i na Tabliście\n✓ Błyskawiczna synchronizacja przez MQTT broker (HiveMQ)\n✓ Zero lagów i pełna płynność FPS',
             draft: false,
             prerelease: false
         });
@@ -116,5 +116,5 @@ function uploadAsset(uploadUrl, token, filePath, fileName, contentType) {
         await uploadAsset(release.upload_url, token, exePath, `Moo.Client.Setup.${VERSION}.exe`, 'application/octet-stream');
     }
 
-    console.log('ALL v1.4.4 ASSETS UPLOADED AND REPLACED SUCCESSFULLY!');
+    console.log('ALL v1.4.5 ASSETS UPLOADED AND REPLACED SUCCESSFULLY!');
 })();
