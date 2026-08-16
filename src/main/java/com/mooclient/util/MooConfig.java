@@ -136,6 +136,20 @@ public class MooConfig {
             ping.addProperty("posY", com.mooclient.module.modules.PingModule.posY);
             root.add("ping", ping);
 
+            // Global Client Settings
+            JsonObject settings = new JsonObject();
+            settings.addProperty("accentPreset", MooClientSettings.getAccentPreset().name());
+            settings.addProperty("customRed", MooClientSettings.getCustomRed());
+            settings.addProperty("customGreen", MooClientSettings.getCustomGreen());
+            settings.addProperty("customBlue", MooClientSettings.getCustomBlue());
+            settings.addProperty("hudSnapping", MooClientSettings.isHudSnapping());
+            settings.addProperty("hudScale", MooClientSettings.getHudScale());
+            settings.addProperty("globalTextShadow", MooClientSettings.isGlobalTextShadow());
+            settings.addProperty("menuBackgroundDim", MooClientSettings.getMenuBackgroundDim());
+            settings.addProperty("guiAnimations", MooClientSettings.isGuiAnimations());
+            settings.addProperty("activeProfile", MooClientSettings.getActiveProfile().name());
+            root.add("settings", settings);
+
             Files.writeString(CONFIG_PATH, GSON.toJson(root));
             MooClient.LOGGER.info("Saved config to {}", CONFIG_PATH);
         } catch (IOException e) {
@@ -390,6 +404,24 @@ public class MooConfig {
                 if (ping.has("posY")) {
                     com.mooclient.module.modules.PingModule.posY = ping.get("posY").getAsInt();
                 }
+            }
+
+            // Global Client Settings
+            if (root.has("settings")) {
+                JsonObject settings = root.getAsJsonObject("settings");
+                if (settings.has("accentPreset")) {
+                    try {
+                        MooClientSettings.setAccentPreset(MooClientSettings.AccentColorPreset.valueOf(settings.get("accentPreset").getAsString()));
+                    } catch (Exception ignored) {}
+                }
+                if (settings.has("customRed")) MooClientSettings.setCustomRed(settings.get("customRed").getAsInt());
+                if (settings.has("customGreen")) MooClientSettings.setCustomGreen(settings.get("customGreen").getAsInt());
+                if (settings.has("customBlue")) MooClientSettings.setCustomBlue(settings.get("customBlue").getAsInt());
+                if (settings.has("hudSnapping")) MooClientSettings.setHudSnapping(settings.get("hudSnapping").getAsBoolean());
+                if (settings.has("hudScale")) MooClientSettings.setHudScale(settings.get("hudScale").getAsInt());
+                if (settings.has("globalTextShadow")) MooClientSettings.setGlobalTextShadow(settings.get("globalTextShadow").getAsBoolean());
+                if (settings.has("menuBackgroundDim")) MooClientSettings.setMenuBackgroundDim(settings.get("menuBackgroundDim").getAsInt());
+                if (settings.has("guiAnimations")) MooClientSettings.setGuiAnimations(settings.get("guiAnimations").getAsBoolean());
             }
 
             MooClient.LOGGER.info("Loaded config from {}", CONFIG_PATH);

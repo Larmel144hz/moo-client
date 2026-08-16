@@ -6,6 +6,7 @@
   "client": [
     "FullbrightMixin",
     "MinecraftClientMixin",
+    "MinecraftClientAccessor",
     "WindowMixin",
     "TitleScreenMixin",
     "GameRendererMixin",

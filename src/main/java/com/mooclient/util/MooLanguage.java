@@ -1,94 +1,130 @@
 package com.mooclient.util;
 
-/**
- * Client language manager supporting Polish (PL) and English (EN).
- */
-public enum MooLanguage {
-    PL,
-    EN;
+public class MooLanguage {
 
-    public static MooLanguage current = PL;
+    public static final String PL = "pl";
+    public static final String EN = "en";
+
+    public static String current = PL;
+
+    public static void toggleLanguage() {
+        current = current.equals(PL) ? EN : PL;
+        MooConfig.save();
+    }
 
     public static String get(String key) {
-        if (current == PL) {
+        if (current.equals(PL)) {
             return switch (key) {
-                case "back" -> "← Powrót";
-                case "mods_title" -> "MOO CLIENT • MODYFIKACJE";
-                case "gamma_desc" -> "Jasność w ciemności";
-                case "fps_desc" -> "Licznik FPS na ekranie";
-                case "sprint_desc" -> "Automatyczny ciągły bieg";
-                case "freelook_desc" -> "Swobodny widok 360°";
-                case "potions_desc" -> "Aktywne mikstury i czas";
-                case "nametags_desc" -> "Nick i kolorowy ping";
-                case "zoom_desc" -> "Płynne przybliżenie (Zoom)";
-                case "macro_desc" -> "Skróty i komendy";
-                case "chat_desc" -> "Przezroczystość i historia";
-                case "ping_desc" -> "Aktualny ping na ekranie";
-                case "esc_hint" -> "Naciśnij ESC lub PRAWY SHIFT, aby zamknąć";
                 case "singleplayer" -> "TRYB JEDNOOSOBOWY";
                 case "multiplayer" -> "TRYB WIELOOSOBOWY";
                 case "settings" -> "USTAWIENIA";
                 case "quit" -> "WYJDŹ Z GRY";
+                case "back" -> "← Powrót";
+                case "on" -> "WŁ";
+                case "off" -> "WYŁ";
+                case "options" -> "OPCJE";
+                case "enabled" -> "WŁĄCZONE";
+                case "disabled" -> "WYŁĄCZONE";
+                case "esc_hint" -> "Naciśnij ESC lub PRAWY SHIFT, aby zamknąć";
+                case "mods_title" -> "MOO CLIENT • MODY";
+                case "gamma_desc" -> "Maksymalna jasność w jaskiniach";
+                case "fps_desc" -> "Licznik FPS w rogu ekranu";
+                case "sprint_desc" -> "Automatyczny sprint";
+                case "freelook_desc" -> "Swobodne obracanie kamery 360°";
+                case "potions_desc" -> "Lista aktywnych mikstur na ekranie";
+                case "nametags_desc" -> "Czytelne tagi graczy i ping";
+                case "zoom_desc" -> "Płynne przybliżenie kamery (Zoom)";
+                case "chat_desc" -> "Przezroczyste tło i nielimitowany czat";
+                case "ping_desc" -> "Opóźnienie połączenia z serwerem";
+                case "macro_desc" -> "Własne komendy pod klawiszami";
                 case "fps_opt_title" -> "FPS";
-                case "fps_opt_subtitle" -> "Wyświetlanie i konfiguracja licznika FPS na ekranie";
+                case "fps_opt_subtitle" -> "Wyświetlaj i dostosuj swój licznik klatek na HUDzie.";
                 case "ping_opt_title" -> "PING";
-                case "ping_opt_subtitle" -> "Wyświetlanie i konfiguracja licznika pingu (ms) na ekranie";
-                case "sprint_opt_title" -> "SPRINT";
-                case "sprint_opt_subtitle" -> "Konfiguracja wskaźnika automatycznego biegu na ekranie";
+                case "ping_opt_subtitle" -> "Wyświetlaj i dostosuj opóźnienie połączenia na HUDzie.";
+                case "sprint_opt_title" -> "TOGGLE SPRINT";
+                case "sprint_opt_subtitle" -> "Dostosuj wskaźnik automatycznego sprintu na HUDzie.";
                 case "freelook_opt_title" -> "FREELOOK";
-                case "freelook_opt_subtitle" -> "Swobodny obrót kamery 360° bez obracania postaci";
+                case "freelook_opt_subtitle" -> "Swobodny obrót kamery o 360° bez poruszania postacią.";
                 case "potions_opt_title" -> "POTION EFFECTS";
-                case "potions_opt_subtitle" -> "Wyświetlanie aktywnych mikstur i odliczania czasu";
+                case "potions_opt_subtitle" -> "Wyświetlaj aktywne mikstury i czas ich trwania na HUDzie.";
                 case "nametags_opt_title" -> "NAMETAGS";
-                case "nametags_opt_subtitle" -> "Wyświetlanie nicków i kolorowego pingu nad graczami";
+                case "nametags_opt_subtitle" -> "Dostosuj tagi graczy i kolorowy ping.";
                 case "zoom_opt_title" -> "ZOOM";
-                case "zoom_opt_subtitle" -> "Konfiguracja przybliżenia i stopnia powiększenia";
-                case "macro_opt_title" -> "MACRO / AUTOTEXT";
-                case "macro_opt_subtitle" -> "Wykonywanie komend i wiadomości pod wybranymi klawiszami";
+                case "zoom_opt_subtitle" -> "Dostosuj klawisz i poziom powiększenia kamery.";
+                case "macro_opt_title" -> "MAKRA / AUTOTEXT";
+                case "macro_opt_subtitle" -> "Wysyłaj komendy i wiadomości za pomocą skrótów klawiszowych.";
                 case "chat_opt_title" -> "CHAT";
-                case "chat_opt_subtitle" -> "Przezroczystość tła, nielimitowany czat i płynna animacja";
-                case "chat_transparent_label" -> "Przezroczyste tło (Transparent Background)";
-                case "chat_unlimited_label" -> "Nielimitowany czat (Unlimited Chat)";
-                case "chat_smooth_label" -> "Płynny czat (Smooth Chat)";
-                case "style_label" -> "Styl wyglądu";
-                case "bg_label" -> "Pokaż tło (Show Background)";
-                case "shadow_label" -> "Cień tekstu (Text Shadow)";
-                case "prefix_label" -> "Przedrostek 'FPS:' (Show Prefix)";
-                case "compact_label" -> "Tryb kompaktowy (Compact Mode)";
-                case "show_ping_label" -> "Pokaż ping (Show Ping)";
-                case "ping_pos_label" -> "Pozycja pingu (Ping Position)";
-                case "ping_pos_beside" -> "Obok nicku (Beside)";
-                case "ping_pos_above" -> "Nad nickiem (Above)";
-                case "show_logo_label" -> "Logo klienta przed nickiem (Client Logo)";
-                case "remove_bg_label" -> "Usuń tło nicków (Remove Background)";
-                case "factor_label" -> "Stopień powiększenia (Zoom Factor)";
-                case "smooth_zoom_label" -> "Płynny zoom (Smooth Zoom)";
+                case "chat_opt_subtitle" -> "Przezroczyste tło, nielimitowana historia i animacja czatu.";
+                case "chat_transparent_label" -> "Przezroczyste tło czatu";
+                case "chat_unlimited_label" -> "Nielimitowana historia czatu";
+                case "chat_smooth_label" -> "Płynna animacja czatu";
+                case "style_label" -> "Styl wyświetlania";
+                case "bg_label" -> "Ciemne tło pod napisem";
+                case "shadow_label" -> "Cień tekstu";
+                case "prefix_label" -> "Pokazuj przedrostek 'FPS:'";
+                case "compact_label" -> "Tryb kompaktowy";
+                case "show_ping_label" -> "Wyświetlaj ping";
+                case "ping_pos_label" -> "Pozycja pingu";
+                case "ping_pos_beside" -> "Obok nicku";
+                case "ping_pos_above" -> "Nad nickiem";
+                case "show_logo_label" -> "Logo Moo Client przy nicku";
+                case "remove_bg_label" -> "Usuń tło z nametaga";
+                case "factor_label" -> "Współczynnik powiększenia";
+                case "smooth_zoom_label" -> "Płynne przybliżanie";
                 case "gamma_opt_title" -> "GAMMA";
-                case "gamma_opt_subtitle" -> "Widzenie w ciemności bez pochodni";
+                case "gamma_opt_subtitle" -> "Rozjaśnij ciemne jaskinie i noc.";
                 case "fullbright_label" -> "Widzenie w ciemności (Fullbright)";
-                case "mode_label" -> "Tryb aktywacji (Mode)";
+                case "mode_label" -> "Tryb działania";
                 case "invert_pitch_label" -> "Odwróć oś Y (Invert Pitch)";
+                case "client_settings_title" -> "MOO CLIENT • USTAWIENIA";
+                case "tab_accent" -> "🎨 KOLOR AKCENTU";
+                case "tab_hud" -> "📍 HUD & WIDGETY";
+                case "tab_gui" -> "✨ WYGLĄD GUI";
+                case "tab_profiles" -> "📁 PROFILE";
+                case "reset_hud_btn" -> "↺ PRZYWRÓĆ POZYCJE HUD";
+                case "reset_hud_done" -> "✓ Pozycje HUD zresetowane!";
+                case "hud_snapping_label" -> "Przyciąganie do krawędzi (HUD Snapping)";
+                case "hud_scale_label" -> "Skala widgetów HUD (HUD Scale)";
+                case "global_shadow_label" -> "Globalne cienie tekstu HUD (Text Shadows)";
+                case "bg_dim_label" -> "Przyciemnienie tła menu (Background Dim)";
+                case "gui_anim_label" -> "Płynne animacje podświetleń (GUI Animations)";
+                case "custom_rgb_label" -> "Dostosuj własny kolor (RGB Sliders):";
+                case "active_badge" -> "✓ AKTYWNY";
+                case "activate_btn" -> "AKTYWUJ";
+                case "accounts_title" -> "KONTA PREMIUM";
+                case "add_account_btn" -> "+ Dodaj konto";
+                case "active_account" -> "Aktywne";
+                case "enter_nickname" -> "Wpisz nick...";
+                case "login_microsoft" -> "🔑 Logowanie Microsoft";
+                case "open_browser" -> "Otwórz link";
+                case "cancel" -> "Anuluj";
+                case "logged_in_as" -> "Zalogowano jako ";
                 default -> key;
             };
         } else {
             return switch (key) {
+                case "singleplayer" -> "SINGLEPLAYER";
+                case "multiplayer" -> "MULTIPLAYER";
+                case "settings" -> "SETTINGS";
+                case "quit" -> "QUIT GAME";
                 case "back" -> "← Back";
+                case "on" -> "ON";
+                case "off" -> "OFF";
+                case "options" -> "OPTIONS";
+                case "enabled" -> "ENABLED";
+                case "disabled" -> "DISABLED";
+                case "esc_hint" -> "Press ESC or RIGHT SHIFT to close";
                 case "mods_title" -> "MOO CLIENT • MODS";
-                case "gamma_desc" -> "Fullbright & Cave Vision";
+                case "gamma_desc" -> "Max brightness for dark caves";
                 case "fps_desc" -> "FPS Counter on HUD";
                 case "sprint_desc" -> "Automatic Toggle Sprint";
                 case "freelook_desc" -> "360° Free Camera View";
                 case "potions_desc" -> "Active Potions & Timers";
                 case "nametags_desc" -> "Nametag Badges & Ping";
                 case "zoom_desc" -> "Smooth Camera Zoom";
-                case "macro_desc" -> "Macro Command Keybinds";
                 case "chat_desc" -> "Transparent Chat & History";
                 case "ping_desc" -> "Ping Latency on HUD";
-                case "esc_hint" -> "Press ESC or RIGHT SHIFT to close";
-                case "singleplayer" -> "SINGLEPLAYER";
-                case "multiplayer" -> "MULTIPLAYER";
-                case "settings" -> "SETTINGS";
-                case "quit" -> "QUIT GAME";
+                case "macro_desc" -> "Macro Command Keybinds";
                 case "fps_opt_title" -> "FPS";
                 case "fps_opt_subtitle" -> "Display and customize your FPS on the HUD.";
                 case "ping_opt_title" -> "PING";
@@ -128,6 +164,29 @@ public enum MooLanguage {
                 case "fullbright_label" -> "Fullbright Vision";
                 case "mode_label" -> "Activation Mode";
                 case "invert_pitch_label" -> "Invert Y-Axis";
+                case "client_settings_title" -> "MOO CLIENT • SETTINGS";
+                case "tab_accent" -> "🎨 ACCENT COLOR";
+                case "tab_hud" -> "📍 HUD & WIDGETS";
+                case "tab_gui" -> "✨ GUI THEME";
+                case "tab_profiles" -> "📁 PROFILES";
+                case "reset_hud_btn" -> "↺ RESET HUD POSITIONS";
+                case "reset_hud_done" -> "✓ HUD Positions Reset!";
+                case "hud_snapping_label" -> "Edge Snapping (HUD Snapping)";
+                case "hud_scale_label" -> "HUD Widget Scale";
+                case "global_shadow_label" -> "Global HUD Text Shadows";
+                case "bg_dim_label" -> "Menu Background Dim";
+                case "gui_anim_label" -> "Smooth Hover Animations";
+                case "custom_rgb_label" -> "Custom Color (RGB Sliders):";
+                case "active_badge" -> "✓ ACTIVE";
+                case "activate_btn" -> "ACTIVATE";
+                case "accounts_title" -> "PREMIUM ACCOUNTS";
+                case "add_account_btn" -> "+ Add Account";
+                case "active_account" -> "Active";
+                case "enter_nickname" -> "Enter nickname...";
+                case "login_microsoft" -> "🔑 Microsoft Login";
+                case "open_browser" -> "Open Link";
+                case "cancel" -> "Cancel";
+                case "logged_in_as" -> "Logged in as ";
                 default -> key;
             };
         }

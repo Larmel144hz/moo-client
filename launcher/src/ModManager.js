@@ -362,26 +362,35 @@ class ModManager {
             // Download new version
             onProgress(`Downloading mod v${remoteVersion.version}...`, 30);
             
-            // Clean old mods first
-            this.cleanOldMods();
-
             const jarFileName = `moo-client-${remoteVersion.version}.jar`;
             const jarPath = path.join(this.modsDir, jarFileName);
+            const tempJarPath = path.join(this.modsDir, `${jarFileName}.download`);
 
-            await this.downloadFile(remoteVersion.download_url, jarPath, (percent) => {
+            await this.downloadFile(remoteVersion.download_url, tempJarPath, (percent) => {
                 const scaledPercent = 30 + Math.round(percent * 0.4); // Scale to 30-70 range
                 onProgress(`Downloading mod: ${percent}%`, scaledPercent);
             });
 
-            // Save installed version info
-            fs.writeFileSync(this.localVersionPath, JSON.stringify({
-                version: remoteVersion.version,
-                minecraft: remoteVersion.minecraft,
-                installedAt: new Date().toISOString(),
-            }, null, 2));
+            if (fs.existsSync(tempJarPath) && fs.statSync(tempJarPath).size > 10000) {
+                // Clean old mods first
+                this.cleanOldMods();
+                fs.renameSync(tempJarPath, jarPath);
 
-            onProgress(`Mod updated to v${remoteVersion.version}!`, 70);
-            return true;
+                // Save installed version info
+                fs.writeFileSync(this.localVersionPath, JSON.stringify({
+                    version: remoteVersion.version,
+                    minecraft: remoteVersion.minecraft || '1.21.4',
+                    installedAt: new Date().toISOString(),
+                }, null, 2));
+
+                onProgress(`Mod updated to v${remoteVersion.version}!`, 70);
+                return true;
+            } else {
+                if (fs.existsSync(tempJarPath)) {
+                    try { fs.unlinkSync(tempJarPath); } catch (e) {}
+                }
+                throw new Error('Pobrany plik moda jest uszkodzony.');
+            }
         } catch (error) {
             console.error('Mod update error:', error);
             onProgress(`Mod update failed: ${error.message}`, 0);

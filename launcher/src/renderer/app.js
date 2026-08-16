@@ -1658,8 +1658,10 @@ window.addEventListener('drop', async (e) => {
 // Moo Client Core Update Check & Modal
 // =============================================
 let currentClientUpdateInfo = null;
+let isUpdatingClientCore = false;
 
 async function checkClientCoreUpdate(showToastIfUpToDate = false) {
+    if (isUpdatingClientCore) return;
     const pill = document.getElementById('update-status-pill');
     const label = document.getElementById('update-text');
 
@@ -1682,16 +1684,28 @@ async function checkClientCoreUpdate(showToastIfUpToDate = false) {
             const settings = await window.mooAPI?.getSettings();
             if (settings?.autoUpdate !== false && !showToastIfUpToDate) {
                 try {
+                    isUpdatingClientCore = true;
+                    label.textContent = `Aktualizowanie...`;
                     const updateRes = await window.mooAPI?.performClientUpdate();
-                    if (updateRes?.success && updateRes.updated && !updateRes.restarting) {
-                        currentClientUpdateInfo = null;
-                        pill.classList.remove('has-update');
-                        label.textContent = `v${res.latestVersion} (${t('update_up_to_date')})`;
-                        pill.title = `Moo Client v${res.latestVersion} — ${t('update_up_to_date')}`;
-                        showToast(`✨ Moo Client został automatycznie zaktualizowany w tle do v${res.latestVersion}!`, 'success');
-                        return;
+                    if (updateRes?.success) {
+                        if (updateRes.restarting) {
+                            label.textContent = `Restartowanie...`;
+                            showToast(`Aktualizacja gotowa! Uruchamianie nowej wersji...`, 'info');
+                            return; // Launcher is terminating & restarting, do not open modal
+                        }
+                        if (updateRes.updated) {
+                            currentClientUpdateInfo = null;
+                            pill.classList.remove('has-update');
+                            label.textContent = `v${res.latestVersion} (${t('update_up_to_date')})`;
+                            pill.title = `Moo Client v${res.latestVersion} — ${t('update_up_to_date')}`;
+                            showToast(`✨ Moo Client został automatycznie zaktualizowany w tle do v${res.latestVersion}!`, 'success');
+                            isUpdatingClientCore = false;
+                            return;
+                        }
                     }
+                    isUpdatingClientCore = false;
                 } catch (e) {
+                    isUpdatingClientCore = false;
                     console.error('Silent background update failed, prompting modal instead:', e);
                 }
             }
@@ -1717,7 +1731,7 @@ async function checkClientCoreUpdate(showToastIfUpToDate = false) {
 }
 
 function openClientUpdateModal(info) {
-    if (!info) return;
+    if (!info || isUpdatingClientCore) return;
     const modal = document.getElementById('modal-client-update');
     const versionTag = document.getElementById('update-modal-version-tag');
     const changelogText = document.getElementById('update-modal-changelog-text');
@@ -1745,11 +1759,16 @@ function closeClientUpdateModal() {
 }
 
 async function performClientCoreUpdate() {
+    if (isUpdatingClientCore) return;
+    isUpdatingClientCore = true;
+
     const progressSection = document.getElementById('update-progress-section');
     const progressBar = document.getElementById('client-update-progress-bar');
     const progressMsg = document.getElementById('client-update-progress-msg');
     const progressPct = document.getElementById('client-update-progress-pct');
     const actions = document.getElementById('update-modal-actions');
+    const pill = document.getElementById('update-status-pill');
+    const label = document.getElementById('update-text');
 
     if (progressSection) progressSection.style.display = 'block';
     if (actions) actions.style.display = 'none';
@@ -1767,21 +1786,30 @@ async function performClientCoreUpdate() {
             if (res.restarting) {
                 if (progressMsg) progressMsg.textContent = 'Aktualizacja ukończona! Ponowne uruchamianie...';
                 showToast('Aktualizacja ukończona! Uruchamianie nowej wersji...', 'success');
+                // Process is restarting via external updater, keep modal showing 100% until termination
             } else {
+                const newVer = res.version || currentClientUpdateInfo?.latestVersion || '1.3.0';
+                currentClientUpdateInfo = null;
+                if (pill) pill.classList.remove('has-update');
+                if (label) label.textContent = `v${newVer} (${t('update_up_to_date')})`;
+                if (pill) pill.title = `Moo Client v${newVer} — ${t('update_up_to_date')}`;
+
                 if (progressMsg) progressMsg.textContent = t('update_success_msg');
                 showToast(t('update_success_msg'), 'success');
 
                 setTimeout(() => {
                     closeClientUpdateModal();
-                    checkClientCoreUpdate(false);
+                    isUpdatingClientCore = false;
                 }, 1200);
             }
         } else {
+            isUpdatingClientCore = false;
             showToast(`Błąd aktualizacji: ${res?.error || 'Nieznany błąd'}`, 'error');
             if (actions) actions.style.display = 'flex';
             if (progressSection) progressSection.style.display = 'none';
         }
     } catch (err) {
+        isUpdatingClientCore = false;
         showToast(`Błąd aktualizacji: ${err.message}`, 'error');
         if (actions) actions.style.display = 'flex';
         if (progressSection) progressSection.style.display = 'none';

@@ -277,7 +277,7 @@ function setupIPC() {
         try {
             const remote = await modManager.getRemoteVersion();
             const localMod = modManager.getLocalVersion();
-            const launcherNeedsUpdate = ModManager.isNewerVersion(remote.version, launcherVersion);
+            const launcherNeedsUpdate = app.isPackaged && ModManager.isNewerVersion(remote.version, launcherVersion);
             const modNeedsUpdate = ModManager.isNewerVersion(remote.version, localMod.version);
             const hasUpdate = launcherNeedsUpdate || modNeedsUpdate;
 
@@ -304,7 +304,7 @@ function setupIPC() {
             const remote = await modManager.getRemoteVersion();
             const launcherVersion = app.getVersion();
             const localMod = modManager.getLocalVersion();
-            const launcherNeedsUpdate = ModManager.isNewerVersion(remote.version, launcherVersion);
+            const launcherNeedsUpdate = app.isPackaged && ModManager.isNewerVersion(remote.version, launcherVersion);
             const modNeedsUpdate = ModManager.isNewerVersion(remote.version, localMod.version);
 
             // 1. Fast Delta Update for Fabric Mod Jar (only ~200 KB!)
@@ -315,14 +315,15 @@ function setupIPC() {
                 });
             }
 
-            // 2. Hot-ASAR delta update (~1.5 MB) — writes external .ps1 script for reliability
-            if (app.isPackaged && launcherNeedsUpdate) {
-                sendToRenderer('client-update-progress', { status: 'Pobieranie nowej paczki kodu launchera...', percent: 55 });
+            // 2. Hot-ASAR delta update — writes external robust batch script for Windows
+            if (launcherNeedsUpdate) {
+                sendToRenderer('client-update-progress', { status: 'Pobieranie nowej paczki launchera...', percent: 55 });
                 const latestVer = remote.version;
                 const asarUrl = `https://github.com/Larmel144hz/moo-client/releases/download/v${latestVer}/app.asar`;
                 const tempAsar = path.join(os.tmpdir(), `moo-update-${latestVer}.pkg`);
                 const targetAsar = path.join(process.resourcesPath, 'app.asar');
                 const targetExe = process.execPath;
+                const currentPid = process.pid;
 
                 await downloadFile(asarUrl, tempAsar, (percent) => {
                     sendToRenderer('client-update-progress', { 
@@ -331,73 +332,74 @@ function setupIPC() {
                     });
                 });
 
-                sendToRenderer('client-update-progress', { status: 'Przygotowywanie aktualizacji...', percent: 96 });
+                if (!fs.existsSync(tempAsar) || fs.statSync(tempAsar).size < 1000000) {
+                    if (fs.existsSync(tempAsar)) {
+                        try { fs.unlinkSync(tempAsar); } catch (e) {}
+                    }
+                    throw new Error('Pobrany plik aktualizacji launchera jest uszkodzony lub niekompletny.');
+                }
 
-                // Write a self-contained .ps1 updater script to disk
-                const scriptPath = path.join(os.tmpdir(), 'moo-client-updater.ps1');
+                sendToRenderer('client-update-progress', { status: 'Przygotowywanie aktualizacji i restart...', percent: 98 });
+
+                // Write a bulletproof .bat updater script that works on all Windows systems without policy restrictions
+                const scriptPath = path.join(os.tmpdir(), `moo-updater-${Date.now()}.bat`);
                 const scriptContent = [
-                    '# Moo Client Hot-ASAR Updater',
-                    '$ErrorActionPreference = "SilentlyContinue"',
-                    `$tempAsar = '${tempAsar.replace(/\\/g, '\\').replace(/'/g, "''")}'`,
-                    `$targetAsar = '${targetAsar.replace(/\\/g, '\\').replace(/'/g, "''")}'`,
-                    `$exePath = '${targetExe.replace(/\\/g, '\\').replace(/'/g, "''")}'`,
+                    '@echo off',
+                    'setlocal enabledelayedexpansion',
+                    'title Moo Client Updater',
                     '',
-                    '# Step 1: Wait for Moo Client to fully exit (up to 10 seconds)',
-                    'for ($w = 0; $w -lt 50; $w++) {',
-                    '    $procs = Get-Process | Where-Object { $_.ProcessName -like "*Moo Client*" -or $_.ProcessName -like "*moo-client*" }',
-                    '    if (-not $procs) { break }',
-                    '    $procs | Stop-Process -Force -ErrorAction SilentlyContinue',
-                    '    Start-Sleep -Milliseconds 200',
-                    '}',
+                    ':: Terminate running Moo Client processes',
+                    `taskkill /F /PID ${currentPid} >nul 2>&1`,
+                    'taskkill /F /IM "Moo Client.exe" >nul 2>&1',
+                    'taskkill /F /IM "moo-client.exe" >nul 2>&1',
+                    'timeout /t 1 /nobreak >nul 2>&1',
                     '',
-                    '# Step 2: Wait an extra moment for file handles to release',
-                    'Start-Sleep -Milliseconds 500',
+                    ':: Retry loop to replace app.asar (up to 30 attempts)',
+                    'set COPIED=0',
+                    'for /l %%i in (1,1,30) do (',
+                    `    copy /Y "${tempAsar}" "${targetAsar}" >nul 2>&1`,
+                    '    if !errorlevel! equ 0 (',
+                    '        set COPIED=1',
+                    `        del /F /Q "${tempAsar}" >nul 2>&1`,
+                    '        goto done_copy',
+                    '    )',
+                    '    timeout /t 1 /nobreak >nul 2>&1',
+                    ')',
+                    ':done_copy',
                     '',
-                    '# Step 3: Copy new app.asar with retry (up to 15 seconds)',
-                    '$copied = $false',
-                    'for ($i = 0; $i -lt 75; $i++) {',
-                    '    try {',
-                    '        [System.IO.File]::Copy($tempAsar, $targetAsar, $true)',
-                    '        $copied = $true',
-                    '        break',
-                    '    } catch {',
-                    '        Start-Sleep -Milliseconds 200',
-                    '    }',
-                    '}',
+                    'if "!COPIED!"=="1" (',
+                    `    start "" "${targetExe}"`,
+                    '    goto cleanup',
+                    ')',
                     '',
-                    '# Step 4: Clean up temp file',
-                    'if ($copied) {',
-                    '    Remove-Item -Path $tempAsar -Force -ErrorAction SilentlyContinue',
-                    '}',
+                    ':: Fallback with PowerShell elevation if in protected directory',
+                    `powershell -NoProfile -ExecutionPolicy Bypass -Command "Start-Process powershell -ArgumentList '-NoProfile -Command Copy-Item -Force ''${tempAsar.replace(/'/g, "''")}'' ''${targetAsar.replace(/'/g, "''")}''; Start-Process ''${targetExe.replace(/'/g, "''")}''' -Verb RunAs" >nul 2>&1`,
+                    'if !errorlevel! equ 0 goto cleanup',
                     '',
-                    '# Step 5: Restart Moo Client',
-                    'Start-Process -FilePath $exePath',
+                    ':: Restart executable',
+                    `start "" "${targetExe}"`,
                     '',
-                    '# Step 6: Self-delete this script',
-                    'Remove-Item -Path $MyInvocation.MyCommand.Path -Force -ErrorAction SilentlyContinue',
+                    ':cleanup',
+                    '(goto) 2>nul & del "%~f0"',
                 ].join('\r\n');
 
                 fs.writeFileSync(scriptPath, scriptContent, 'utf8');
 
-                sendToRenderer('client-update-progress', { status: 'Ponowne uruchamianie...', percent: 99 });
+                sendToRenderer('client-update-progress', { status: 'Ponowne uruchamianie...', percent: 100 });
 
                 const { spawn } = require('child_process');
-                const child = spawn('powershell.exe', [
-                    '-WindowStyle', 'Hidden',
-                    '-NoProfile',
-                    '-ExecutionPolicy', 'Bypass',
-                    '-File', scriptPath
-                ], {
+                const child = spawn('cmd.exe', ['/c', scriptPath], {
                     detached: true,
-                    stdio: 'ignore'
+                    stdio: 'ignore',
+                    windowsHide: true,
                 });
                 child.unref();
 
-                setTimeout(() => { app.exit(0); }, 100);
+                setTimeout(() => { app.exit(0); }, 150);
                 return { success: true, updated: true, restarting: true };
             }
 
-            // 3. Mod-only update (no launcher restart needed)
+            // 3. Mod-only update or dev mode update (no launcher restart needed)
             sendToRenderer('client-update-progress', { status: 'Zaktualizowano pomyślnie!', percent: 100 });
             const newLocal = modManager.getLocalVersion();
             return {
@@ -511,6 +513,52 @@ function sendToRenderer(channel, data) {
 }
 
 // =============================================
+// Local API Server for Game Integration
+// =============================================
+function startLocalApiServer() {
+    const server = http.createServer(async (req, res) => {
+        res.setHeader('Access-Control-Allow-Origin', '*');
+        res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+        res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+
+        if (req.method === 'OPTIONS') {
+            res.writeHead(200);
+            res.end();
+            return;
+        }
+
+        if (req.url === '/api/login-microsoft') {
+            try {
+                const account = await gameManager.loginMicrosoft();
+                sendToRenderer('account-updated', account);
+                res.writeHead(200, { 'Content-Type': 'application/json' });
+                res.end(JSON.stringify({ success: true, account }));
+            } catch (error) {
+                res.writeHead(400, { 'Content-Type': 'application/json' });
+                res.end(JSON.stringify({ success: false, error: error.message }));
+            }
+            return;
+        }
+
+        if (req.url === '/api/get-accounts') {
+            const data = gameManager.getAllAccounts();
+            res.writeHead(200, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify(data));
+            return;
+        }
+
+        res.writeHead(404);
+        res.end();
+    });
+
+    server.listen(49152, '127.0.0.1', () => {
+        console.log('[MooLauncher] Local API server listening on 127.0.0.1:49152');
+    }).on('error', (err) => {
+        console.log('[MooLauncher] Local API server notice:', err.message);
+    });
+}
+
+// =============================================
 // Single Instance Lock (Only 1 launcher instance allowed)
 // =============================================
 const gotTheLock = app.requestSingleInstanceLock();
@@ -519,6 +567,13 @@ if (!gotTheLock) {
     app.quit();
 } else {
     app.on('second-instance', (event, commandLine, workingDirectory) => {
+        if (commandLine.some(arg => arg.includes('--login-microsoft'))) {
+            gameManager.loginMicrosoft().then(acc => {
+                sendToRenderer('account-updated', acc);
+            }).catch(() => {});
+            return;
+        }
+
         // Someone tried to run a second instance, focus our main window
         if (mainWindow && !mainWindow.isDestroyed()) {
             if (mainWindow.isMinimized()) {
@@ -536,6 +591,7 @@ if (!gotTheLock) {
         createWindow();
         setupIPC();
         setupLauncherPresence();
+        startLocalApiServer();
         discordRPC.init();
     });
 
