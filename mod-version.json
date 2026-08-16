@@ -1,6 +1,6 @@
 {
-  "version": "1.4.0",
+  "version": "1.4.1",
   "minecraft": "1.21.4",
-  "download_url": "https://github.com/Larmel144hz/moo-client/releases/download/v1.4.0/moo-client-1.4.0.jar",
-  "changelog": "🚀 Moo Client v1.4.0 (Performance & Smoothness Update):\n✓ Całkowita eliminacja lag spike'ów i przycięć — 100% asynchroniczny wątek sieciowy\n✓ Płynna synchronizacja graczy w tle z zerowym wpływem na FPS\n✓ Błyskawiczne ładowanie i stabilna rozgrywka"
+  "download_url": "https://github.com/Larmel144hz/moo-client/releases/download/v1.4.1/moo-client-1.4.1.jar",
+  "changelog": "🚀 Moo Client v1.4.1 (Instant Real-time Sync Update):\n✓ Błyskawiczna, w 100% dwukierunkowa synchronizacja obecności przez broker HiveMQ MQTT\n✓ Wszyscy gracze natychmiast widzą swoje logo krowy bez opóźnień\n✓ 0ms lagów i zerowy wpływ na FPS"
 }
