@@ -262,21 +262,58 @@ class GameManager {
         }
 
         if (process.platform === 'win32') {
-            // Check common Java 21 JDK installation directories
+            const homedir = os.homedir();
             const programFiles = process.env.ProgramFiles || 'C:\\Program Files';
-            const candidates = [
-                path.join(programFiles, 'Java', 'jdk-21', 'bin', 'javaw.exe'),
-                path.join(programFiles, 'Eclipse Adoptium', 'jdk-21', 'bin', 'javaw.exe'),
-                path.join(programFiles, 'Microsoft', 'jdk-21', 'bin', 'javaw.exe'),
-                path.join(programFiles, 'Zulu', 'zulu-21', 'bin', 'javaw.exe'),
-                'C:\\Program Files (x86)\\Minecraft Launcher\\runtime\\java-runtime-gamma\\windows-x64\\java-runtime-gamma\\bin\\javaw.exe'
+            const programFilesX86 = process.env['ProgramFiles(x86)'] || 'C:\\Program Files (x86)';
+
+            const searchRoots = [
+                process.env.JAVA_HOME,
+                path.join(homedir, 'AppData', 'Local', 'Programs', 'Eclipse Adoptium'),
+                path.join(homedir, 'AppData', 'Local', 'Programs', 'Java'),
+                path.join(homedir, 'AppData', 'Local', 'Programs', 'Microsoft'),
+                path.join(programFiles, 'Eclipse Adoptium'),
+                path.join(programFiles, 'Java'),
+                path.join(programFiles, 'Microsoft'),
+                path.join(programFiles, 'BellSoft'),
+                path.join(programFiles, 'Zulu'),
+                path.join(programFilesX86, 'Minecraft Launcher', 'runtime', 'java-runtime-delta'),
+                path.join(programFilesX86, 'Minecraft Launcher', 'runtime', 'java-runtime-gamma')
             ];
 
-            for (const c of candidates) {
-                if (fs.existsSync(c)) return c;
+            const findBinary = (dir, depth = 0) => {
+                if (depth > 4 || !fs.existsSync(dir)) return null;
+                try {
+                    const entries = fs.readdirSync(dir, { withFileTypes: true });
+                    let javaFound = null;
+                    for (const e of entries) {
+                        const full = path.join(dir, e.name);
+                        if (e.isFile()) {
+                            if (e.name.toLowerCase() === 'javaw.exe') return full;
+                            if (e.name.toLowerCase() === 'java.exe') javaFound = full;
+                        }
+                    }
+                    if (javaFound) {
+                        const javaw = javaFound.slice(0, -8) + 'javaw.exe';
+                        if (fs.existsSync(javaw)) return javaw;
+                        return javaFound;
+                    }
+                    for (const e of entries) {
+                        if (e.isDirectory()) {
+                            const found = findBinary(path.join(dir, e.name), depth + 1);
+                            if (found) return found;
+                        }
+                    }
+                } catch (e) {}
+                return null;
+            };
+
+            for (const root of searchRoots) {
+                if (root && fs.existsSync(root)) {
+                    const found = findBinary(root);
+                    if (found) return found;
+                }
             }
 
-            // Fallback to javaw in PATH (silent, no console)
             return 'javaw';
         }
 
@@ -288,8 +325,12 @@ class GameManager {
      */
     async launch(options = {}, onProgress = () => {}) {
         const settings = this.getSettings();
-        const ram = options.ram || settings.ram || '4';
+        const rawRam = parseInt(options.ram || settings.ram || '4', 10) || 4;
         const versionNumber = options.version || '1.21.4';
+
+        // Safe memory calculation: cap at reasonable max based on system RAM
+        const totalSysRamGB = Math.round(os.totalmem() / (1024 * 1024 * 1024));
+        const safeMaxRam = Math.min(rawRam, Math.max(2, totalSysRamGB - 2));
 
         const launcher = new Client();
 
@@ -304,6 +345,7 @@ class GameManager {
         const customFabric = await this.ensureFabricVersion(versionNumber);
 
         const javaExecutable = this.resolveJavawPath(settings.javaPath);
+        console.log(`[Launch] Using Java: ${javaExecutable}, RAM: max ${safeMaxRam}G (requested ${rawRam}G)`);
 
         const launchOpts = {
             authorization: auth,
@@ -315,9 +357,17 @@ class GameManager {
                 custom: customFabric,
             },
             memory: {
-                max: `${ram}G`,
-                min: '2G',
+                max: `${safeMaxRam}G`,
+                min: '1024M',
             },
+            customArgs: [
+                '-XX:+UseG1GC',
+                '-XX:+UnlockExperimentalVMOptions',
+                '-XX:G1NewSizePercent=20',
+                '-XX:G1ReservePercent=20',
+                '-XX:MaxGCPauseMillis=50',
+                '-XX:G1HeapRegionSize=32M'
+            ],
             window: {
                 width: settings.resolution?.width || 1280,
                 height: settings.resolution?.height || 720,
