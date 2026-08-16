@@ -220,10 +220,23 @@ class GameManager {
         const versionDir = path.join(this.gameDir, 'versions', customVersionName);
         const versionJsonPath = path.join(versionDir, `${customVersionName}.json`);
 
-        // If cached profile exists, verify it uses the latest loader version
+        // If cached profile exists, verify it uses the latest loader version and clean arguments
         if (fs.existsSync(versionJsonPath)) {
             try {
                 const existing = JSON.parse(fs.readFileSync(versionJsonPath, 'utf8'));
+                let modified = false;
+                if (existing.arguments && Array.isArray(existing.arguments.jvm)) {
+                    existing.arguments.jvm = existing.arguments.jvm.map(arg => {
+                        if (typeof arg === 'string' && arg.includes('= ')) {
+                            modified = true;
+                            return arg.replace(/=\s+/g, '=').trim();
+                        }
+                        return typeof arg === 'string' ? arg.trim() : arg;
+                    });
+                }
+                if (modified) {
+                    fs.writeFileSync(versionJsonPath, JSON.stringify(existing, null, 2), 'utf8');
+                }
                 const hasLoader = existing.libraries?.some(lib => lib.name?.includes(`net.fabricmc:fabric-loader:${loaderVersion}`));
                 if (hasLoader) {
                     return customVersionName;
@@ -242,6 +255,14 @@ class GameManager {
                     try {
                         const json = JSON.parse(data);
                         json.id = customVersionName;
+                        if (json.arguments && Array.isArray(json.arguments.jvm)) {
+                            json.arguments.jvm = json.arguments.jvm.map(arg => {
+                                if (typeof arg === 'string') {
+                                    return arg.replace(/=\s+/g, '=').trim();
+                                }
+                                return arg;
+                            });
+                        }
                         fs.writeFileSync(versionJsonPath, JSON.stringify(json, null, 2));
                         resolve(customVersionName);
                     } catch (e) {
