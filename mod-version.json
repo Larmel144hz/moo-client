@@ -1,6 +1,6 @@
 {
-  "version": "1.4.2",
+  "version": "1.4.3",
   "minecraft": "1.21.4",
-  "download_url": "https://github.com/Larmel144hz/moo-client/releases/download/v1.4.2/moo-client-1.4.2.jar",
-  "changelog": "🚀 Moo Client v1.4.2 (Maximum FPS & Zero-Lag Optimization Update):\n✓ O(1) Cache dla renderowania NameTagów i Tablisty — zero alokacji pamięci w pętli renderowania\n✓ Zaawansowane flagi JVM Aikar/Lunar G1GC dla stabilnych 200+ FPS bez mikrozacięć\n✓ Błyskawiczna, w 100% płynna synchronizacja obecności graczy"
+  "download_url": "https://github.com/Larmel144hz/moo-client/releases/download/v1.4.3/moo-client-1.4.3.jar",
+  "changelog": "🚀 Moo Client v1.4.3 (Lunar-Style Hidden Core & Protected Architecture):\n✓ Rdzeń Moo Client przeniesiony do chronionego katalogu bibliotek (brak widoczności i możliwości usunięcia z folderu mods)\n✓ Całkowite ukrycie z menu Mod Menu w grze (czysty wygląd jak w Lunar Client)\n✓ Pełna odporność na przypadkowe usunięcie folderu mods"
 }

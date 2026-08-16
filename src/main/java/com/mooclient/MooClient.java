@@ -21,7 +21,7 @@ public class MooClient implements ClientModInitializer {
 
     public static final String MOD_ID = "mooclient";
     public static final String MOD_NAME = "Moo Client";
-    public static final String VERSION = "1.4.2";
+    public static final String VERSION = "1.4.3";
     public static final Logger LOGGER = LoggerFactory.getLogger(MOD_NAME);
 
     private static MooClient instance;
@@ -52,6 +52,9 @@ public class MooClient implements ClientModInitializer {
 
         // Initialize Discord Rich Presence
         DiscordRPC.getInstance().init();
+
+        // Hide Moo Client from third-party ModMenu screen
+        hideFromModMenu();
 
         // Register the Right Shift keybinding for the client menu
         menuKeyBinding = KeyBindingHelper.registerKeyBinding(new KeyBinding(
@@ -166,5 +169,29 @@ public class MooClient implements ClientModInitializer {
         });
 
         LOGGER.info("{} initialized successfully! Press Right Shift to open menu.", MOD_NAME);
+    }
+
+    public static void hideFromModMenu() {
+        try {
+            Class<?> modMenuConfig = Class.forName("com.terraformersmc.modmenu.config.ModMenuConfig");
+            java.lang.reflect.Field hiddenModsField = modMenuConfig.getField("HIDDEN_MODS");
+            Object option = hiddenModsField.get(null);
+            java.lang.reflect.Method getValue = option.getClass().getMethod("getValue");
+            @SuppressWarnings("unchecked")
+            java.util.Set<String> set = (java.util.Set<String>) getValue.invoke(option);
+            if (set != null) {
+                set.add("mooclient");
+            }
+        } catch (Throwable ignored) {}
+
+        try {
+            Class<?> modMenuClass = Class.forName("com.terraformersmc.modmenu.ModMenu");
+            java.lang.reflect.Field modsField = modMenuClass.getField("MODS");
+            @SuppressWarnings("unchecked")
+            java.util.Map<String, Object> modsMap = (java.util.Map<String, Object>) modsField.get(null);
+            if (modsMap != null) {
+                modsMap.remove("mooclient");
+            }
+        } catch (Throwable ignored) {}
     }
 }
