@@ -804,10 +804,9 @@ public class MooClientScreen extends Screen {
         String[] tabs = new String[]{
                 MooLanguage.get("tab_accent"),
                 MooLanguage.get("tab_hud"),
-                MooLanguage.get("tab_gui"),
-                MooLanguage.get("tab_profiles")
+                MooLanguage.get("tab_gui")
         };
-        int tabW = (panelW - 28) / 4;
+        int tabW = (panelW - 28) / 3;
 
         for (int i = 0; i < tabs.length; i++) {
             int tX = panelX + 14 + i * tabW;
@@ -843,10 +842,6 @@ public class MooClientScreen extends Screen {
         // --- Tab 2: GUI Appearance ---
         else if (settingsTab == 2) {
             renderGuiSettingsTab(context, panelX, contentY, panelW, mouseX, mouseY);
-        }
-        // --- Tab 3: Profiles ---
-        else if (settingsTab == 3) {
-            renderProfilesTab(context, panelX, contentY, panelW, mouseX, mouseY);
         }
 
         String hint = MooLanguage.get("esc_hint");
@@ -1067,59 +1062,6 @@ public class MooClientScreen extends Screen {
             drawCenteredText(context, labels[i], curX + w / 2, y + 7, textColor);
 
             curX += w + gap;
-        }
-    }
-
-    private void renderProfilesTab(DrawContext context, int panelX, int contentY, int panelW, int mouseX, int mouseY) {
-        com.mooclient.util.MooClientSettings.ProfileType[] profiles = com.mooclient.util.MooClientSettings.ProfileType.values();
-        com.mooclient.util.MooClientSettings.ProfileType active = com.mooclient.util.MooClientSettings.getActiveProfile();
-
-        int cardW = (panelW - 52) / 2;
-        int cardH = 82;
-        int startX = panelX + 20;
-        int startY = contentY + 8;
-        int gap = 12;
-
-        for (int i = 0; i < profiles.length; i++) {
-            com.mooclient.util.MooClientSettings.ProfileType p = profiles[i];
-            int col = i % 2;
-            int row = i / 2;
-            int cX = startX + col * (cardW + gap);
-            int cY = startY + row * (cardH + gap);
-
-            boolean isActive = (p == active);
-            boolean cardHover = mouseX >= cX && mouseX <= cX + cardW && mouseY >= cY && mouseY <= cY + cardH;
-
-            int bg = isActive ? 0x551E1E2C : (cardHover ? 0x441E1E2C : 0x2212121A);
-            int border = isActive ? com.mooclient.util.MooClientSettings.getAccentColor() : (cardHover ? 0x66FFFFFF : 0x22FFFFFF);
-
-            context.fill(cX, cY, cX + cardW, cY + cardH, bg);
-            drawBorder(context, cX, cY, cardW, cardH, border);
-
-            // Title
-            context.drawTextWithShadow(this.textRenderer, p.getTitle(), cX + 10, cY + 8, COLOR_TEXT_WHITE);
-
-            // Description
-            context.drawTextWithShadow(this.textRenderer, p.getDescription(), cX + 10, cY + 24, COLOR_TEXT_MUTED);
-
-            // Button / Badge on bottom right
-            int btnW = 86;
-            int btnH = 20;
-            int btnX = cX + cardW - btnW - 10;
-            int btnY = cY + cardH - btnH - 8;
-
-            if (isActive) {
-                context.fill(btnX, btnY, btnX + btnW, btnY + btnH, com.mooclient.util.MooClientSettings.getAccentColor());
-                drawBorder(context, btnX, btnY, btnW, btnH, 0x66FFFFFF);
-                drawCenteredText(context, MooLanguage.get("active_badge"), btnX + btnW / 2, btnY + 6, 0xFF082212);
-            } else {
-                boolean btnHover = mouseX >= btnX && mouseX <= btnX + btnW && mouseY >= btnY && mouseY <= btnY + btnH;
-                int bBg = btnHover ? 0xCC2A2A3E : 0x66181824;
-                int bBorder = btnHover ? com.mooclient.util.MooClientSettings.getAccentColor() : 0x44FFFFFF;
-                context.fill(btnX, btnY, btnX + btnW, btnY + btnH, bBg);
-                drawBorder(context, btnX, btnY, btnW, btnH, bBorder);
-                drawCenteredText(context, MooLanguage.get("activate_btn"), btnX + btnW / 2, btnY + 6, btnHover ? COLOR_TEXT_WHITE : 0xFFA0A0AB);
-            }
         }
     }
 
@@ -1968,8 +1910,8 @@ public class MooClientScreen extends Screen {
                 // Tabs Click
                 int tabY = panelY + 34;
                 int tabH = 22;
-                int tabW = (panelW - 28) / 4;
-                for (int i = 0; i < 4; i++) {
+                int tabW = (panelW - 28) / 3;
+                for (int i = 0; i < 3; i++) {
                     int tX = panelX + 14 + i * tabW;
                     if (mouseX >= tX && mouseX <= tX + tabW && mouseY >= tabY && mouseY <= tabY + tabH) {
                         playClickSound();
@@ -2100,28 +2042,6 @@ public class MooClientScreen extends Screen {
                         playClickSound();
                         com.mooclient.util.MooClientSettings.toggleGuiAnimations();
                         return true;
-                    }
-                }
-                // Tab 3: Profiles
-                else if (settingsTab == 3) {
-                    com.mooclient.util.MooClientSettings.ProfileType[] profiles = com.mooclient.util.MooClientSettings.ProfileType.values();
-                    int cardW = (panelW - 52) / 2;
-                    int cardH = 82;
-                    int startX = panelX + 20;
-                    int startY = contentY + 8;
-                    int gap = 12;
-
-                    for (int i = 0; i < profiles.length; i++) {
-                        int col = i % 2;
-                        int row = i / 2;
-                        int cX = startX + col * (cardW + gap);
-                        int cY = startY + row * (cardH + gap);
-
-                        if (mouseX >= cX && mouseX <= cX + cardW && mouseY >= cY && mouseY <= cY + cardH) {
-                            playClickSound();
-                            com.mooclient.util.MooClientSettings.applyProfile(profiles[i]);
-                            return true;
-                        }
                     }
                 }
             }

@@ -1,6 +1,6 @@
 {
-  "version": "1.3.2",
+  "version": "1.3.3",
   "minecraft": "1.21.4",
-  "download_url": "https://github.com/Larmel144hz/moo-client/releases/download/v1.3.2/moo-client-1.3.2.jar",
-  "changelog": "🚀 Stabilna aktualizacja 1.3.2:\n✓ Automatyczny restart po aktualizacji bez pętli\n✓ Poprawione wykrywanie wersji launchera\n✓ Konta Premium Microsoft (okno logowania MSMC bezpośrednio w menu)\n✓ Przywrócone logo Moo Client na tabliście i nametagach"
+  "download_url": "https://github.com/Larmel144hz/moo-client/releases/download/v1.3.3/moo-client-1.3.3.jar",
+  "changelog": "🚀 Moo Client v1.3.3:\n✓ Usunięto zakładkę Profile z menu Ustawień dla czystszego interfejsu\n✓ Kolor akcentu, HUD & Widgety, Wygląd GUI w pełni dopracowane\n✓ Konta Premium Microsoft bezpośrednio z menu gry\n✓ Nowy, w 100% stabilny mechanizm auto-aktualizacji launchera i moda"
 }
