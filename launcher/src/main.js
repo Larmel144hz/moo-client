@@ -271,9 +271,24 @@ function setupIPC() {
         return { success: true };
     });
 
+function getActualLauncherVersion() {
+    try {
+        const pkg = require('../package.json');
+        if (pkg && pkg.version) return pkg.version;
+    } catch(e) {}
+    try {
+        const pkgPath = path.join(__dirname, '..', 'package.json');
+        if (fs.existsSync(pkgPath)) {
+            const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf8'));
+            if (pkg && pkg.version) return pkg.version;
+        }
+    } catch(e) {}
+    return app.getVersion();
+}
+
     // --- Moo Client Core Version & Update Check ---
     ipcMain.handle('check-client-update', async () => {
-        const launcherVersion = app.getVersion();
+        const launcherVersion = getActualLauncherVersion();
         try {
             const remote = await modManager.getRemoteVersion();
             const localMod = modManager.getLocalVersion();
@@ -302,7 +317,7 @@ function setupIPC() {
     ipcMain.handle('perform-client-update', async () => {
         try {
             const remote = await modManager.getRemoteVersion();
-            const launcherVersion = app.getVersion();
+            const launcherVersion = getActualLauncherVersion();
             const localMod = modManager.getLocalVersion();
             const launcherNeedsUpdate = app.isPackaged && ModManager.isNewerVersion(remote.version, launcherVersion);
             const modNeedsUpdate = ModManager.isNewerVersion(remote.version, localMod.version);
