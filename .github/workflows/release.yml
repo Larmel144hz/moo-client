@@ -39,7 +39,7 @@ jobs:
           payload = {
               "username": "🐮 Moo Client | Releases",
               "avatar_url": "https://cdn-icons-png.flaticon.com/512/2395/2395796.png",
-              "content": "📢 **New Moo Client update has been released!** @everyone",
+              "content": "📢 **New Moo Client update has been released!** @here",
               "embeds": [
                   {
                       "title": f"🚀 {name} ({tag})",
