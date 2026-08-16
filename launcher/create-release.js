@@ -3,7 +3,7 @@ const https = require('https');
 const fs = require('fs');
 const path = require('path');
 
-const VERSION = '1.3.3';
+const VERSION = '1.3.4';
 
 function getGitHubToken() {
     try {
@@ -71,12 +71,22 @@ function uploadAsset(uploadUrl, token, filePath, fileName, contentType) {
     if (!token) { console.error('No token'); process.exit(1); }
 
     let res = await apiRequest('GET', `/repos/Larmel144hz/moo-client/releases/tags/v${VERSION}`, token);
-    if (res.status !== 200) {
-        console.error('Release not found');
-        process.exit(1);
+    let release;
+
+    if (res.status === 200) {
+        release = res.data;
+        console.log('Found existing release:', release.html_url);
+    } else {
+        res = await apiRequest('POST', '/repos/Larmel144hz/moo-client/releases', token, {
+            tag_name: `v${VERSION}`,
+            name: `Moo Client v${VERSION}`,
+            body: '🚀 **Moo Client v1.3.4**\n\n✓ Naprawiono błąd \"Could not create the Java Virtual Machine\" przy przydzielaniu RAM-u\n✓ Inteligentne i bezpieczne wykrywanie 64-bitowej Javy 21 w systemie\n✓ Optymalizacja flag JVM i pamięci dla stabilnych FPS\n✓ Usunięto zakładkę Profile z menu Ustawień dla czystszego interfejsu',
+            draft: false,
+            prerelease: false
+        });
+        release = res.data;
+        console.log('Created release:', release.html_url);
     }
-    const release = res.data;
-    console.log('Found release:', release.html_url);
 
     // Delete old assets
     if (release.assets) {
@@ -106,5 +116,5 @@ function uploadAsset(uploadUrl, token, filePath, fileName, contentType) {
         await uploadAsset(release.upload_url, token, exePath, `Moo.Client.Setup.${VERSION}.exe`, 'application/octet-stream');
     }
 
-    console.log('ALL v1.3.3 ASSETS RE-UPLOADED AND REPLACED SUCCESSFULLY!');
+    console.log('ALL v1.3.4 ASSETS UPLOADED AND REPLACED SUCCESSFULLY!');
 })();

@@ -273,13 +273,29 @@ class GameManager {
         });
     }
 
+    getJavaMajorVersion(javaPath) {
+        if (!javaPath) return 0;
+        try {
+            const { spawnSync } = require('child_process');
+            const res = spawnSync(javaPath, ['-version'], { encoding: 'utf8', timeout: 5000, windowsHide: true });
+            const output = (res.stderr || '') + (res.stdout || '');
+            const match = output.match(/version "([0-9]+)(\.([0-9]+))?/);
+            if (match) {
+                let major = parseInt(match[1], 10);
+                if (major === 1 && match[3]) major = parseInt(match[3], 10);
+                return major;
+            }
+        } catch (e) {}
+        return 0;
+    }
+
     resolveJavawPath(customPath) {
         if (customPath && fs.existsSync(customPath)) {
             if (process.platform === 'win32' && customPath.toLowerCase().endsWith('java.exe')) {
                 const javaw = customPath.slice(0, -8) + 'javaw.exe';
-                if (fs.existsSync(javaw)) return javaw;
+                if (fs.existsSync(javaw) && this.getJavaMajorVersion(javaw) >= 21) return javaw;
             }
-            return customPath;
+            if (this.getJavaMajorVersion(customPath) >= 21) return customPath;
         }
 
         if (process.platform === 'win32') {
@@ -288,6 +304,7 @@ class GameManager {
             const programFilesX86 = process.env['ProgramFiles(x86)'] || 'C:\\Program Files (x86)';
 
             const searchRoots = [
+                path.join(this.gameDir, 'runtime', 'java-21'),
                 process.env.JAVA_HOME,
                 path.join(homedir, 'AppData', 'Local', 'Programs', 'Eclipse Adoptium'),
                 path.join(homedir, 'AppData', 'Local', 'Programs', 'Java'),
@@ -309,8 +326,12 @@ class GameManager {
                     for (const e of entries) {
                         const full = path.join(dir, e.name);
                         if (e.isFile()) {
-                            if (e.name.toLowerCase() === 'javaw.exe') return full;
-                            if (e.name.toLowerCase() === 'java.exe') javaFound = full;
+                            if (e.name.toLowerCase() === 'javaw.exe') {
+                                if (this.getJavaMajorVersion(full) >= 21) return full;
+                            }
+                            if (e.name.toLowerCase() === 'java.exe') {
+                                if (this.getJavaMajorVersion(full) >= 21) javaFound = full;
+                            }
                         }
                     }
                     if (javaFound) {
@@ -335,10 +356,103 @@ class GameManager {
                 }
             }
 
-            return 'javaw';
+            // Check PATH if javaw is >= 21
+            if (this.getJavaMajorVersion('javaw') >= 21) return 'javaw';
+            if (this.getJavaMajorVersion('java') >= 21) return 'java';
+            return null;
         }
 
-        return 'java';
+        if (this.getJavaMajorVersion('java') >= 21) return 'java';
+        return null;
+    }
+
+    async ensureJava21(onProgress = () => {}) {
+        const settings = this.getSettings();
+        const existing = this.resolveJavawPath(settings.javaPath);
+        if (existing) {
+            return existing;
+        }
+
+        // Check if bundled/downloaded runtime exists
+        const runtimeDir = path.join(this.gameDir, 'runtime', 'java-21');
+        const findInRuntime = (dir, depth = 0) => {
+            if (depth > 4 || !fs.existsSync(dir)) return null;
+            try {
+                const entries = fs.readdirSync(dir, { withFileTypes: true });
+                for (const e of entries) {
+                    const full = path.join(dir, e.name);
+                    if (e.isFile() && e.name.toLowerCase() === 'javaw.exe') {
+                        if (this.getJavaMajorVersion(full) >= 21) return full;
+                    }
+                    if (e.isDirectory()) {
+                        const f = findInRuntime(full, depth + 1);
+                        if (f) return f;
+                    }
+                }
+            } catch (e) {}
+            return null;
+        };
+
+        const runtimeJavaw = findInRuntime(runtimeDir);
+        if (runtimeJavaw) return runtimeJavaw;
+
+        // Auto-download Java 21 JRE for Windows
+        onProgress('Pobieranie oficjalnej Javy 21 dla Minecrafta...', 10);
+        fs.mkdirSync(runtimeDir, { recursive: true });
+        const zipPath = path.join(this.gameDir, 'runtime', 'java21-temp.zip');
+
+        const downloadUrl = 'https://api.adoptium.net/v3/binary/latest/21/ga/windows/x64/jre/hotspot/normal/eclipse';
+
+        await new Promise((resolve, reject) => {
+            const file = fs.createWriteStream(zipPath);
+            const fetch = (targetUrl) => {
+                https.get(targetUrl, { headers: { 'User-Agent': 'MooClient-Launcher' } }, (res) => {
+                    if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
+                        return fetch(res.headers.location);
+                    }
+                    if (res.statusCode !== 200) {
+                        return reject(new Error(`Błąd pobierania Javy: HTTP ${res.statusCode}`));
+                    }
+
+                    const total = parseInt(res.headers['content-length'] || '0', 10);
+                    let downloaded = 0;
+
+                    res.on('data', (chunk) => {
+                        downloaded += chunk.length;
+                        if (total > 0) {
+                            const pct = Math.min(80, 10 + Math.round((downloaded / total) * 70));
+                            onProgress(`Pobieranie Javy 21: ${Math.round(downloaded / (1024 * 1024))}MB / ${Math.round(total / (1024 * 1024))}MB`, pct);
+                        }
+                    });
+
+                    res.pipe(file);
+                    file.on('finish', () => {
+                        file.close(resolve);
+                    });
+                }).on('error', (err) => {
+                    try { fs.unlinkSync(zipPath); } catch (e) {}
+                    reject(err);
+                });
+            };
+            fetch(downloadUrl);
+        });
+
+        onProgress('Rozpakowywanie Javy 21...', 85);
+        try {
+            const { execSync } = require('child_process');
+            execSync(`powershell -NoProfile -NonInteractive -Command "Expand-Archive -Path '${zipPath}' -DestinationPath '${runtimeDir}' -Force"`, { stdio: 'ignore', windowsHide: true });
+            try { fs.unlinkSync(zipPath); } catch (e) {}
+        } catch (e) {
+            console.error('Error extracting Java 21:', e);
+        }
+
+        const downloadedJavaw = findInRuntime(runtimeDir);
+        if (downloadedJavaw) {
+            onProgress('Java 21 pomyślnie zainstalowana!', 95);
+            return downloadedJavaw;
+        }
+
+        return 'javaw';
     }
 
     /**
@@ -362,10 +476,12 @@ class GameManager {
         }
         const auth = account.mclc;
 
+        onProgress('Weryfikacja środowiska Java 21...', 10);
+        const javaExecutable = await this.ensureJava21(onProgress);
+
         onProgress('Przygotowywanie profilu Fabric...', 30);
         const customFabric = await this.ensureFabricVersion(versionNumber);
 
-        const javaExecutable = this.resolveJavawPath(settings.javaPath);
         console.log(`[Launch] Using Java: ${javaExecutable}, RAM: max ${safeMaxRam}G (requested ${rawRam}G)`);
 
         const launchOpts = {
