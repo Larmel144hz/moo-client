@@ -8,19 +8,23 @@ import net.minecraft.text.Text;
 
 import java.util.Collections;
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
- * Tracks and confirms Moo Client users for nametag and tab list badges.
- * The local player is ALWAYS recognized as a Moo Client user.
+ * High-performance, zero-lag player tracking for Moo Client.
+ * Local player is ALWAYS recognized instantly.
+ * Includes O(1) concurrent caching for maximum render-loop FPS.
  */
 public class MooUserManager {
 
     private static final Set<String> MOO_USERS_NAMES = Collections.synchronizedSet(new HashSet<>());
     private static final Set<UUID> MOO_USERS_UUIDS = Collections.synchronizedSet(new HashSet<>());
+    private static final Map<String, Boolean> LOOKUP_CACHE = new ConcurrentHashMap<>();
     private static final Pattern USERNAME_PATTERN = Pattern.compile("[a-zA-Z0-9_]{3,16}");
 
     public static void registerUser(String username, UUID uuid) {
@@ -28,10 +32,12 @@ public class MooUserManager {
             String clean = cleanName(username);
             if (!clean.isEmpty()) {
                 MOO_USERS_NAMES.add(clean);
+                LOOKUP_CACHE.clear();
             }
         }
         if (uuid != null) {
             MOO_USERS_UUIDS.add(uuid);
+            LOOKUP_CACHE.clear();
         }
     }
 
@@ -40,20 +46,29 @@ public class MooUserManager {
             String clean = cleanName(username);
             if (!clean.isEmpty()) {
                 MOO_USERS_NAMES.remove(clean);
+                LOOKUP_CACHE.clear();
             }
         }
         if (uuid != null) {
             MOO_USERS_UUIDS.remove(uuid);
+            LOOKUP_CACHE.clear();
         }
     }
 
     public static void clear() {
         MOO_USERS_NAMES.clear();
         MOO_USERS_UUIDS.clear();
+        LOOKUP_CACHE.clear();
     }
 
     public static String cleanName(String name) {
         if (name == null || name.isEmpty()) return "";
+
+        // Fast path: if string contains no formatting codes, just trim and lowercase
+        if (name.indexOf('§') == -1 && !name.startsWith("literal{")) {
+            return name.trim().toLowerCase();
+        }
+
         return name.replaceAll("(?i)§[0-9a-fk-or]", "")
                    .replaceAll("(?i)literal\\{text='(.*?)'\\}", "$1")
                    .trim().toLowerCase();
@@ -70,7 +85,7 @@ public class MooUserManager {
 
         MinecraftClient client = MinecraftClient.getInstance();
 
-        // 1. Always check local player
+        // 1. Always check local player (O(1))
         if (client.getSession() != null && client.getSession().getUsername() != null && client.getSession().getUsername().equalsIgnoreCase(entry.getProfile().getName())) {
             return true;
         }
@@ -78,7 +93,7 @@ public class MooUserManager {
             return true;
         }
 
-        // 2. UUID Match
+        // 2. UUID Match (O(1))
         if (entry.getProfile().getId() != null && MOO_USERS_UUIDS.contains(entry.getProfile().getId())) {
             return true;
         }
@@ -106,16 +121,17 @@ public class MooUserManager {
     }
 
     /**
-     * Checks if the given player is a confirmed Moo Client user.
+     * Checks if the given player is a confirmed Moo Client user (with O(1) concurrent caching).
      */
     public static boolean isMooUser(String playerName, int entityId) {
+        if (playerName == null || playerName.isEmpty()) return false;
         if (!com.mooclient.module.modules.NametagsModule.isNametagsEnabled() || !com.mooclient.module.modules.NametagsModule.isShowLogo()) {
             return false;
         }
 
         MinecraftClient client = MinecraftClient.getInstance();
 
-        // 1. Local Player Check (ALWAYS TRUE FOR LOCAL PLAYER)
+        // 1. Local Player Fast Path (ALWAYS TRUE FOR LOCAL PLAYER)
         if (client.player != null && client.player.getId() == entityId) {
             return true;
         }
@@ -136,17 +152,32 @@ public class MooUserManager {
             }
         }
 
-        // 2. Direct username match in registered Moo users
+        // 2. Check LRU / Fast Cache
+        Boolean cached = LOOKUP_CACHE.get(targetClean);
+        if (cached != null) {
+            return cached;
+        }
+
+        boolean result = evaluateUser(targetClean, entityId, client);
+        if (LOOKUP_CACHE.size() > 500) {
+            LOOKUP_CACHE.clear();
+        }
+        LOOKUP_CACHE.put(targetClean, result);
+        return result;
+    }
+
+    private static boolean evaluateUser(String targetClean, int entityId, MinecraftClient client) {
+        // Direct username match in registered Moo users
         if (MOO_USERS_NAMES.contains(targetClean)) {
             return true;
         }
 
-        // 3. Word token matcher (handles prefixes like "[VIP] Player", "★ Nick ★", etc.)
+        // Word token matcher (handles ranks like "[VIP] Player", "★ Nick ★", etc.)
         if (matchesAnyUser(targetClean)) {
             return true;
         }
 
-        // 4. Check entity in world
+        // Check entity in world
         if (client.world != null && entityId >= 0) {
             Entity entity = client.world.getEntityById(entityId);
             if (entity instanceof PlayerEntity player) {
@@ -160,7 +191,7 @@ public class MooUserManager {
             }
         }
 
-        // 5. Tab list entry match
+        // Tab list entry match
         if (client.getNetworkHandler() != null) {
             for (PlayerListEntry entry : client.getNetworkHandler().getPlayerList()) {
                 if (entry.getProfile() != null) {
