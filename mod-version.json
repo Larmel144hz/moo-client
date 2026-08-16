@@ -1,6 +1,6 @@
 {
-  "version": "1.3.1",
+  "version": "1.3.2",
   "minecraft": "1.21.4",
-  "download_url": "https://github.com/Larmel144hz/moo-client/releases/download/v1.3.1/moo-client-1.3.1.jar",
-  "changelog": "👤 Konta Premium: Dodawanie kont Microsoft bezpośrednio z menu gry (okno MSMC)\n🔑 Logowanie Microsoft: Kliknij + Dodaj konto i od razu otwiera się oficjalne okno logowania\n⚙️ Ustawienia: Panel ustawień z kolorem akcentu i opcjami profilu\n🐮 Logo Moo Client: Tablist i Nametag logo przywrócone z v1.2.5\n🚀 Stabilność: Bez pętli, bez problemów z aktualizacjami"
+  "download_url": "https://github.com/Larmel144hz/moo-client/releases/download/v1.3.2/moo-client-1.3.2.jar",
+  "changelog": "🚀 Stabilna aktualizacja 1.3.2:\n✓ Automatyczny restart po aktualizacji bez pętli\n✓ Poprawione wykrywanie wersji launchera\n✓ Konta Premium Microsoft (okno logowania MSMC bezpośrednio w menu)\n✓ Przywrócone logo Moo Client na tabliście i nametagach"
 }
