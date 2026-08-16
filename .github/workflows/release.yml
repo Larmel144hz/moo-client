@@ -1,0 +1,67 @@
+name: Discord Release Announcer
+
+on:
+  release:
+    types: [published]
+
+jobs:
+  discord-notify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Send Discord Notification
+        env:
+          WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK }}
+          RELEASE_NAME: ${{ github.event.release.name || github.event.release.tag_name }}
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+          RELEASE_BODY: ${{ github.event.release.body }}
+          RELEASE_URL: ${{ github.event.release.html_url }}
+          AUTHOR_NAME: ${{ github.event.release.author.login }}
+          AUTHOR_AVATAR: ${{ github.event.release.author.avatar_url }}
+        run: |
+          python -c '
+          import os, json, urllib.request
+
+          webhook = os.environ.get("WEBHOOK_URL")
+          if not webhook:
+              exit(0)
+
+          tag = os.environ.get("RELEASE_TAG", "")
+          name = os.environ.get("RELEASE_NAME", tag)
+          body = os.environ.get("RELEASE_BODY", "No changelog provided.")
+          url = os.environ.get("RELEASE_URL", "")
+          author = os.environ.get("AUTHOR_NAME", "Moo Client Team")
+          avatar = os.environ.get("AUTHOR_AVATAR", "")
+
+          # Trim body if too long for Discord embed
+          if len(body) > 2000:
+              body = body[:1990] + "..."
+
+          payload = {
+              "username": "🐮 Moo Client | Releases",
+              "avatar_url": "https://cdn-icons-png.flaticon.com/512/2395/2395796.png",
+              "content": "📢 **New Moo Client update has been released!** @everyone",
+              "embeds": [
+                  {
+                      "title": f"🚀 {name} ({tag})",
+                      "url": url,
+                      "description": f"### 📋 What is new:\n{body}\n\n🔗 **[Click here to download this release]({url})**",
+                      "color": 4838901, # Zielono-błękitny
+                      "author": {
+                          "name": f"Released by {author}",
+                          "icon_url": avatar
+                      },
+                      "footer": {
+                          "text": "Moo Client Official Update • Minecraft PvP Client"
+                      }
+                  }
+              ]
+          }
+
+          req = urllib.request.Request(
+              webhook,
+              data=json.dumps(payload).encode("utf-8"),
+              headers={"Content-Type": "application/json", "User-Agent": "GitHub-Action"}
+          )
+          urllib.request.urlopen(req)
+          print("Changelog sent to Discord!")
+          '
