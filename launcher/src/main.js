@@ -356,61 +356,53 @@ function getActualLauncherVersion() {
 
                 sendToRenderer('client-update-progress', { status: 'Przygotowywanie aktualizacji i restart...', percent: 98 });
 
-                // Write a bulletproof .bat updater script that works on all Windows systems without policy restrictions
-                const scriptPath = path.join(os.tmpdir(), `moo-updater-${Date.now()}.bat`);
-                const scriptContent = [
-                    '@echo off',
-                    'setlocal enabledelayedexpansion',
-                    'title Moo Client Updater',
-                    '',
-                    ':: Terminate running Moo Client processes',
-                    `taskkill /F /PID ${currentPid} >nul 2>&1`,
-                    'taskkill /F /IM "Moo Client.exe" >nul 2>&1',
-                    'taskkill /F /IM "moo-client.exe" >nul 2>&1',
-                    'timeout /t 1 /nobreak >nul 2>&1',
-                    '',
-                    ':: Retry loop to replace app.asar (up to 30 attempts)',
-                    'set COPIED=0',
-                    'for /l %%i in (1,1,30) do (',
-                    `    copy /Y "${tempAsar}" "${targetAsar}" >nul 2>&1`,
-                    '    if !errorlevel! equ 0 (',
-                    '        set COPIED=1',
-                    `        del /F /Q "${tempAsar}" >nul 2>&1`,
-                    '        goto done_copy',
-                    '    )',
-                    '    timeout /t 1 /nobreak >nul 2>&1',
-                    ')',
-                    ':done_copy',
-                    '',
-                    'if "!COPIED!"=="1" (',
-                    `    start "" "${targetExe}"`,
-                    '    goto cleanup',
-                    ')',
-                    '',
-                    ':: Fallback with PowerShell elevation if in protected directory',
-                    `powershell -NoProfile -ExecutionPolicy Bypass -Command "Start-Process powershell -ArgumentList '-NoProfile -Command Copy-Item -Force ''${tempAsar.replace(/'/g, "''")}'' ''${targetAsar.replace(/'/g, "''")}''; Start-Process ''${targetExe.replace(/'/g, "''")}''' -Verb RunAs" >nul 2>&1`,
-                    'if !errorlevel! equ 0 goto cleanup',
-                    '',
-                    ':: Restart executable',
-                    `start "" "${targetExe}"`,
-                    '',
-                    ':cleanup',
-                    '(goto) 2>nul & del "%~f0"',
+                // Write a bulletproof PowerShell updater script that replaces app.asar and relaunches the launcher
+                const scriptPath = path.join(os.tmpdir(), `moo-updater-${Date.now()}.ps1`);
+                const psContent = [
+                    "$ErrorActionPreference = 'SilentlyContinue'",
+                    "Start-Sleep -Milliseconds 600",
+                    "",
+                    `$proc = Get-Process -Id ${currentPid} -ErrorAction SilentlyContinue`,
+                    "if ($proc) { $proc.WaitForExit(5000) }",
+                    "Stop-Process -Name 'Moo Client' -Force -ErrorAction SilentlyContinue",
+                    "Stop-Process -Name 'moo-client' -Force -ErrorAction SilentlyContinue",
+                    "Start-Sleep -Milliseconds 400",
+                    "",
+                    "$copied = $false",
+                    "for ($i = 0; $i -lt 30; $i++) {",
+                    "    try {",
+                    `        Copy-Item -Path '${tempAsar.replace(/'/g, "''")}' -Destination '${targetAsar.replace(/'/g, "''")}' -Force -ErrorAction Stop`,
+                    "        $copied = $true",
+                    `        Remove-Item -Path '${tempAsar.replace(/'/g, "''")}' -Force -ErrorAction SilentlyContinue`,
+                    "        break",
+                    "    } catch {",
+                    "        Start-Sleep -Milliseconds 500",
+                    "    }",
+                    "}",
+                    "",
+                    `Start-Process -FilePath '${targetExe.replace(/'/g, "''")}'`,
+                    "Start-Sleep -Seconds 1",
+                    "Remove-Item -Path $MyInvocation.MyCommand.Path -Force -ErrorAction SilentlyContinue"
                 ].join('\r\n');
 
-                fs.writeFileSync(scriptPath, scriptContent, 'utf8');
+                fs.writeFileSync(scriptPath, psContent, 'utf8');
 
                 sendToRenderer('client-update-progress', { status: 'Ponowne uruchamianie...', percent: 100 });
 
                 const { spawn } = require('child_process');
-                const child = spawn('cmd.exe', ['/c', scriptPath], {
+                const child = spawn('powershell.exe', [
+                    '-NoProfile',
+                    '-ExecutionPolicy', 'Bypass',
+                    '-WindowStyle', 'Hidden',
+                    '-File', scriptPath
+                ], {
                     detached: true,
                     stdio: 'ignore',
                     windowsHide: true,
                 });
                 child.unref();
 
-                setTimeout(() => { app.exit(0); }, 150);
+                setTimeout(() => { app.exit(0); }, 250);
                 return { success: true, updated: true, restarting: true };
             }
 
