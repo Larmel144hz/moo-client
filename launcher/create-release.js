@@ -70,14 +70,14 @@ function uploadAsset(uploadUrl, token, filePath, fileName, contentType) {
     const token = getGitHubToken();
     if (!token) { console.error('No token'); process.exit(1); }
 
-    let res = await apiRequest('GET', `/repos/Larmel144hz/moo-client/releases/tags/v${VERSION}`, token);
+    let res = await apiRequest('GET', `/repos/Moo-Client/moo-client/releases/tags/v${VERSION}`, token);
     let release;
 
     if (res.status === 200) {
         release = res.data;
         console.log('Found existing release:', release.html_url);
     } else {
-        res = await apiRequest('POST', '/repos/Larmel144hz/moo-client/releases', token, {
+        res = await apiRequest('POST', '/repos/Moo-Client/moo-client/releases', token, {
             tag_name: `v${VERSION}`,
             name: `Moo Client v${VERSION}`,
             body: '🚀 **Moo Client v1.4.7 (Waypoints, See-Through Logo & Minimalist UI)**\n\n✓ Logo Moo Client widoczne również przez ściany i przeszkody (See-Through Layer)\n✓ Rock-solid matematyczna projekcja 3D->2D dla Waypointów bez drgań\n✓ Celownik renderowany na wierzchu przed punktami w świecie\n✓ Opcje tła i cienia tekstu dla Waypointów\n✓ Nowoczesny i minimalistyczny wygląd menu modów',
@@ -92,7 +92,7 @@ function uploadAsset(uploadUrl, token, filePath, fileName, contentType) {
     if (release.assets) {
         for (const asset of release.assets) {
             console.log('Deleting old asset:', asset.name);
-            await apiRequest('DELETE', `/repos/Larmel144hz/moo-client/releases/assets/${asset.id}`, token);
+            await apiRequest('DELETE', `/repos/Moo-Client/moo-client/releases/assets/${asset.id}`, token);
         }
     }
 
