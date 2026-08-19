@@ -21,7 +21,7 @@ public class MooClient implements ClientModInitializer {
 
     public static final String MOD_ID = "mooclient";
     public static final String MOD_NAME = "Moo Client";
-    public static final String VERSION = "1.4.6";
+    public static final String VERSION = "1.4.7";
     public static final Logger LOGGER = LoggerFactory.getLogger(MOD_NAME);
 
     private static MooClient instance;
@@ -31,6 +31,7 @@ public class MooClient implements ClientModInitializer {
     private static boolean sprintKeyWasDown = false;
     private static boolean freelookKeyWasDown = false;
     private static boolean zoomKeyWasDown = false;
+    private static boolean waypointKeyWasDown = false;
     private static int tickCounter = 0;
 
     @Override
@@ -49,6 +50,9 @@ public class MooClient implements ClientModInitializer {
 
         // Initialize Moo Client Network & Discovery Handler
         com.mooclient.network.MooNetworkHandler.init();
+
+        // Initialize In-World Waypoint Renderer
+        com.mooclient.waypoint.WaypointRenderer.init();
 
         // Initialize Discord Rich Presence
         DiscordRPC.getInstance().init();
@@ -84,6 +88,7 @@ public class MooClient implements ClientModInitializer {
                 freelookKeyWasDown = false;
                 zoomKeyWasDown = false;
                 sprintKeyWasDown = false;
+                waypointKeyWasDown = false;
             }
 
             // In-game Toggle Sprint key detection
@@ -140,6 +145,16 @@ public class MooClient implements ClientModInitializer {
                         }
                     }
                     zoomKeyWasDown = isKeyDown;
+                }
+
+                // In-game Waypoint Screen Keybind detection (e.g. B key)
+                int waypointKeyCode = com.mooclient.module.modules.WaypointsModule.getKeyCode();
+                if (waypointKeyCode > 0 && com.mooclient.module.modules.WaypointsModule.isWaypointsEnabled()) {
+                    boolean isKeyDown = GLFW.glfwGetKey(window, waypointKeyCode) == GLFW.GLFW_PRESS;
+                    if (isKeyDown && !waypointKeyWasDown) {
+                        client.setScreen(new com.mooclient.gui.MooWaypointScreen());
+                    }
+                    waypointKeyWasDown = isKeyDown;
                 }
 
                 // In-game Macro execution detection

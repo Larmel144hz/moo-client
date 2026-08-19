@@ -2,18 +2,22 @@ package com.mooclient.mixin;
 
 import com.mooclient.gui.MooClientScreen;
 import com.mooclient.module.modules.FullbrightModule;
+import com.mooclient.waypoint.WaypointRenderer;
 import net.minecraft.client.MinecraftClient;
+import net.minecraft.client.render.Camera;
 import net.minecraft.client.render.GameRenderer;
 import net.minecraft.entity.LivingEntity;
+import org.joml.Matrix4f;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
+import org.spongepowered.asm.mixin.injection.ModifyArg;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 /**
  * Disables vanilla screen blur when MooClientScreen is open,
- * and handles Fullbright Night Vision strength calculations.
+ * handles Fullbright Night Vision, Zoom FOV, and captures exact world projection matrix for Waypoints.
  */
 @Mixin(GameRenderer.class)
 public class GameRendererMixin {
@@ -33,11 +37,25 @@ public class GameRendererMixin {
         }
     }
 
+    @ModifyArg(
+        method = "renderWorld",
+        at = @At(
+            value = "INVOKE",
+            target = "Lcom/mojang/blaze3d/systems/RenderSystem;setProjectionMatrix(Lorg/joml/Matrix4f;Lcom/mojang/blaze3d/systems/ProjectionType;)V"
+        ),
+        index = 0
+    )
+    private Matrix4f mooClient$captureWorldProjection(Matrix4f projMatrix) {
+        WaypointRenderer.worldProjectionMatrix.set(projMatrix);
+        return projMatrix;
+    }
+
     @Inject(method = "getFov", at = @At("RETURN"), cancellable = true)
-    private void mooClient$applyZoomFov(net.minecraft.client.render.Camera camera, float tickDelta, boolean changingFov, CallbackInfoReturnable<Float> cir) {
+    private void mooClient$applyZoomFov(Camera camera, float tickDelta, boolean changingFov, CallbackInfoReturnable<Float> cir) {
+        float fov = cir.getReturnValueF();
         if (com.mooclient.module.modules.ZoomModule.isZooming()) {
-            float baseFov = cir.getReturnValueF();
-            cir.setReturnValue(com.mooclient.module.modules.ZoomModule.calculateZoomFov(baseFov, tickDelta));
+            fov = com.mooclient.module.modules.ZoomModule.calculateZoomFov(fov, tickDelta);
+            cir.setReturnValue(fov);
         }
     }
 }

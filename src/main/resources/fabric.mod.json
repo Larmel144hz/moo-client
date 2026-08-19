@@ -3,7 +3,7 @@
   "id": "mooclient",
   "version": "${version}",
   "name": "Moo Client",
-  "description": "A premium Minecraft client mod inspired by Lunar Client. Press Right Shift to open the client menu.",
+  "description": "",
   "authors": [
     "MooTeam"
   ],

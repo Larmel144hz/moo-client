@@ -23,7 +23,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 /**
  * Mixin into EntityRenderer to render authentic Lunar/Badlion style Moo Client logo badge
- * before player nicknames for Moo Client users, render Ping ABOVE nicknames when selected,
+ * EXCLUSIVELY before player nicknames for Moo Client users, render Ping ABOVE nicknames when selected,
  * remove nametag background, and apply text shadow.
  */
 @Mixin(EntityRenderer.class)
@@ -34,15 +34,31 @@ public abstract class NametagBackgroundMixin {
 
     private static final Identifier MOO_LOGO = Identifier.of("mooclient", "textures/gui/icon.png");
     private final ThreadLocal<EntityRenderState> mooClient$currentState = new ThreadLocal<>();
+    private final ThreadLocal<Text> mooClient$currentText = new ThreadLocal<>();
+
+    private static boolean isPlayerNicknameLabel(PlayerEntityRenderState playerState, Text text) {
+        if (playerState == null || text == null) return false;
+        // In 1.21.4 PlayerEntityRenderState: playerState.playerName is the SCOREBOARD sub-label (e.g. "20 ❤") when present.
+        if (playerState.playerName != null && text == playerState.playerName) {
+            return false;
+        }
+        // Sub-labels do not contain the player's username
+        if (playerState.name != null && !text.getString().toLowerCase().contains(playerState.name.toLowerCase())) {
+            return false;
+        }
+        return true;
+    }
 
     @Inject(method = "renderLabelIfPresent", at = @At("HEAD"))
     private void mooClient$captureState(EntityRenderState state, Text text, MatrixStack matrices, VertexConsumerProvider vertexConsumers, int light, CallbackInfo ci) {
         this.mooClient$currentState.set(state);
+        this.mooClient$currentText.set(text);
     }
 
     @Inject(method = "renderLabelIfPresent", at = @At("RETURN"))
     private void mooClient$clearState(EntityRenderState state, Text text, MatrixStack matrices, VertexConsumerProvider vertexConsumers, int light, CallbackInfo ci) {
         this.mooClient$currentState.remove();
+        this.mooClient$currentText.remove();
     }
 
     @Redirect(
@@ -63,7 +79,10 @@ public abstract class NametagBackgroundMixin {
     )
     private float mooClient$centerNametagWithBadge(float originalX) {
         EntityRenderState state = this.mooClient$currentState.get();
-        if (state instanceof PlayerEntityRenderState playerState && com.mooclient.util.MooUserManager.isMooUser(playerState.name, playerState.id)) {
+        Text text = this.mooClient$currentText.get();
+        if (state instanceof PlayerEntityRenderState playerState
+                && isPlayerNicknameLabel(playerState, text)
+                && com.mooclient.util.MooUserManager.isMooUser(playerState.name, playerState.id)) {
             float badgeTotalWidth = 11.0f; // iconSize (8.5f) + gap (2.5f)
             return originalX + (badgeTotalWidth / 2.0f);
         }
@@ -91,9 +110,14 @@ public abstract class NametagBackgroundMixin {
             return;
         }
 
+        // Exclusively render cow logo and ping on the player's nickname line (never on health, score, or sub-labels)
+        if (!isPlayerNicknameLabel(playerState, text)) {
+            return;
+        }
+
         Matrix4f matrix = matrices.peek().getPositionMatrix();
 
-        // 1. Authentic Moo Client Cow Logo Badge rendering
+        // 1. Authentic Moo Client Cow Logo Badge rendering (EXCLUSIVELY in front of nickname)
         if (com.mooclient.util.MooUserManager.isMooUser(playerState.name, playerState.id)) {
             float textWidth = this.getTextRenderer().getWidth(text);
             float badgeTotalWidth = 11.0f;
@@ -103,11 +127,31 @@ public abstract class NametagBackgroundMixin {
             float iconX = -totalWidth / 2.0f;
             float iconY = 0.0f;
 
-            VertexConsumer buffer = vertexConsumers.getBuffer(RenderLayer.getText(MOO_LOGO));
-            buffer.vertex(matrix, iconX, iconY, 0.0f).color(255, 255, 255, 255).texture(0.0f, 0.0f).light(light);
-            buffer.vertex(matrix, iconX, iconY + iconSize, 0.0f).color(255, 255, 255, 255).texture(0.0f, 1.0f).light(light);
-            buffer.vertex(matrix, iconX + iconSize, iconY + iconSize, 0.0f).color(255, 255, 255, 255).texture(1.0f, 1.0f).light(light);
-            buffer.vertex(matrix, iconX + iconSize, iconY, 0.0f).color(255, 255, 255, 255).texture(1.0f, 0.0f).light(light);
+            boolean seeThrough = !playerState.sneaking;
+
+            if (seeThrough) {
+                // Render see-through layer (visible through blocks and walls)
+                VertexConsumer seeThroughBuffer = vertexConsumers.getBuffer(RenderLayer.getTextSeeThrough(MOO_LOGO));
+                seeThroughBuffer.vertex(matrix, iconX, iconY, 0.0f).color(255, 255, 255, 128).texture(0.0f, 0.0f).light(light);
+                seeThroughBuffer.vertex(matrix, iconX, iconY + iconSize, 0.0f).color(255, 255, 255, 128).texture(0.0f, 1.0f).light(light);
+                seeThroughBuffer.vertex(matrix, iconX + iconSize, iconY + iconSize, 0.0f).color(255, 255, 255, 128).texture(1.0f, 1.0f).light(light);
+                seeThroughBuffer.vertex(matrix, iconX + iconSize, iconY, 0.0f).color(255, 255, 255, 128).texture(1.0f, 0.0f).light(light);
+
+                // Render normal layer (full brightness with depth testing when in line of sight)
+                int emissiveLight = net.minecraft.client.render.LightmapTextureManager.applyEmission(light, 2);
+                VertexConsumer normalBuffer = vertexConsumers.getBuffer(RenderLayer.getText(MOO_LOGO));
+                normalBuffer.vertex(matrix, iconX, iconY, 0.0f).color(255, 255, 255, 255).texture(0.0f, 0.0f).light(emissiveLight);
+                normalBuffer.vertex(matrix, iconX, iconY + iconSize, 0.0f).color(255, 255, 255, 255).texture(0.0f, 1.0f).light(emissiveLight);
+                normalBuffer.vertex(matrix, iconX + iconSize, iconY + iconSize, 0.0f).color(255, 255, 255, 255).texture(1.0f, 1.0f).light(emissiveLight);
+                normalBuffer.vertex(matrix, iconX + iconSize, iconY, 0.0f).color(255, 255, 255, 255).texture(1.0f, 0.0f).light(emissiveLight);
+            } else {
+                // Sneaking player: only normal depth layer
+                VertexConsumer normalBuffer = vertexConsumers.getBuffer(RenderLayer.getText(MOO_LOGO));
+                normalBuffer.vertex(matrix, iconX, iconY, 0.0f).color(255, 255, 255, 128).texture(0.0f, 0.0f).light(light);
+                normalBuffer.vertex(matrix, iconX, iconY + iconSize, 0.0f).color(255, 255, 255, 128).texture(0.0f, 1.0f).light(light);
+                normalBuffer.vertex(matrix, iconX + iconSize, iconY + iconSize, 0.0f).color(255, 255, 255, 128).texture(1.0f, 1.0f).light(light);
+                normalBuffer.vertex(matrix, iconX + iconSize, iconY, 0.0f).color(255, 255, 255, 128).texture(1.0f, 0.0f).light(light);
+            }
         }
 
         // 2. Render Ping ABOVE nickname for all players when ABOVE mode is active
@@ -120,18 +164,35 @@ public abstract class NametagBackgroundMixin {
                 int bgAlpha = NametagsModule.isRemoveBackground() ? 0 : (int)(net.minecraft.client.MinecraftClient.getInstance().options.getTextBackgroundOpacity(0.25F) * 255.0F);
                 int bgColor = bgAlpha << 24;
 
+                boolean seeThrough = !playerState.sneaking;
+
                 this.getTextRenderer().draw(
                     pingText,
                     pingX,
                     pingY,
-                    -1,
+                    -2130706433,
                     NametagsModule.isTextShadow(),
                     matrix,
                     vertexConsumers,
-                    TextRenderer.TextLayerType.NORMAL,
+                    seeThrough ? TextRenderer.TextLayerType.SEE_THROUGH : TextRenderer.TextLayerType.NORMAL,
                     bgColor,
                     light
                 );
+
+                if (seeThrough) {
+                    this.getTextRenderer().draw(
+                        pingText,
+                        pingX,
+                        pingY,
+                        -1,
+                        NametagsModule.isTextShadow(),
+                        matrix,
+                        vertexConsumers,
+                        TextRenderer.TextLayerType.NORMAL,
+                        0,
+                        net.minecraft.client.render.LightmapTextureManager.applyEmission(light, 2)
+                    );
+                }
             }
         }
     }

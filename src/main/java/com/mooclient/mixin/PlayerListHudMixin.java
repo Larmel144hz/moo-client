@@ -6,6 +6,7 @@ import net.minecraft.client.font.TextRenderer;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.hud.PlayerListHud;
 import net.minecraft.client.render.RenderLayer;
+import net.minecraft.text.StringVisitable;
 import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
 import org.spongepowered.asm.mixin.Mixin;
@@ -13,13 +14,33 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Redirect;
 
 /**
- * Renders the Moo Client cow logo badge right before player nicknames on the Tab list.
- * Output: [Head] [Cow Logo] Nickname
+ * Renders the Moo Client cow logo badge right before player nicknames on the Tab list,
+ * and expands the column width so the ping latency icon does not overlap the player nickname.
+ * Output: [Head] [Cow Logo] Nickname [Ping Signal Bars]
  */
 @Mixin(PlayerListHud.class)
 public class PlayerListHudMixin {
 
     private static final Identifier MOO_LOGO = Identifier.of("mooclient", "textures/gui/icon.png");
+
+    @Redirect(
+        method = "render",
+        at = @At(
+            value = "INVOKE",
+            target = "Lnet/minecraft/client/font/TextRenderer;getWidth(Lnet/minecraft/text/StringVisitable;)I"
+        )
+    )
+    private int mooClient$expandColumnWidthForLogo(TextRenderer textRenderer, StringVisitable text) {
+        int width = textRenderer.getWidth(text);
+        if (text != null && NametagsModule.isNametagsEnabled() && NametagsModule.isShowLogo()) {
+            String raw = text.getString();
+            if (raw != null && !raw.isEmpty() && MooUserManager.isMooUser(raw, -1)) {
+                // Reserve +10px in the tab list column for the cow logo
+                return width + 10;
+            }
+        }
+        return width;
+    }
 
     @Redirect(
         method = "render",

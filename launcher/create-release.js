@@ -3,7 +3,7 @@ const https = require('https');
 const fs = require('fs');
 const path = require('path');
 
-const VERSION = '1.4.6';
+const VERSION = '1.4.7';
 
 function getGitHubToken() {
     try {
@@ -80,7 +80,7 @@ function uploadAsset(uploadUrl, token, filePath, fileName, contentType) {
         res = await apiRequest('POST', '/repos/Larmel144hz/moo-client/releases', token, {
             tag_name: `v${VERSION}`,
             name: `Moo Client v${VERSION}`,
-            body: '🚀 **Moo Client v1.4.6 (Performance & Instant Logo Optimization)**\n\n✓ Super-szybki O(1) Cache dla renderowania NameTagów i Tablisty\n✓ Błyskawiczna, w 100% niezawodna widoczność logo graczy i wysoki FPS\n✓ Zero mikroprzycięć i zoptymalizowane flagi JVM',
+            body: '🚀 **Moo Client v1.4.7 (Waypoints, See-Through Logo & Minimalist UI)**\n\n✓ Logo Moo Client widoczne również przez ściany i przeszkody (See-Through Layer)\n✓ Rock-solid matematyczna projekcja 3D->2D dla Waypointów bez drgań\n✓ Celownik renderowany na wierzchu przed punktami w świecie\n✓ Opcje tła i cienia tekstu dla Waypointów\n✓ Nowoczesny i minimalistyczny wygląd menu modów',
             draft: false,
             prerelease: false
         });
@@ -116,5 +116,5 @@ function uploadAsset(uploadUrl, token, filePath, fileName, contentType) {
         await uploadAsset(release.upload_url, token, exePath, `Moo.Client.Setup.${VERSION}.exe`, 'application/octet-stream');
     }
 
-    console.log('ALL v1.4.6 ASSETS UPLOADED AND REPLACED SUCCESSFULLY!');
+    console.log('ALL v1.4.7 ASSETS UPLOADED AND REPLACED SUCCESSFULLY!');
 })();

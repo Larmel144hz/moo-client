@@ -193,6 +193,28 @@ function setupIPC() {
         }
     });
 
+    ipcMain.handle('validate-session', async () => {
+        try {
+            const account = gameManager.getAccount();
+            if (!account) return { success: false, error: 'Brak konta' };
+            const isValid = await gameManager.validateSession(account);
+            return { success: true, isValid, accountName: account.name };
+        } catch (e) {
+            return { success: false, isValid: false, error: e.message };
+        }
+    });
+
+    ipcMain.handle('refresh-session', async () => {
+        try {
+            const account = gameManager.getAccount();
+            if (!account) return { success: false, error: 'Brak konta' };
+            const result = await gameManager.refreshAccount(account);
+            return result;
+        } catch (e) {
+            return { success: false, error: e.message };
+        }
+    });
+
     ipcMain.handle('logout-microsoft', async () => {
         return gameManager.logout();
     });

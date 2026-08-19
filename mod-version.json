@@ -1,6 +1,6 @@
 {
-  "version": "1.4.6",
+  "version": "1.4.7",
   "minecraft": "1.21.4",
-  "download_url": "https://github.com/Larmel144hz/moo-client/releases/download/v1.4.6/moo-client-1.4.6.jar",
-  "changelog": "🚀 Moo Client v1.4.6 (Performance & Instant Logo Optimization):\n✓ Super-szybki O(1) Cache dla renderowania NameTagów i Tablisty\n✓ Błyskawiczna, w 100% niezawodna widoczność logo graczy i płynność FPS\n✓ Zero mikroprzycięć i zoptymalizowane flagi JVM"
+  "download_url": "https://github.com/Larmel144hz/moo-client/releases/download/v1.4.7/moo-client-1.4.7.jar",
+  "changelog": "🚀 Moo Client v1.4.7 (Waypoints, See-Through Logo & Minimalist UI):\n✓ Logo Moo Client widoczne również przez ściany i przeszkody (See-Through Layer)\n✓ Rock-solid matematyczna projekcja 3D->2D dla Waypointów bez drgań\n✓ Celownik renderowany na wierzchu przed punktami w świecie\n✓ Opcje tła i cienia tekstu dla Waypointów\n✓ Nowoczesny i minimalistyczny wygląd menu modów"
 }

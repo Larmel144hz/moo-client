@@ -16,6 +16,8 @@ contextBridge.exposeInMainWorld('mooAPI', {
     // Account & Authentication (Microsoft Premium)
     loginMicrosoft: () => ipcRenderer.invoke('login-microsoft'),
     logoutMicrosoft: () => ipcRenderer.invoke('logout-microsoft'),
+    validateSession: () => ipcRenderer.invoke('validate-session'),
+    refreshSession: () => ipcRenderer.invoke('refresh-session'),
     getAccount: () => ipcRenderer.invoke('get-account'),
     getAccounts: () => ipcRenderer.invoke('get-accounts'),
     selectAccount: (uuid) => ipcRenderer.invoke('select-account', uuid),

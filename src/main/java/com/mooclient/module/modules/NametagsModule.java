@@ -12,6 +12,7 @@ import net.minecraft.util.Formatting;
  * Nametags Module.
  * Always shows own nametag in 3rd person / Freelook.
  * Displays colorful latency (ping) indicators (BESIDE or ABOVE player heads).
+ * Option to toggle showing ping on self (showSelfPing).
  * Displays authentic Lunar/Badlion style Moo Client logo badge before nicknames (always active).
  * Option to remove background behind nametags.
  * Option to enable text shadow.
@@ -36,6 +37,7 @@ public class NametagsModule extends Module {
     private static boolean enabled = true;
     private static boolean showLogo = true;
     private static boolean showPing = true;
+    private static boolean showSelfPing = false; // Default false as requested
     private static PingPosition pingPosition = PingPosition.BESIDE;
     private static boolean removeBackground = false;
     private static boolean textShadow = true;
@@ -92,6 +94,18 @@ public class NametagsModule extends Module {
         showPing = !showPing;
     }
 
+    public static boolean isShowSelfPing() {
+        return showSelfPing;
+    }
+
+    public static void setShowSelfPing(boolean state) {
+        showSelfPing = state;
+    }
+
+    public static void toggleShowSelfPing() {
+        showSelfPing = !showSelfPing;
+    }
+
     public static PingPosition getPingPosition() {
         return pingPosition;
     }
@@ -129,10 +143,33 @@ public class NametagsModule extends Module {
     }
 
     /**
+     * Checks whether the target entity represents the local client player.
+     */
+    public static boolean isLocalPlayer(int entityId, String playerName) {
+        MinecraftClient client = MinecraftClient.getInstance();
+        if (client.player == null) return false;
+        if (entityId > 0 && client.player.getId() == entityId) return true;
+        if (playerName != null && !playerName.trim().isEmpty()) {
+            if (client.getSession() != null && playerName.equalsIgnoreCase(client.getSession().getUsername())) {
+                return true;
+            }
+            if (client.player.getName() != null && playerName.equalsIgnoreCase(client.player.getName().getString())) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
      * Retrieves colored latency Text indicator for the given entity ID and playerName.
      */
     public static Text getPingText(int entityId, String playerName) {
         if (!enabled || !showPing) {
+            return null;
+        }
+
+        // Check if self-ping is disabled
+        if (!showSelfPing && isLocalPlayer(entityId, playerName)) {
             return null;
         }
 
@@ -194,6 +231,11 @@ public class NametagsModule extends Module {
      */
     public static Text formatNametag(Text originalText, int entityId, String playerName) {
         if (!enabled || originalText == null) {
+            return originalText;
+        }
+
+        // If self ping is disabled, do not append ping to local player
+        if (!showSelfPing && isLocalPlayer(entityId, playerName)) {
             return originalText;
         }
 

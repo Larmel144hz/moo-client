@@ -17,7 +17,14 @@ public class PlayerEntityRendererMixin {
         argsOnly = true
     )
     private Text mooClient$modifyNametagText(Text text, PlayerEntityRenderState state) {
-        if (NametagsModule.isNametagsEnabled() && state != null) {
+        if (NametagsModule.isNametagsEnabled() && state != null && text != null) {
+            // Do NOT format if text is the scoreboard sub-label (e.g. "20 ❤")
+            if (state.playerName != null && text == state.playerName) {
+                return text;
+            }
+            if (state.name != null && !text.getString().toLowerCase().contains(state.name.toLowerCase())) {
+                return text;
+            }
             return NametagsModule.formatNametag(text, state.id, state.name);
         }
         return text;

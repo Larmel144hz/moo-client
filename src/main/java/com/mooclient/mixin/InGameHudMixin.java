@@ -283,4 +283,14 @@ public class InGameHudMixin {
             }
         }
     }
+
+    @Inject(method = "renderMiscOverlays", at = @At("TAIL"))
+    private void mooClient$renderWaypoints(DrawContext context, RenderTickCounter tickCounter, CallbackInfo ci) {
+        MinecraftClient client = MinecraftClient.getInstance();
+        if (client == null || client.options.hudHidden || client.getDebugHud().shouldShowDebugHud()) {
+            return;
+        }
+        // Render waypoints BEFORE crosshair and main HUD so crosshair is always visible in front
+        com.mooclient.waypoint.WaypointRenderer.renderHudWaypoints(context, client, tickCounter.getTickDelta(true));
+    }
 }

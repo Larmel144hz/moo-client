@@ -332,6 +332,30 @@ const btnPopupAdd = document.getElementById('btn-popup-add');
 
 let currentAccount = null;
 
+async function checkAccountSession(account) {
+    if (!account) return;
+    try {
+        const val = await window.mooAPI?.validateSession?.();
+        if (val && !val.isValid && currentAccount) {
+            if (playerStatus) {
+                playerStatus.textContent = '⚠️ Sesja wygasła (Odświeżanie...)';
+                playerStatus.style.color = '#fbbf24';
+            }
+            // Auto refresh attempt
+            const ref = await window.mooAPI?.refreshSession?.();
+            if (ref?.success && ref.account) {
+                updateAccountUI(ref.account);
+                showToast(`Sesja konta ${ref.account.name} została pomyślnie odświeżona!`, 'success');
+            } else {
+                if (playerStatus) {
+                    playerStatus.textContent = '⚠️ Sesja wygasła — Zaloguj ponownie';
+                    playerStatus.style.color = '#ef4444';
+                }
+            }
+        }
+    } catch (e) {}
+}
+
 function updateAccountUI(account) {
     currentAccount = account;
     if (account && account.name) {
@@ -340,17 +364,26 @@ function updateAccountUI(account) {
         btnCardLogout?.classList.remove('hidden');
 
         if (playerNameEl) playerNameEl.textContent = account.name;
-        if (playerStatus) playerStatus.textContent = t('status_ready_play');
+        if (playerStatus) {
+            playerStatus.textContent = t('status_ready_play');
+            playerStatus.style.color = '';
+        }
 
         const avatarUrl = `https://mc-heads.net/avatar/${account.name}/64`;
         playerAvatarImgs.forEach((img) => { img.src = avatarUrl; });
+
+        // Non-blocking background session validation & auto-refresh
+        setTimeout(() => checkAccountSession(account), 600);
     } else {
         // Logged out state
         closeAccountsPopup();
         btnCardLogout?.classList.add('hidden');
 
         if (playerNameEl) playerNameEl.textContent = t('not_logged_in');
-        if (playerStatus) playerStatus.textContent = t('require_login_status');
+        if (playerStatus) {
+            playerStatus.textContent = t('require_login_status');
+            playerStatus.style.color = '';
+        }
         playerAvatarImgs.forEach((img) => { img.src = 'logo.png'; });
     }
 }
@@ -386,14 +419,19 @@ async function renderAccountsPopup() {
                     <span class="account-item-badge">${acc.isActive ? `<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg> ${t('account_active')}` : 'Premium'}</span>
                 </div>
                 ${acc.isActive ? `<svg class="account-item-check" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>` : ''}
-                <button class="account-item-remove" title="Usuń to konto" type="button">
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 6L6 18M6 6l12 12"/></svg>
-                </button>
+                <div class="account-item-actions" style="display:flex; gap:4px; align-items:center;">
+                    <button class="account-item-refresh" title="Odśwież sesję Microsoft" type="button" style="background:transparent; border:none; color:var(--text-muted); cursor:pointer; padding:4px; border-radius:4px; display:flex; align-items:center;">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg>
+                    </button>
+                    <button class="account-item-remove" title="Usuń to konto" type="button">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 6L6 18M6 6l12 12"/></svg>
+                    </button>
+                </div>
             `;
 
             // Click to switch active account
             item.addEventListener('click', async (e) => {
-                if (e.target.closest('.account-item-remove')) return;
+                if (e.target.closest('.account-item-remove') || e.target.closest('.account-item-refresh')) return;
                 if (!acc.isActive) {
                     try {
                         const res = await window.mooAPI?.selectAccount(acc.uuid);
@@ -407,6 +445,30 @@ async function renderAccountsPopup() {
                     }
                 } else {
                     closeAccountsPopup();
+                }
+            });
+
+            // Refresh specific account session
+            const btnRefresh = item.querySelector('.account-item-refresh');
+            btnRefresh?.addEventListener('click', async (e) => {
+                e.stopPropagation();
+                showToast('Odświeżanie sesji Microsoft...', 'info');
+                try {
+                    const res = await window.mooAPI?.refreshSession();
+                    if (res?.success && res.account) {
+                        showToast(`Sesja konta ${res.account.name} odświeżona!`, 'success');
+                        updateAccountUI(res.account);
+                    } else {
+                        showToast('Wymagane ponowne logowanie', 'warning');
+                        const loginRes = await window.mooAPI?.loginMicrosoft();
+                        if (loginRes?.success && loginRes.account) {
+                            updateAccountUI(loginRes.account);
+                            showToast(`Zalogowano pomyślnie jako ${loginRes.account.name}!`, 'success');
+                        }
+                    }
+                    await renderAccountsPopup();
+                } catch (err) {
+                    console.error('Refresh account error:', err);
                 }
             });
 

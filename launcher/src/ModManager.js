@@ -17,12 +17,16 @@ class ModManager {
     constructor() {
         this.gameDir = path.join(os.homedir(), '.mooclient');
         this.modsDir = path.join(this.gameDir, 'mods');
+        this.offlineDir = path.join(this.gameDir, 'offline', 'multiver');
+        this.coreModPath = path.join(this.offlineDir, 'moo-client.jar');
         this.localVersionPath = path.join(this.gameDir, 'installed-mod-version.json');
 
         // GitHub raw URL for version check
         this.versionUrl = 'https://raw.githubusercontent.com/Larmel144hz/moo-client/main/mod-version.json';
 
         this.ensureDir(this.modsDir);
+        this.ensureDir(this.offlineDir);
+        this.cleanOldMods();
         this.ensureBundledMod();
     }
 
@@ -47,33 +51,28 @@ class ModManager {
     }
 
     /**
-     * Deploys the bundled mod jar from assets if not already installed.
+     * Deploys the bundled mod jar into offline/multiver/ if not already installed.
      */
     ensureBundledMod() {
         try {
             const pkg = require('../package.json');
-            const defaultVer = pkg.version || '1.0.2';
+            const defaultVer = pkg.version || '1.4.7';
             const bundledPath = path.join(__dirname, '..', 'assets', 'moo-client.jar');
-            const targetJar = path.join(this.modsDir, `moo-client-${defaultVer}.jar`);
+
+            this.ensureDir(this.offlineDir);
 
             if (fs.existsSync(bundledPath)) {
-                const files = fs.existsSync(this.modsDir) ? fs.readdirSync(this.modsDir) : [];
-                const hasMatchingOrNewer = files.some(f => {
-                    const m = f.match(/^moo-client-([0-9.]+)\.jar$/i);
-                    return m && !ModManager.isNewerVersion(defaultVer, m[1]);
-                });
-
-                if (!hasMatchingOrNewer) {
-                    this.cleanOldMods();
-                    fs.copyFileSync(bundledPath, targetJar);
+                if (!fs.existsSync(this.coreModPath)) {
+                    fs.copyFileSync(bundledPath, this.coreModPath);
                     fs.writeFileSync(this.localVersionPath, JSON.stringify({
                         version: defaultVer,
                         minecraft: '1.21.4',
                         installedAt: new Date().toISOString(),
                     }, null, 2));
-                    console.log(`Bundled mod moo-client-${defaultVer}.jar deployed successfully!`);
+                    console.log(`Core mod deployed to offline folder: ${this.coreModPath}`);
                 }
             }
+            this.cleanOldMods();
         } catch (e) {
             console.warn('Could not deploy bundled mod:', e.message);
         }
@@ -88,26 +87,11 @@ class ModManager {
                 const data = fs.readFileSync(this.localVersionPath, 'utf8');
                 return JSON.parse(data);
             }
-            if (fs.existsSync(this.modsDir)) {
-                const files = fs.readdirSync(this.modsDir);
-                let highest = null;
-                for (const file of files) {
-                    const match = file.match(/^moo-client-([0-9.]+)\.jar$/i);
-                    if (match) {
-                        if (!highest || ModManager.isNewerVersion(match[1], highest)) {
-                            highest = match[1];
-                        }
-                    }
-                }
-                if (highest) {
-                    return { version: highest, minecraft: '1.21.4' };
-                }
-            }
         } catch (e) {
             console.error('Error reading local mod version:', e);
         }
         const pkg = require('../package.json');
-        return { version: pkg.version || '1.0.2', minecraft: '1.21.4' };
+        return { version: pkg.version || '1.4.7', minecraft: '1.21.4' };
     }
 
     /**
@@ -289,15 +273,19 @@ class ModManager {
     }
 
     /**
-     * Removes old mod JARs from the mods folder (only moo-client ones).
+     * Removes old internal core mod JARs from the user mods folder (moo-client and fabric-api).
      */
     cleanOldMods() {
         try {
+            if (!fs.existsSync(this.modsDir)) return;
             const files = fs.readdirSync(this.modsDir);
             for (const file of files) {
-                if (file.startsWith('moo-client') && file.endsWith('.jar')) {
-                    fs.unlinkSync(path.join(this.modsDir, file));
-                    console.log(`Removed old mod: ${file}`);
+                const lower = file.toLowerCase();
+                if ((lower.startsWith('moo-client') || lower.startsWith('fabric-api')) && (lower.endsWith('.jar') || lower.endsWith('.disabled'))) {
+                    try {
+                        fs.unlinkSync(path.join(this.modsDir, file));
+                        console.log(`Cleaned core library from user mods folder: ${file}`);
+                    } catch (e) {}
                 }
             }
         } catch (e) {
@@ -306,25 +294,39 @@ class ModManager {
     }
 
     /**
-     * Ensures Fabric API (Core Mod) is present in the mods folder.
+     * Ensures Fabric API (Core Runtime) is safely present in the protected offline/multiver folder.
      */
     async ensureFabricApi(onProgress = () => {}) {
         try {
-            const files = fs.existsSync(this.modsDir) ? fs.readdirSync(this.modsDir) : [];
-            const hasFabricApi = files.some(f => f.toLowerCase().startsWith('fabric-api') && f.endsWith('.jar'));
-            if (hasFabricApi) {
+            this.ensureDir(this.offlineDir);
+            this.cleanOldMods();
+
+            const targetPath = path.join(this.offlineDir, 'fabric-api.jar');
+            if (fs.existsSync(targetPath) && fs.statSync(targetPath).size > 100000) {
                 return true;
             }
 
-            onProgress('Pobieranie biblioteki Fabric API (Core)...', 15);
+            onProgress('Pobieranie biblioteki Fabric API (Core Runtime)...', 15);
             const fabricApiUrl = 'https://cdn.modrinth.com/data/P7dR8mSH/versions/p96k10UR/fabric-api-0.119.4%2B1.21.4.jar';
-            const destPath = path.join(this.modsDir, 'fabric-api-0.119.4+1.21.4.jar');
+            const tempPath = path.join(this.offlineDir, 'fabric-api.jar.download');
 
-            await this.downloadFile(fabricApiUrl, destPath, (percent) => {
+            await this.downloadFile(fabricApiUrl, tempPath, (percent) => {
                 onProgress(`Pobieranie Fabric API: ${percent}%`, 15 + Math.round(percent * 0.15));
             });
-            console.log('Fabric API downloaded successfully!');
-            return true;
+
+            if (fs.existsSync(tempPath) && fs.statSync(tempPath).size > 100000) {
+                if (fs.existsSync(targetPath)) {
+                    try { fs.unlinkSync(targetPath); } catch(e){}
+                }
+                fs.renameSync(tempPath, targetPath);
+                console.log('Fabric API saved to protected offline folder:', targetPath);
+                return true;
+            } else {
+                if (fs.existsSync(tempPath)) {
+                    try { fs.unlinkSync(tempPath); } catch(e){}
+                }
+                throw new Error('Pobieranie Fabric API nie powiodło się');
+            }
         } catch (e) {
             console.error('Error ensuring Fabric API:', e);
             return false;
@@ -360,11 +362,10 @@ class ModManager {
             }
 
             // Download new version
-            onProgress(`Downloading mod v${remoteVersion.version}...`, 30);
+            onProgress(`Downloading core update v${remoteVersion.version}...`, 30);
             
-            const jarFileName = `moo-client-${remoteVersion.version}.jar`;
-            const jarPath = path.join(this.modsDir, jarFileName);
-            const tempJarPath = path.join(this.modsDir, `${jarFileName}.download`);
+            this.ensureDir(this.offlineDir);
+            const tempJarPath = path.join(this.offlineDir, `moo-client-${remoteVersion.version}.download`);
 
             await this.downloadFile(remoteVersion.download_url, tempJarPath, (percent) => {
                 const scaledPercent = 30 + Math.round(percent * 0.4); // Scale to 30-70 range
@@ -372,9 +373,14 @@ class ModManager {
             });
 
             if (fs.existsSync(tempJarPath) && fs.statSync(tempJarPath).size > 10000) {
-                // Clean old mods first
+                // Save to offline/multiver/moo-client.jar
+                if (fs.existsSync(this.coreModPath)) {
+                    try { fs.unlinkSync(this.coreModPath); } catch(e){}
+                }
+                fs.renameSync(tempJarPath, this.coreModPath);
+
+                // Clean any stray mods from mods/
                 this.cleanOldMods();
-                fs.renameSync(tempJarPath, jarPath);
 
                 // Save installed version info
                 fs.writeFileSync(this.localVersionPath, JSON.stringify({
@@ -559,7 +565,7 @@ class ModManager {
             const AdmZip = require('adm-zip');
 
             const mods = files
-                .filter(file => (file.endsWith('.jar') || file.endsWith('.jar.disabled')) && !file.toLowerCase().startsWith('moo-client'))
+                .filter(file => (file.endsWith('.jar') || file.endsWith('.jar.disabled')) && !file.toLowerCase().startsWith('moo-client') && !file.toLowerCase().startsWith('fabric-api'))
                 .map(file => {
                     const isEnabled = !file.endsWith('.disabled');
                     const cleanName = isEnabled ? file : file.replace(/\.disabled$/, '');
@@ -603,21 +609,11 @@ class ModManager {
                         size: stats.size,
                         enabled: isEnabled,
                         modifiedAt: stats.mtime,
-                        isCore: cleanName.toLowerCase().startsWith('fabric-api'),
+                        isCore: false,
                     };
                 });
 
-            // Put fabric-api first, then other mods alphabetically
-            mods.sort((a, b) => {
-                const getPriority = (m) => {
-                    if (m.cleanName.toLowerCase().startsWith('fabric-api')) return 0;
-                    return 1;
-                };
-                const pA = getPriority(a);
-                const pB = getPriority(b);
-                if (pA !== pB) return pA - pB;
-                return a.name.localeCompare(b.name);
-            });
+            mods.sort((a, b) => a.name.localeCompare(b.name));
 
             return mods;
         } catch (e) {

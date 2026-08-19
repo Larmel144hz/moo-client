@@ -43,7 +43,7 @@ public class MooClientScreen extends Screen {
     private boolean searching = false;
 
     // Settings screen state
-    private int settingsTab = 0; // 0 = Accent, 1 = HUD, 2 = GUI, 3 = Profiles
+    private int settingsTab = 0; // 0 = Accent, 1 = HUD, 2 = GUI
     private int draggingSlider = -1; // 0 = Red, 1 = Green, 2 = Blue
     private long resetHudFeedbackTime = 0;
 
@@ -336,7 +336,7 @@ public class MooClientScreen extends Screen {
 
         int cols = 3;
         int cardW = 160;
-        int cardH = 150;
+        int cardH = 135;
         int cardGap = 16;
 
         int totalGridW = cols * cardW + (cols - 1) * cardGap;
@@ -392,14 +392,13 @@ public class MooClientScreen extends Screen {
                 icon = "💬";
             } else if (module.getName().equalsIgnoreCase("Ping")) {
                 icon = "📡";
+            } else if (module.getName().equalsIgnoreCase("Waypoints")) {
+                icon = "📍";
             } else {
                 icon = "⌨";
             }
-            drawCenteredText(context, icon, cardX + cardW / 2, cardY + 16, COLOR_TEXT_WHITE);
-            drawCenteredText(context, module.getName(), cardX + cardW / 2, cardY + 38, COLOR_TEXT_WHITE);
-
-            String desc = getModuleDescText(module.getName());
-            context.drawTextWithShadow(this.textRenderer, desc, cardX + (cardW - this.textRenderer.getWidth(desc)) / 2, cardY + 54, COLOR_TEXT_MUTED);
+            drawCenteredText(context, icon, cardX + cardW / 2, cardY + 20, COLOR_TEXT_WHITE);
+            drawCenteredText(context, module.getName(), cardX + cardW / 2, cardY + 44, COLOR_TEXT_WHITE);
 
             // OPTIONS Bar
             int optH = 20;
@@ -456,6 +455,7 @@ public class MooClientScreen extends Screen {
         if (name.equalsIgnoreCase("Zoom")) return MooLanguage.get("zoom_desc");
         if (name.equalsIgnoreCase("Chat")) return MooLanguage.get("chat_desc");
         if (name.equalsIgnoreCase("Ping")) return MooLanguage.get("ping_desc");
+        if (name.equalsIgnoreCase("Waypoints")) return MooLanguage.get("waypoints_desc");
         return MooLanguage.get("macro_desc");
     }
 
@@ -464,7 +464,7 @@ public class MooClientScreen extends Screen {
      */
     private void renderOptionsWindow(DrawContext context, int mouseX, int mouseY, float delta) {
         int panelW = 480;
-        int panelH = 270;
+        int panelH = 330;
         int panelX = (this.width - panelW) / 2;
         int panelY = (this.height - panelH) / 2;
 
@@ -510,6 +510,9 @@ public class MooClientScreen extends Screen {
         } else if (modName.equalsIgnoreCase("Macro")) {
             optTitle = MooLanguage.get("macro_opt_title");
             optSubtitle = MooLanguage.get("macro_opt_subtitle");
+        } else if (modName.equalsIgnoreCase("Waypoints")) {
+            optTitle = MooLanguage.get("waypoints_opt_title");
+            optSubtitle = MooLanguage.get("waypoints_opt_subtitle");
         } else {
             optTitle = MooLanguage.get("gamma_opt_title");
             optSubtitle = MooLanguage.get("gamma_opt_subtitle");
@@ -644,17 +647,22 @@ public class MooClientScreen extends Screen {
             drawOptionRow(context, rowX, rowY, rowW, rowH, MooLanguage.get("show_ping_label"));
             drawOptionToggle(context, rowX + rowW - 44, rowY + 8, mouseX, mouseY, com.mooclient.module.modules.NametagsModule.isShowPing());
 
-            // Row 2: Ping Position (Beside vs Above)
+            // Row 2: Show Self Ping
+            rowY += rowH + 6;
+            drawOptionRow(context, rowX, rowY, rowW, rowH, MooLanguage.get("show_self_ping_label"));
+            drawOptionToggle(context, rowX + rowW - 44, rowY + 8, mouseX, mouseY, com.mooclient.module.modules.NametagsModule.isShowSelfPing());
+
+            // Row 3: Ping Position (Beside vs Above)
             rowY += rowH + 6;
             drawOptionRow(context, rowX, rowY, rowW, rowH, MooLanguage.get("ping_pos_label"));
             renderPingPositionSelector(context, rowX + rowW - 206, rowY + 6, mouseX, mouseY, com.mooclient.module.modules.NametagsModule.getPingPosition().ordinal());
 
-            // Row 3: Remove Background
+            // Row 4: Remove Background
             rowY += rowH + 6;
             drawOptionRow(context, rowX, rowY, rowW, rowH, MooLanguage.get("remove_bg_label"));
             drawOptionToggle(context, rowX + rowW - 44, rowY + 8, mouseX, mouseY, com.mooclient.module.modules.NametagsModule.isRemoveBackground());
 
-            // Row 4: Text Shadow
+            // Row 5: Text Shadow
             rowY += rowH + 6;
             drawOptionRow(context, rowX, rowY, rowW, rowH, MooLanguage.get("shadow_label"));
             drawOptionToggle(context, rowX + rowW - 44, rowY + 8, mouseX, mouseY, com.mooclient.module.modules.NametagsModule.isTextShadow());
@@ -762,6 +770,62 @@ public class MooClientScreen extends Screen {
 
                 curY += mRowH + 4;
             }
+
+        } else if (modName.equalsIgnoreCase("Waypoints")) {
+            // Row 1: Keybind (Interactive Keybind Selector)
+            drawOptionRow(context, rowX, rowY, rowW, rowH, "Klawisz (Keybind)");
+            String keyText = listeningForKeybind ? "> WCIŚNIJ KLAWISZ <" : "[ " + com.mooclient.module.modules.WaypointsModule.getKeyName() + " ]";
+            int btnW = 140;
+            int btnH = 22;
+            int btnX = rowX + rowW - btnW - 10;
+            int btnY = rowY + 6;
+            boolean btnHover = mouseX >= btnX && mouseX <= btnX + btnW && mouseY >= btnY && mouseY <= btnY + btnH;
+            int btnBg = listeningForKeybind ? 0xEE334466 : (btnHover ? 0xCC252535 : 0x88181824);
+            int btnBorder = listeningForKeybind ? 0xFF55FFFF : (btnHover ? 0xAAFFFFFF : 0x44FFFFFF);
+            int textColor = listeningForKeybind ? 0xFFFFFF55 : 0xFF55FFFF;
+
+            context.fill(btnX, btnY, btnX + btnW, btnY + btnH, btnBg);
+            drawBorder(context, btnX, btnY, btnW, btnH, btnBorder);
+            drawCenteredText(context, keyText, btnX + btnW / 2, btnY + 7, textColor);
+
+            // Row 2: Open Waypoints Manager GUI button
+            rowY += rowH + 6;
+            int openBtnW = 200;
+            int openBtnH = 22;
+            int openBtnX = rowX + rowW - openBtnW - 10;
+            int openBtnY = rowY + 6;
+            boolean openHover = mouseX >= openBtnX && mouseX <= openBtnX + openBtnW && mouseY >= openBtnY && mouseY <= openBtnY + openBtnH;
+            int openBg = openHover ? com.mooclient.util.MooClientSettings.getAccentHoverColor() : com.mooclient.util.MooClientSettings.getAccentColor();
+
+            drawOptionRow(context, rowX, rowY, rowW, rowH, "Zarządzanie punktami");
+            context.fill(openBtnX, openBtnY, openBtnX + openBtnW, openBtnY + openBtnH, openBg);
+            drawBorder(context, openBtnX, openBtnY, openBtnW, openBtnH, 0xFFFFFFFF);
+            drawCenteredText(context, MooLanguage.get("waypoints_open_gui"), openBtnX + openBtnW / 2, openBtnY + 7, 0xFF0A2514);
+
+            // Row 3: Waypoint Scale Selector
+            rowY += rowH + 6;
+            drawOptionRow(context, rowX, rowY, rowW, rowH, MooLanguage.get("waypoint_scale_label"));
+            renderWaypointScaleSelector(context, rowX + rowW - 216, rowY + 6, mouseX, mouseY, com.mooclient.module.modules.WaypointsModule.getScale());
+
+            // Row 4: Auto Death Waypoint
+            rowY += rowH + 6;
+            drawOptionRow(context, rowX, rowY, rowW, rowH, MooLanguage.get("death_waypoint_label"));
+            drawOptionToggle(context, rowX + rowW - 44, rowY + 8, mouseX, mouseY, com.mooclient.module.modules.WaypointsModule.isDeathWaypoint());
+
+            // Row 5: Show Distance
+            rowY += rowH + 6;
+            drawOptionRow(context, rowX, rowY, rowW, rowH, MooLanguage.get("show_distance_label"));
+            drawOptionToggle(context, rowX + rowW - 44, rowY + 8, mouseX, mouseY, com.mooclient.module.modules.WaypointsModule.isShowDistance());
+
+            // Row 6: Background (Tło)
+            rowY += rowH + 6;
+            drawOptionRow(context, rowX, rowY, rowW, rowH, MooLanguage.get("bg_label"));
+            drawOptionToggle(context, rowX + rowW - 44, rowY + 8, mouseX, mouseY, com.mooclient.module.modules.WaypointsModule.isShowBackground());
+
+            // Row 7: Text Shadow (Cień tekstu)
+            rowY += rowH + 6;
+            drawOptionRow(context, rowX, rowY, rowW, rowH, MooLanguage.get("shadow_label"));
+            drawOptionToggle(context, rowX + rowW - 44, rowY + 8, mouseX, mouseY, com.mooclient.module.modules.WaypointsModule.isTextShadow());
 
         } else {
             // Gamma Options
@@ -1274,6 +1338,45 @@ public class MooClientScreen extends Screen {
         return -1;
     }
 
+    private void renderWaypointScaleSelector(DrawContext context, int startX, int y, int mouseX, int mouseY, float currentScale) {
+        String[] labels = new String[]{"50%", "75%", "100%", "125%", "150%"};
+        float[] values = new float[]{0.5f, 0.75f, 1.0f, 1.25f, 1.5f};
+        int w = 40;
+        int gap = 3;
+        int curX = startX;
+        int h = 22;
+
+        for (int i = 0; i < labels.length; i++) {
+            boolean selected = Math.abs(currentScale - values[i]) < 0.08f;
+            boolean hover = mouseX >= curX && mouseX <= curX + w && mouseY >= y && mouseY <= y + h;
+
+            int bg = selected ? 0xDD22C55E : (hover ? 0xCC252535 : 0x66141420);
+            int border = selected ? 0xFF4ADE80 : (hover ? 0xAAFFFFFF : 0x33FFFFFF);
+            int textColor = selected ? 0xFF0A2514 : (hover ? COLOR_TEXT_WHITE : 0xFFA0A0AB);
+
+            context.fill(curX, y, curX + w, y + h, bg);
+            drawBorder(context, curX, y, w, h, border);
+            drawCenteredText(context, labels[i], curX + w / 2, y + 7, textColor);
+
+            curX += w + gap;
+        }
+    }
+
+    private int getWaypointScaleClick(int startX, int y, int mouseX, int mouseY) {
+        int w = 40;
+        int gap = 3;
+        int curX = startX;
+        int h = 22;
+
+        for (int i = 0; i < 5; i++) {
+            if (mouseX >= curX && mouseX <= curX + w && mouseY >= y && mouseY <= y + h) {
+                return i;
+            }
+            curX += w + gap;
+        }
+        return -1;
+    }
+
     private void drawCenteredText(DrawContext context, String text, int centerX, int y, int color) {
         int width = this.textRenderer.getWidth(text);
         context.drawTextWithShadow(this.textRenderer, text, centerX - width / 2, y, color);
@@ -1493,7 +1596,7 @@ public class MooClientScreen extends Screen {
 
                 int cols = 3;
                 int cardW = 160;
-                int cardH = 150;
+                int cardH = 135;
                 int cardGap = 16;
                 int totalGridW = cols * cardW + (cols - 1) * cardGap;
                 int startX = panelX + (panelW - totalGridW) / 2;
@@ -1542,7 +1645,7 @@ public class MooClientScreen extends Screen {
             // 4. Options View Clicks
             else if (currentView == View.OPTIONS) {
                 int panelW = 480;
-                int panelH = 270;
+                int panelH = 330;
                 int panelX = (this.width - panelW) / 2;
                 int panelY = (this.height - panelH) / 2;
 
@@ -1720,31 +1823,44 @@ public class MooClientScreen extends Screen {
                     if (mouseX >= rowX + rowW - 44 && mouseX <= rowX + rowW - 10 && mouseY >= rowY + 8 && mouseY <= rowY + 26) {
                         playClickSound();
                         com.mooclient.module.modules.NametagsModule.toggleShowPing();
+                        com.mooclient.util.MooConfig.save();
                         return true;
                     }
 
-                    // Row 2: Ping Position (Beside vs Above)
+                    // Row 2: Show Self Ping
+                    rowY += rowH + 6;
+                    if (mouseX >= rowX + rowW - 44 && mouseX <= rowX + rowW - 10 && mouseY >= rowY + 8 && mouseY <= rowY + 26) {
+                        playClickSound();
+                        com.mooclient.module.modules.NametagsModule.toggleShowSelfPing();
+                        com.mooclient.util.MooConfig.save();
+                        return true;
+                    }
+
+                    // Row 3: Ping Position (Beside vs Above)
                     rowY += rowH + 6;
                     int pingPosClick = getModeSelectorClick(rowX + rowW - 206, rowY + 6, (int) mouseX, (int) mouseY);
                     if (pingPosClick >= 0) {
                         playClickSound();
                         com.mooclient.module.modules.NametagsModule.setPingPosition(com.mooclient.module.modules.NametagsModule.PingPosition.values()[pingPosClick]);
+                        com.mooclient.util.MooConfig.save();
                         return true;
                     }
 
-                    // Row 3: Remove Background
+                    // Row 4: Remove Background
                     rowY += rowH + 6;
                     if (mouseX >= rowX + rowW - 44 && mouseX <= rowX + rowW - 10 && mouseY >= rowY + 8 && mouseY <= rowY + 26) {
                         playClickSound();
                         com.mooclient.module.modules.NametagsModule.toggleRemoveBackground();
+                        com.mooclient.util.MooConfig.save();
                         return true;
                     }
 
-                    // Row 4: Text Shadow
+                    // Row 5: Text Shadow
                     rowY += rowH + 6;
                     if (mouseX >= rowX + rowW - 44 && mouseX <= rowX + rowW - 10 && mouseY >= rowY + 8 && mouseY <= rowY + 26) {
                         playClickSound();
                         com.mooclient.module.modules.NametagsModule.toggleTextShadow();
+                        com.mooclient.util.MooConfig.save();
                         return true;
                     }
                 } else if (modName.equalsIgnoreCase("Zoom")) {
@@ -1880,6 +1996,79 @@ public class MooClientScreen extends Screen {
                         }
 
                         curY += mRowH + 4;
+                    }
+                } else if (modName.equalsIgnoreCase("Waypoints")) {
+                    int btnW = 140;
+                    int btnH = 22;
+                    int btnX = rowX + rowW - btnW - 10;
+                    int btnY = rowY + 6;
+
+                    // Row 1: Keybind click
+                    if (mouseX >= btnX && mouseX <= btnX + btnW && mouseY >= btnY && mouseY <= btnY + btnH) {
+                        playClickSound();
+                        this.listeningForKeybind = !this.listeningForKeybind;
+                        return true;
+                    }
+
+                    // Row 2: Open Waypoints Screen
+                    rowY += rowH + 6;
+                    int openBtnW = 200;
+                    int openBtnH = 22;
+                    int openBtnX = rowX + rowW - openBtnW - 10;
+                    int openBtnY = rowY + 6;
+                    if (mouseX >= openBtnX && mouseX <= openBtnX + openBtnW && mouseY >= openBtnY && mouseY <= openBtnY + openBtnH) {
+                        playClickSound();
+                        if (this.client != null) {
+                            this.client.setScreen(new MooWaypointScreen());
+                        }
+                        return true;
+                    }
+
+                    // Row 3: Waypoint Scale Click
+                    rowY += rowH + 6;
+                    int scaleClick = getWaypointScaleClick(rowX + rowW - 216, rowY + 6, (int) mouseX, (int) mouseY);
+                    if (scaleClick >= 0) {
+                        playClickSound();
+                        float[] values = new float[]{0.5f, 0.75f, 1.0f, 1.25f, 1.5f};
+                        com.mooclient.module.modules.WaypointsModule.setScale(values[scaleClick]);
+                        com.mooclient.util.MooConfig.save();
+                        return true;
+                    }
+
+                    // Row 4: Auto Death Waypoint Toggle
+                    rowY += rowH + 6;
+                    if (mouseX >= rowX + rowW - 44 && mouseX <= rowX + rowW - 10 && mouseY >= rowY + 8 && mouseY <= rowY + 26) {
+                        playClickSound();
+                        com.mooclient.module.modules.WaypointsModule.toggleDeathWaypoint();
+                        com.mooclient.util.MooConfig.save();
+                        return true;
+                    }
+
+                    // Row 5: Show Distance
+                    rowY += rowH + 6;
+                    if (mouseX >= rowX + rowW - 44 && mouseX <= rowX + rowW - 10 && mouseY >= rowY + 8 && mouseY <= rowY + 26) {
+                        playClickSound();
+                        com.mooclient.module.modules.WaypointsModule.toggleShowDistance();
+                        com.mooclient.util.MooConfig.save();
+                        return true;
+                    }
+
+                    // Row 6: Background Toggle
+                    rowY += rowH + 6;
+                    if (mouseX >= rowX + rowW - 44 && mouseX <= rowX + rowW - 10 && mouseY >= rowY + 8 && mouseY <= rowY + 26) {
+                        playClickSound();
+                        com.mooclient.module.modules.WaypointsModule.toggleShowBackground();
+                        com.mooclient.util.MooConfig.save();
+                        return true;
+                    }
+
+                    // Row 7: Text Shadow Toggle
+                    rowY += rowH + 6;
+                    if (mouseX >= rowX + rowW - 44 && mouseX <= rowX + rowW - 10 && mouseY >= rowY + 8 && mouseY <= rowY + 26) {
+                        playClickSound();
+                        com.mooclient.module.modules.WaypointsModule.toggleTextShadow();
+                        com.mooclient.util.MooConfig.save();
+                        return true;
                     }
                 } else {
                     if (mouseX >= rowX + rowW - 44 && mouseX <= rowX + rowW - 10 && mouseY >= rowY + 8 && mouseY <= rowY + 26) {
@@ -2268,10 +2457,13 @@ public class MooClientScreen extends Screen {
                 FreelookModule.setKeybind(keyCode, keyName);
             } else if (selectedModule != null && selectedModule.getName().equalsIgnoreCase("Zoom")) {
                 com.mooclient.module.modules.ZoomModule.setKeybind(keyCode, keyName);
+            } else if (selectedModule != null && selectedModule.getName().equalsIgnoreCase("Waypoints")) {
+                com.mooclient.module.modules.WaypointsModule.setKeybind(keyCode, keyName);
             } else {
                 ToggleSprintModule.setKeybind(keyCode, keyName);
             }
 
+            com.mooclient.util.MooConfig.save();
             listeningForKeybind = false;
             playClickSound();
             return true;

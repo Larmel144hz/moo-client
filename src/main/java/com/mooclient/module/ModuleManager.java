@@ -39,6 +39,7 @@ public class ModuleManager {
         register(new com.mooclient.module.modules.MacroModule());         // "Macro"
         register(new com.mooclient.module.modules.ChatModule());          // "Chat"
         register(new com.mooclient.module.modules.PingModule());          // "Ping"
+        register(new com.mooclient.module.modules.WaypointsModule());     // "Waypoints"
     }
 
     public void register(Module module) {

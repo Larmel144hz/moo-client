@@ -158,6 +158,98 @@ class GameManager {
     }
 
     /**
+     * Checks if account access_token is currently valid with Mojang Session API
+     */
+    async validateSession(account) {
+        if (!account || !account.mclc || !account.mclc.access_token) return false;
+        return new Promise((resolve) => {
+            const req = https.request('https://api.minecraftservices.com/minecraft/profile', {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${account.mclc.access_token}`,
+                    'User-Agent': 'MooClient-Launcher'
+                },
+                timeout: 4000
+            }, (res) => {
+                resolve(res.statusCode === 200);
+            });
+            req.on('error', () => resolve(false));
+            req.on('timeout', () => { req.destroy(); resolve(false); });
+            req.end();
+        });
+    }
+
+    /**
+     * Silently refreshes account session using Microsoft Refresh Token
+     */
+    async refreshAccount(account) {
+        if (!account) return { success: false, error: 'Brak konta' };
+        if (!account.refreshToken) {
+            return { success: false, error: 'Brak tokenu odświeżania' };
+        }
+
+        try {
+            const authManager = new msmc.Auth("select_account");
+            const xbox = await authManager.refresh(account.refreshToken);
+            const token = await xbox.getMinecraft();
+
+            if (!token.validate()) {
+                throw new Error('Nie udało się zweryfikować odświeżonego konta Minecraft');
+            }
+
+            const mclcAuth = token.mclc();
+            const updatedAccount = {
+                ...account,
+                name: token.profile.name,
+                uuid: token.profile.id,
+                mclc: mclcAuth,
+                refreshToken: xbox.save() || account.refreshToken,
+                lastValidated: Date.now()
+            };
+
+            this.saveAccount(updatedAccount);
+            console.log(`[Auth] Sesja dla konta ${updatedAccount.name} została pomyślnie odświeżona!`);
+            return { success: true, account: updatedAccount };
+        } catch (e) {
+            console.warn(`[Auth] Błąd podczas odświeżania sesji: ${e.message}`);
+            return { success: false, error: e.message };
+        }
+    }
+
+    /**
+     * Ensures active session is 100% valid before launching, auto-refreshing in background if needed
+     */
+    async ensureValidSession(onProgress = () => {}) {
+        let account = this.getAccount();
+        if (!account || !account.mclc) {
+            onProgress('Wymagane logowanie kontem Microsoft...', 10);
+            account = await this.loginMicrosoft();
+            return account;
+        }
+
+        onProgress('Weryfikacja sesji gracza...', 5);
+        const isValid = await this.validateSession(account);
+
+        if (isValid) {
+            console.log(`[Auth] Sesja dla konta ${account.name} jest aktywna.`);
+            return account;
+        }
+
+        console.log(`[Auth] Sesja dla konta ${account.name} wygasła. Próba automatycznego odświeżenia w tle...`);
+        onProgress('Odświeżanie sesji konta w tle...', 8);
+
+        const refreshResult = await this.refreshAccount(account);
+        if (refreshResult.success && refreshResult.account) {
+            return refreshResult.account;
+        }
+
+        console.log(`[Auth] Ciche odświeżanie nie powiodło się. Otwieranie logowania Microsoft...`);
+        onProgress('Sesja wygasła. Logowanie do Microsoft...', 10);
+        account = await this.loginMicrosoft();
+        return account;
+    }
+
+    /**
      * Log in with official Microsoft Minecraft Account
      */
     async loginMicrosoft() {
@@ -179,12 +271,15 @@ class GameManager {
             throw new Error('Nie udało się zweryfikować konta Minecraft!');
         }
 
+        const refreshToken = xbox.save();
         const mclcAuth = token.mclc();
         const account = {
             name: token.profile.name,
             uuid: token.profile.id,
             mclc: mclcAuth,
-            type: 'microsoft'
+            refreshToken: refreshToken,
+            type: 'microsoft',
+            lastValidated: Date.now()
         };
 
         this.saveAccount(account);
@@ -469,8 +564,9 @@ class GameManager {
 
         const launcher = new Client();
 
-        // Authorization: strictly require Microsoft Account
-        const account = this.getAccount();
+        // Authorization: validate & auto-refresh session if expired
+        onProgress('Weryfikacja i przygotowanie sesji gracza...', 5);
+        const account = await this.ensureValidSession(onProgress);
         if (!account || !account.mclc) {
             throw new Error('Musisz być zalogowany kontem Microsoft Premium, aby zagrać!');
         }
@@ -483,6 +579,54 @@ class GameManager {
         const customFabric = await this.ensureFabricVersion(versionNumber);
 
         console.log(`[Launch] Using Java: ${javaExecutable}, RAM: max ${safeMaxRam}G (requested ${rawRam}G)`);
+
+        const offlineDir = path.join(this.gameDir, 'offline', 'multiver');
+        if (!fs.existsSync(offlineDir)) {
+            fs.mkdirSync(offlineDir, { recursive: true });
+        }
+        const offlineModPath = path.join(offlineDir, 'moo-client.jar');
+        const fabricApiPath = path.join(offlineDir, 'fabric-api.jar');
+
+        // Clean any stray core jars (moo-client and fabric-api) from the public user mods/ folder
+        const modsDir = path.join(this.gameDir, 'mods');
+        if (fs.existsSync(modsDir)) {
+            try {
+                fs.readdirSync(modsDir).filter(f => {
+                    const lower = f.toLowerCase();
+                    return (lower.startsWith('moo-client') || lower.startsWith('fabric-api')) && (lower.endsWith('.jar') || lower.endsWith('.disabled'));
+                }).forEach(f => {
+                    try { fs.unlinkSync(path.join(modsDir, f)); } catch(e){}
+                });
+            } catch (e) {}
+        }
+
+        const customArgs = [
+            '-XX:+UseG1GC',
+            '-XX:+ParallelRefProcEnabled',
+            '-XX:MaxGCPauseMillis=50',
+            '-XX:+UnlockExperimentalVMOptions',
+            '-XX:+DisableExplicitGC',
+            '-XX:+AlwaysPreTouch',
+            '-XX:G1NewSizePercent=30',
+            '-XX:G1MaxNewSizePercent=40',
+            '-XX:G1ReservePercent=20',
+            '-XX:G1HeapWastePercent=5',
+            '-XX:G1MixedGCCountTarget=4',
+            '-XX:InitiatingHeapOccupancyPercent=15',
+            '-XX:G1MixedGCLiveThresholdPercent=90',
+            '-XX:G1RSetUpdatingPauseTimePercent=5',
+            '-XX:SurvivorRatio=32',
+            '-XX:+PerfDisableSharedMem',
+            '-XX:MaxTenuringThreshold=1'
+        ];
+
+        // Dynamic injection of core mods via Fabric addMods argument (Lunar Client architecture)
+        const coreModsToInject = [offlineModPath, fabricApiPath].filter(p => fs.existsSync(p));
+        if (coreModsToInject.length > 0) {
+            const addModsArg = coreModsToInject.join(path.delimiter);
+            customArgs.push(`-Dfabric.addMods=${addModsArg}`);
+            console.log(`[Launch] Injected core mods via -Dfabric.addMods: ${addModsArg}`);
+        }
 
         const launchOpts = {
             authorization: auth,
@@ -497,25 +641,7 @@ class GameManager {
                 max: `${safeMaxRam}G`,
                 min: '1024M',
             },
-            customArgs: [
-                '-XX:+UseG1GC',
-                '-XX:+ParallelRefProcEnabled',
-                '-XX:MaxGCPauseMillis=50',
-                '-XX:+UnlockExperimentalVMOptions',
-                '-XX:+DisableExplicitGC',
-                '-XX:+AlwaysPreTouch',
-                '-XX:G1NewSizePercent=30',
-                '-XX:G1MaxNewSizePercent=40',
-                '-XX:G1ReservePercent=20',
-                '-XX:G1HeapWastePercent=5',
-                '-XX:G1MixedGCCountTarget=4',
-                '-XX:InitiatingHeapOccupancyPercent=15',
-                '-XX:G1MixedGCLiveThresholdPercent=90',
-                '-XX:G1RSetUpdatingPauseTimePercent=5',
-                '-XX:SurvivorRatio=32',
-                '-XX:+PerfDisableSharedMem',
-                '-XX:MaxTenuringThreshold=1'
-            ],
+            customArgs: customArgs,
             window: {
                 width: settings.resolution?.width || 1280,
                 height: settings.resolution?.height || 720,

@@ -83,6 +83,7 @@ public class MooConfig {
             nametags.addProperty("enabled", com.mooclient.module.modules.NametagsModule.isNametagsEnabled());
             nametags.addProperty("showLogo", com.mooclient.module.modules.NametagsModule.isShowLogo());
             nametags.addProperty("showPing", com.mooclient.module.modules.NametagsModule.isShowPing());
+            nametags.addProperty("showSelfPing", com.mooclient.module.modules.NametagsModule.isShowSelfPing());
             nametags.addProperty("pingPosition", com.mooclient.module.modules.NametagsModule.getPingPosition().name());
             nametags.addProperty("removeBackground", com.mooclient.module.modules.NametagsModule.isRemoveBackground());
             nametags.addProperty("textShadow", com.mooclient.module.modules.NametagsModule.isTextShadow());
@@ -135,6 +136,19 @@ public class MooConfig {
             ping.addProperty("posX", com.mooclient.module.modules.PingModule.posX);
             ping.addProperty("posY", com.mooclient.module.modules.PingModule.posY);
             root.add("ping", ping);
+
+            // Waypoints Module
+            JsonObject waypoints = new JsonObject();
+            waypoints.addProperty("enabled", com.mooclient.module.modules.WaypointsModule.isWaypointsEnabled());
+            waypoints.addProperty("showDistance", com.mooclient.module.modules.WaypointsModule.isShowDistance());
+            waypoints.addProperty("showBeacons", com.mooclient.module.modules.WaypointsModule.isShowBeacons());
+            waypoints.addProperty("showBackground", com.mooclient.module.modules.WaypointsModule.isShowBackground());
+            waypoints.addProperty("textShadow", com.mooclient.module.modules.WaypointsModule.isTextShadow());
+            waypoints.addProperty("deathWaypoint", com.mooclient.module.modules.WaypointsModule.isDeathWaypoint());
+            waypoints.addProperty("scale", com.mooclient.module.modules.WaypointsModule.getScale());
+            waypoints.addProperty("keyCode", com.mooclient.module.modules.WaypointsModule.getKeyCode());
+            waypoints.addProperty("keyName", com.mooclient.module.modules.WaypointsModule.getKeyName());
+            root.add("waypoints", waypoints);
 
             // Global Client Settings
             JsonObject settings = new JsonObject();
@@ -280,6 +294,9 @@ public class MooConfig {
                 if (nametags.has("showPing")) {
                     com.mooclient.module.modules.NametagsModule.setShowPing(nametags.get("showPing").getAsBoolean());
                 }
+                if (nametags.has("showSelfPing")) {
+                    com.mooclient.module.modules.NametagsModule.setShowSelfPing(nametags.get("showSelfPing").getAsBoolean());
+                }
                 if (nametags.has("pingPosition")) {
                     try {
                         com.mooclient.module.modules.NametagsModule.setPingPosition(com.mooclient.module.modules.NametagsModule.PingPosition.valueOf(nametags.get("pingPosition").getAsString()));
@@ -403,6 +420,37 @@ public class MooConfig {
                 }
                 if (ping.has("posY")) {
                     com.mooclient.module.modules.PingModule.posY = ping.get("posY").getAsInt();
+                }
+            }
+
+            // Waypoints Module
+            if (root.has("waypoints")) {
+                JsonObject waypoints = root.getAsJsonObject("waypoints");
+                if (waypoints.has("enabled")) {
+                    boolean state = waypoints.get("enabled").getAsBoolean();
+                    com.mooclient.module.modules.WaypointsModule.setWaypointsEnabled(state);
+                    ModuleManager.getInstance().getModule("Waypoints").ifPresent(m -> m.setEnabled(state));
+                }
+                if (waypoints.has("showDistance")) {
+                    com.mooclient.module.modules.WaypointsModule.setShowDistance(waypoints.get("showDistance").getAsBoolean());
+                }
+                if (waypoints.has("showBeacons")) {
+                    com.mooclient.module.modules.WaypointsModule.setShowBeacons(waypoints.get("showBeacons").getAsBoolean());
+                }
+                if (waypoints.has("showBackground")) {
+                    com.mooclient.module.modules.WaypointsModule.setShowBackground(waypoints.get("showBackground").getAsBoolean());
+                }
+                if (waypoints.has("textShadow")) {
+                    com.mooclient.module.modules.WaypointsModule.setTextShadow(waypoints.get("textShadow").getAsBoolean());
+                }
+                if (waypoints.has("deathWaypoint")) {
+                    com.mooclient.module.modules.WaypointsModule.setDeathWaypoint(waypoints.get("deathWaypoint").getAsBoolean());
+                }
+                if (waypoints.has("scale")) {
+                    com.mooclient.module.modules.WaypointsModule.setScale(waypoints.get("scale").getAsFloat());
+                }
+                if (waypoints.has("keyCode") && waypoints.has("keyName")) {
+                    com.mooclient.module.modules.WaypointsModule.setKeybind(waypoints.get("keyCode").getAsInt(), waypoints.get("keyName").getAsString());
                 }
             }
 
