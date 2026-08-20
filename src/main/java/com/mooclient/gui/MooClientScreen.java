@@ -962,48 +962,77 @@ public class MooClientScreen extends Screen {
             context.drawTextWithShadow(this.textRenderer, name, dotX + dotSize + 5, by + 6, selected ? COLOR_TEXT_WHITE : (hover ? COLOR_TEXT_WHITE : 0xFFA0A0AB));
         }
 
-        // Custom RGB Sliders Section
+        // Custom RGB Sliders Section & Live Preview
         int customY = startY + 2 * (pH + gap) + 8;
         context.fill(panelX + 18, customY, panelX + panelW - 18, customY + 1, 0x22FFFFFF);
 
-        context.drawTextWithShadow(this.textRenderer, MooLanguage.get("custom_rgb_label"), panelX + 18, customY + 6, 0xFFA0A0AB);
+        boolean isCustom = (activePreset == com.mooclient.util.MooClientSettings.AccentColorPreset.CUSTOM);
 
-        int sliderStartX = panelX + 50;
-        int sliderW = 210;
-        int sliderH = 10;
-        int sY = customY + 20;
+        if (isCustom) {
+            context.drawTextWithShadow(this.textRenderer, MooLanguage.get("custom_rgb_label"), panelX + 18, customY + 6, 0xFFA0A0AB);
 
-        // Slider 1: Red
-        renderRgbSlider(context, panelX + 18, sliderStartX, sY, sliderW, sliderH, "R:", com.mooclient.util.MooClientSettings.getCustomRed(), 0xFFFF4444, mouseX, mouseY);
-        // Slider 2: Green
-        renderRgbSlider(context, panelX + 18, sliderStartX, sY + 20, sliderW, sliderH, "G:", com.mooclient.util.MooClientSettings.getCustomGreen(), 0xFF44FF44, mouseX, mouseY);
-        // Slider 3: Blue
-        renderRgbSlider(context, panelX + 18, sliderStartX, sY + 40, sliderW, sliderH, "B:", com.mooclient.util.MooClientSettings.getCustomBlue(), 0xFF4488FF, mouseX, mouseY);
+            int sliderStartX = panelX + 50;
+            int sliderW = 210;
+            int sliderH = 10;
+            int sY = customY + 20;
 
-        // Preview Box on the right
-        int prevX = panelX + 290;
-        int prevY = customY + 16;
-        int prevW = panelW - 308;
-        int prevH = 68;
+            // Slider 1: Red
+            renderRgbSlider(context, panelX + 18, sliderStartX, sY, sliderW, sliderH, "R:", com.mooclient.util.MooClientSettings.getCustomRed(), 0xFFFF4444, mouseX, mouseY);
+            // Slider 2: Green
+            renderRgbSlider(context, panelX + 18, sliderStartX, sY + 20, sliderW, sliderH, "G:", com.mooclient.util.MooClientSettings.getCustomGreen(), 0xFF44FF44, mouseX, mouseY);
+            // Slider 3: Blue
+            renderRgbSlider(context, panelX + 18, sliderStartX, sY + 40, sliderW, sliderH, "B:", com.mooclient.util.MooClientSettings.getCustomBlue(), 0xFF4488FF, mouseX, mouseY);
 
-        context.fill(prevX, prevY, prevX + prevW, prevY + prevH, 0x44101018);
-        drawBorder(context, prevX, prevY, prevW, prevH, com.mooclient.util.MooClientSettings.getAccentColor());
+            // Preview Box on the right
+            int prevX = panelX + 290;
+            int prevY = customY + 16;
+            int prevW = panelW - 308;
+            int prevH = 68;
 
-        drawCenteredText(context, MooLanguage.current == MooLanguage.PL ? "Podgląd akcentu UI:" : "Live UI Preview:", prevX + prevW / 2, prevY + 8, 0xFFA0A0AB);
+            context.fill(prevX, prevY, prevX + prevW, prevY + prevH, 0x44101018);
+            drawBorder(context, prevX, prevY, prevW, prevH, com.mooclient.util.MooClientSettings.getAccentColor());
 
-        // Live mock ENABLED button
-        int mBtnW = 100;
-        int mBtnH = 20;
-        int mBtnX = prevX + (prevW - mBtnW) / 2;
-        int mBtnY = prevY + 24;
-        context.fill(mBtnX, mBtnY, mBtnX + mBtnW, mBtnY + mBtnH, com.mooclient.util.MooClientSettings.getAccentColor());
-        drawBorder(context, mBtnX, mBtnY, mBtnW, mBtnH, 0x55FFFFFF);
-        drawCenteredText(context, "ENABLED", mBtnX + mBtnW / 2, mBtnY + 6, 0xFF082212);
+            drawCenteredText(context, MooLanguage.current == MooLanguage.PL ? "Podgląd akcentu UI:" : "Live UI Preview:", prevX + prevW / 2, prevY + 8, 0xFFA0A0AB);
 
-        // Hex Code display
-        int hexCol = com.mooclient.util.MooClientSettings.getAccentColor();
-        String hexStr = String.format("#%06X", (0xFFFFFF & hexCol));
-        drawCenteredText(context, "HEX: " + hexStr, prevX + prevW / 2, prevY + 50, 0x88FFFFFF);
+            // Live mock ENABLED button
+            int mBtnW = 100;
+            int mBtnH = 20;
+            int mBtnX = prevX + (prevW - mBtnW) / 2;
+            int mBtnY = prevY + 24;
+            context.fill(mBtnX, mBtnY, mBtnX + mBtnW, mBtnY + mBtnH, com.mooclient.util.MooClientSettings.getAccentColor());
+            drawBorder(context, mBtnX, mBtnY, mBtnW, mBtnH, 0x55FFFFFF);
+            drawCenteredText(context, "ENABLED", mBtnX + mBtnW / 2, mBtnY + 6, 0xFF082212);
+
+            // Hex Code display
+            int hexCol = com.mooclient.util.MooClientSettings.getAccentColor();
+            String hexStr = String.format("#%06X", (0xFFFFFF & hexCol));
+            drawCenteredText(context, "HEX: " + hexStr, prevX + prevW / 2, prevY + 50, 0x88FFFFFF);
+        } else {
+            // Centered Live Preview Box when a standard preset is selected
+            int prevW = 320;
+            int prevH = 68;
+            int prevX = panelX + (panelW - prevW) / 2;
+            int prevY = customY + 14;
+
+            context.fill(prevX, prevY, prevX + prevW, prevY + prevH, 0x44101018);
+            drawBorder(context, prevX, prevY, prevW, prevH, com.mooclient.util.MooClientSettings.getAccentColor());
+
+            drawCenteredText(context, MooLanguage.current == MooLanguage.PL ? "Podgląd akcentu UI:" : "Live UI Preview:", prevX + prevW / 2, prevY + 8, 0xFFA0A0AB);
+
+            // Live mock ENABLED button
+            int mBtnW = 100;
+            int mBtnH = 20;
+            int mBtnX = prevX + (prevW - mBtnW) / 2;
+            int mBtnY = prevY + 24;
+            context.fill(mBtnX, mBtnY, mBtnX + mBtnW, mBtnY + mBtnH, com.mooclient.util.MooClientSettings.getAccentColor());
+            drawBorder(context, mBtnX, mBtnY, mBtnW, mBtnH, 0x55FFFFFF);
+            drawCenteredText(context, "ENABLED", mBtnX + mBtnW / 2, mBtnY + 6, 0xFF082212);
+
+            // Hex Code display
+            int hexCol = com.mooclient.util.MooClientSettings.getAccentColor();
+            String hexStr = String.format("#%06X", (0xFFFFFF & hexCol));
+            drawCenteredText(context, "HEX: " + hexStr, prevX + prevW / 2, prevY + 50, 0x88FFFFFF);
+        }
     }
 
     private void renderRgbSlider(DrawContext context, int labelX, int trackX, int y, int trackW, int trackH, String label, int value, int colorBar, int mouseX, int mouseY) {
@@ -2135,35 +2164,37 @@ public class MooClientScreen extends Screen {
                         }
                     }
 
-                    // RGB Sliders Click
-                    int customY = startY + 2 * (pH + gap) + 8;
-                    int sliderStartX = panelX + 50;
-                    int sliderW = 210;
-                    int sliderH = 14;
-                    int sY = customY + 18;
+                    // RGB Sliders Click (only if CUSTOM preset is active)
+                    if (com.mooclient.util.MooClientSettings.getAccentPreset() == com.mooclient.util.MooClientSettings.AccentColorPreset.CUSTOM) {
+                        int customY = startY + 2 * (pH + gap) + 8;
+                        int sliderStartX = panelX + 50;
+                        int sliderW = 210;
+                        int sliderH = 14;
+                        int sY = customY + 18;
 
-                    // Red slider click
-                    if (mouseX >= sliderStartX - 5 && mouseX <= sliderStartX + sliderW + 5 && mouseY >= sY && mouseY <= sY + sliderH) {
-                        this.draggingSlider = 0;
-                        handleSliderDrag(mouseX);
-                        playClickSound();
-                        return true;
-                    }
-                    // Green slider click
-                    sY += 20;
-                    if (mouseX >= sliderStartX - 5 && mouseX <= sliderStartX + sliderW + 5 && mouseY >= sY && mouseY <= sY + sliderH) {
-                        this.draggingSlider = 1;
-                        handleSliderDrag(mouseX);
-                        playClickSound();
-                        return true;
-                    }
-                    // Blue slider click
-                    sY += 20;
-                    if (mouseX >= sliderStartX - 5 && mouseX <= sliderStartX + sliderW + 5 && mouseY >= sY && mouseY <= sY + sliderH) {
-                        this.draggingSlider = 2;
-                        handleSliderDrag(mouseX);
-                        playClickSound();
-                        return true;
+                        // Red slider click
+                        if (mouseX >= sliderStartX - 5 && mouseX <= sliderStartX + sliderW + 5 && mouseY >= sY && mouseY <= sY + sliderH) {
+                            this.draggingSlider = 0;
+                            handleSliderDrag(mouseX);
+                            playClickSound();
+                            return true;
+                        }
+                        // Green slider click
+                        sY += 20;
+                        if (mouseX >= sliderStartX - 5 && mouseX <= sliderStartX + sliderW + 5 && mouseY >= sY && mouseY <= sY + sliderH) {
+                            this.draggingSlider = 1;
+                            handleSliderDrag(mouseX);
+                            playClickSound();
+                            return true;
+                        }
+                        // Blue slider click
+                        sY += 20;
+                        if (mouseX >= sliderStartX - 5 && mouseX <= sliderStartX + sliderW + 5 && mouseY >= sY && mouseY <= sY + sliderH) {
+                            this.draggingSlider = 2;
+                            handleSliderDrag(mouseX);
+                            playClickSound();
+                            return true;
+                        }
                     }
                 }
                 // Tab 1: HUD Management
