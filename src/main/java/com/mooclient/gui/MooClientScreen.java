@@ -132,7 +132,7 @@ public class MooClientScreen extends Screen {
             boolean hovered = mouseX >= x - 2 && mouseX <= x - 2 + boxW && mouseY >= y - 2 && mouseY <= y - 2 + boxH;
             boolean isDragging = "FPS".equals(draggingWidget);
 
-            renderWidgetBoundingBox(context, x - 2, y - 2, boxW, boxH, hovered, isDragging, "FPS");
+            renderWidgetBoundingBox(context, x - 2, y - 2, boxW, boxH, hovered, isDragging);
         }
 
         // 2. Draggable Sprint Widget Preview
@@ -158,7 +158,7 @@ public class MooClientScreen extends Screen {
             boolean hovered = mouseX >= x - 2 && mouseX <= x - 2 + boxW && mouseY >= y - 2 && mouseY <= y - 2 + boxH;
             boolean isDragging = "SPRINT".equals(draggingWidget);
 
-            renderWidgetBoundingBox(context, x - 2, y - 2, boxW, boxH, hovered, isDragging, "Sprint");
+            renderWidgetBoundingBox(context, x - 2, y - 2, boxW, boxH, hovered, isDragging);
         }
 
         // 3. Draggable Potion Effects Widget Preview
@@ -171,7 +171,7 @@ public class MooClientScreen extends Screen {
             boolean hovered = mouseX >= x - 2 && mouseX <= x - 2 + boxW && mouseY >= y - 2 && mouseY <= y - 2 + boxH;
             boolean isDragging = "POTIONS".equals(draggingWidget);
 
-            renderWidgetBoundingBox(context, x - 2, y - 2, boxW, boxH, hovered, isDragging, "Potions");
+            renderWidgetBoundingBox(context, x - 2, y - 2, boxW, boxH, hovered, isDragging);
         }
 
         // 4. Draggable Ping Widget Preview
@@ -190,7 +190,7 @@ public class MooClientScreen extends Screen {
             boolean hovered = mouseX >= x - 2 && mouseX <= x - 2 + boxW && mouseY >= y - 2 && mouseY <= y - 2 + boxH;
             boolean isDragging = "PING".equals(draggingWidget);
 
-            renderWidgetBoundingBox(context, x - 2, y - 2, boxW, boxH, hovered, isDragging, "Ping");
+            renderWidgetBoundingBox(context, x - 2, y - 2, boxW, boxH, hovered, isDragging);
         }
 
         // 5. Draggable Scoreboard Widget Preview
@@ -262,47 +262,31 @@ public class MooClientScreen extends Screen {
             boolean hovered = mouseX >= x - 2 && mouseX <= x - 2 + boxW && mouseY >= y - 2 && mouseY <= y - 2 + boxH;
             boolean isDragging = "SCOREBOARD".equals(draggingWidget);
 
-            renderWidgetBoundingBox(context, x - 2, y - 2, boxW, boxH, hovered, isDragging, "Scoreboard");
+            renderWidgetBoundingBox(context, x - 2, y - 2, boxW, boxH, hovered, isDragging);
         }
     }
 
-    private void renderWidgetBoundingBox(DrawContext context, int x, int y, int w, int h, boolean hovered, boolean isDragging, String name) {
+    private void renderWidgetBoundingBox(DrawContext context, int x, int y, int w, int h, boolean hovered, boolean isDragging) {
         int accent = com.mooclient.util.MooClientSettings.getAccentColor();
         int accentHover = com.mooclient.util.MooClientSettings.getAccentHoverColor();
 
         int bg;
         int border;
-        int textColor;
 
         if (isDragging) {
             bg = com.mooclient.util.MooClientSettings.getAccentGlowColor(0x45);
             border = accentHover;
-            textColor = COLOR_TEXT_WHITE;
         } else if (hovered) {
-            bg = com.mooclient.util.MooClientSettings.getAccentGlowColor(0x2E);
+            bg = com.mooclient.util.MooClientSettings.getAccentGlowColor(0x28);
             border = accent;
-            textColor = COLOR_TEXT_WHITE;
         } else {
-            // Always visible when Right Shift HUD editor is open!
-            bg = 0x22101018;
-            border = 0x66FFFFFF;
-            textColor = 0xBBFFFFFF;
+            // Clean lines always visible when Right Shift HUD editor is open
+            bg = 0x15FFFFFF;
+            border = 0x88FFFFFF;
         }
 
         context.fill(x, y, x + w, y + h, bg);
         drawBorder(context, x, y, w, h, border);
-
-        // Small tag badge on top-left of the box
-        String label = "✢ " + name;
-        int labelW = this.textRenderer.getWidth(label);
-        int tagH = 10;
-        int tagY = y - tagH - 1;
-        if (tagY < 2) tagY = y + 2; // if close to top edge, show inside
-        int tagBg = (hovered || isDragging) ? 0xEE141420 : 0xBB101018;
-        int tagBorder = (hovered || isDragging) ? border : 0x44FFFFFF;
-        context.fill(x, tagY, x + labelW + 6, tagY + tagH, tagBg);
-        drawBorder(context, x, tagY, labelW + 6, tagH, tagBorder);
-        context.drawTextWithShadow(this.textRenderer, label, x + 3, tagY + 1, (hovered || isDragging) ? textColor : 0xFFA0A0AB);
     }
 
     private void renderScoreboardPreview(DrawContext context, int x, int y, int totalWidth, int lineHeight) {
