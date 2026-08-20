@@ -3,7 +3,7 @@ const https = require('https');
 const fs = require('fs');
 const path = require('path');
 
-const VERSION = '1.4.7';
+const VERSION = '1.4.8';
 
 function getGitHubToken() {
     try {
@@ -80,7 +80,7 @@ function uploadAsset(uploadUrl, token, filePath, fileName, contentType) {
         res = await apiRequest('POST', '/repos/Moo-Client/moo-client/releases', token, {
             tag_name: `v${VERSION}`,
             name: `Moo Client v${VERSION}`,
-            body: '🚀 **Moo Client v1.4.7 (Waypoints, See-Through Logo & Minimalist UI)**\n\n✓ Logo Moo Client widoczne również przez ściany i przeszkody (See-Through Layer)\n✓ Rock-solid matematyczna projekcja 3D->2D dla Waypointów bez drgań\n✓ Celownik renderowany na wierzchu przed punktami w świecie\n✓ Opcje tła i cienia tekstu dla Waypointów\n✓ Nowoczesny i minimalistyczny wygląd menu modów',
+            body: '🚀 **Moo Client v1.4.8 (Scoreboard Mod, HUD Dragging & Grammar)**\n\n✓ Nowy mod Scoreboard z możliwością dowolnego przesuwania po ekranie\n✓ Opcje cieni tekstu, tła oraz ukrywania cyfr/punktów ze Scoreboarda\n✓ Minimalistyczne, czyste ramki dla wszystkich widgetów HUD w edytorze (Prawy Shift)\n✓ Poprawna polska odmiana gramatyczna licznika graczy online w launcherze',
             draft: false,
             prerelease: false
         });
@@ -88,7 +88,7 @@ function uploadAsset(uploadUrl, token, filePath, fileName, contentType) {
         console.log('Created release:', release.html_url);
     }
 
-    // Delete old assets
+    // Delete old assets if any
     if (release.assets) {
         for (const asset of release.assets) {
             console.log('Deleting old asset:', asset.name);
@@ -99,22 +99,25 @@ function uploadAsset(uploadUrl, token, filePath, fileName, contentType) {
     // Upload jar
     const jarPath = path.join(__dirname, '..', 'build', 'libs', `moo-client-${VERSION}.jar`);
     if (fs.existsSync(jarPath)) {
+        console.log(`Uploading moo-client-${VERSION}.jar...`);
         await uploadAsset(release.upload_url, token, jarPath, `moo-client-${VERSION}.jar`, 'application/java-archive');
+    } else {
+        console.warn(`Jar not found at ${jarPath}`);
     }
 
-    // Upload asar
+    // Upload asar if exists
     const asarPath = path.join(__dirname, 'dist', 'win-unpacked', 'resources', 'app.asar');
     if (fs.existsSync(asarPath)) {
         console.log('Uploading app.asar (65MB)...');
         await uploadAsset(release.upload_url, token, asarPath, 'app.asar', 'application/octet-stream');
     }
 
-    // Upload exe
+    // Upload exe if exists
     const exePath = path.join(__dirname, 'dist', `Moo Client Setup ${VERSION}.exe`);
     if (fs.existsSync(exePath)) {
         console.log('Uploading exe (136MB)...');
         await uploadAsset(release.upload_url, token, exePath, `Moo.Client.Setup.${VERSION}.exe`, 'application/octet-stream');
     }
 
-    console.log('ALL v1.4.7 ASSETS UPLOADED AND REPLACED SUCCESSFULLY!');
+    console.log(`ALL v${VERSION} ASSETS UPLOADED AND REPLACED SUCCESSFULLY!`);
 })();

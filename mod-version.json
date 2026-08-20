@@ -1,6 +1,6 @@
 {
-  "version": "1.4.7",
+  "version": "1.4.8",
   "minecraft": "1.21.4",
-  "download_url": "https://github.com/Larmel144hz/moo-client/releases/download/v1.4.7/moo-client-1.4.7.jar",
-  "changelog": "🚀 Moo Client v1.4.7 (Waypoints, See-Through Logo & Minimalist UI):\n✓ Logo Moo Client widoczne również przez ściany i przeszkody (See-Through Layer)\n✓ Rock-solid matematyczna projekcja 3D->2D dla Waypointów bez drgań\n✓ Celownik renderowany na wierzchu przed punktami w świecie\n✓ Opcje tła i cienia tekstu dla Waypointów\n✓ Nowoczesny i minimalistyczny wygląd menu modów"
+  "download_url": "https://github.com/Larmel144hz/moo-client/releases/download/v1.4.8/moo-client-1.4.8.jar",
+  "changelog": "🚀 Moo Client v1.4.8 (Scoreboard Mod, HUD Dragging & Grammar):\n✓ Nowy mod Scoreboard z możliwością dowolnego przesuwania po ekranie\n✓ Opcje cieni tekstu, tła oraz ukrywania cyfr/punktów ze Scoreboarda\n✓ Minimalistyczne, czyste ramki dla wszystkich widgetów HUD w edytorze (Prawy Shift)\n✓ Poprawna polska odmiana gramatyczna licznika graczy online w launcherze"
 }

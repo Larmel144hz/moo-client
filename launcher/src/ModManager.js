@@ -56,7 +56,7 @@ class ModManager {
     ensureBundledMod() {
         try {
             const pkg = require('../package.json');
-            const defaultVer = pkg.version || '1.4.7';
+            const defaultVer = pkg.version || '1.4.8';
             const bundledPath = path.join(__dirname, '..', 'assets', 'moo-client.jar');
 
             this.ensureDir(this.offlineDir);
@@ -91,7 +91,7 @@ class ModManager {
             console.error('Error reading local mod version:', e);
         }
         const pkg = require('../package.json');
-        return { version: pkg.version || '1.4.7', minecraft: '1.21.4' };
+        return { version: pkg.version || '1.4.8', minecraft: '1.21.4' };
     }
 
     /**
