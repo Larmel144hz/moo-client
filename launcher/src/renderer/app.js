@@ -241,10 +241,14 @@ function updateOnlineUsersDisplay(count) {
 function initOnlineUsersCounter() {
     updateOnlineUsersDisplay(1);
 
-    // Get current count from backend process
-    window.mooAPI?.getOnlineUsersCount?.().then((count) => {
-        if (typeof count === 'number') updateOnlineUsersDisplay(count);
-    }).catch(() => {});
+    const fetchCount = () => {
+        window.mooAPI?.getOnlineUsersCount?.().then((count) => {
+            if (typeof count === 'number') updateOnlineUsersDisplay(count);
+        }).catch(() => {});
+    };
+
+    fetchCount();
+    setInterval(fetchCount, 2500);
 
     // Listen for live broadcast updates
     window.mooAPI?.onOnlineUsersCount?.((count) => {

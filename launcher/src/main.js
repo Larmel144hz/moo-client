@@ -606,8 +606,14 @@ function setupLauncherPresence() {
                     const data = JSON.parse(payload);
                     const userId = data.id || (data.uuid && data.uuid.length > 5 ? data.uuid : null) || (data.u && data.u.length > 0 ? 'mc_' + data.u.toLowerCase() : null);
                     if (userId) {
+                        const isNew = !activeUsers.has(userId);
                         activeUsers.set(userId, Date.now());
                         updateCountAndBroadcast();
+
+                        // If a new peer launcher joined, immediately broadcast back our presence so they know about us instantly
+                        if (isNew && userId !== launcherClientId) {
+                            sendPresencePing();
+                        }
                     }
                 } catch (e) {}
             });
@@ -707,17 +713,17 @@ function setupLauncherPresence() {
     // Connect initially
     connectMqtt();
 
-    // Broadcast presence every 4 seconds
+    // Broadcast presence every 2.5 seconds
     presenceTimer = setInterval(() => {
         sendPresencePing();
         updateCountAndBroadcast();
-    }, 4000);
+    }, 2500);
 
     // Keepalive ping every 25 seconds
     pingTimer = setInterval(sendMqttPing, 25000);
 
-    // Cleanup & count refresh every 2 seconds
-    setInterval(updateCountAndBroadcast, 2000);
+    // Cleanup & count refresh every 1.5 seconds
+    setInterval(updateCountAndBroadcast, 1500);
 }
 
 // Helper: send message to renderer
