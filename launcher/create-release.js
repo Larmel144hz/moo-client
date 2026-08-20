@@ -3,7 +3,7 @@ const https = require('https');
 const fs = require('fs');
 const path = require('path');
 
-const VERSION = '1.4.8';
+const VERSION = '1.4.9';
 
 function getGitHubToken() {
     try {
@@ -80,7 +80,7 @@ function uploadAsset(uploadUrl, token, filePath, fileName, contentType) {
         res = await apiRequest('POST', '/repos/Moo-Client/moo-client/releases', token, {
             tag_name: `v${VERSION}`,
             name: `Moo Client v${VERSION}`,
-            body: '🚀 **Moo Client v1.4.8 (Scoreboard Mod, HUD Dragging & Grammar)**\n\n✓ Nowy mod Scoreboard z możliwością dowolnego przesuwania po ekranie\n✓ Opcje cieni tekstu, tła oraz ukrywania cyfr/punktów ze Scoreboarda\n✓ Minimalistyczne, czyste ramki dla wszystkich widgetów HUD w edytorze (Prawy Shift)\n✓ Poprawna polska odmiana gramatyczna licznika graczy online w launcherze',
+            body: '🚀 **Moo Client v1.4.9 (Live Online Presence Engine & Grammar)**\n\n✓ Globalny protokół MQTT dla licznika graczy online w launcherze w czasie rzeczywistym\n✓ Błyskawiczne wykrywanie znajomych i innych graczy (<1s)\n✓ Poprawna polska odmiana gramatyczna (1 gracz / 2-4 gracze / 5+ graczy online)\n✓ Mod Scoreboard i ulepszone ramki HUD',
             draft: false,
             prerelease: false
         });

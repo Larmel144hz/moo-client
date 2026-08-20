@@ -1,6 +1,6 @@
 {
-  "version": "1.4.8",
+  "version": "1.4.9",
   "minecraft": "1.21.4",
-  "download_url": "https://github.com/Larmel144hz/moo-client/releases/download/v1.4.8/moo-client-1.4.8.jar",
-  "changelog": "🚀 Moo Client v1.4.8 (Scoreboard Mod, HUD Dragging & Grammar):\n✓ Nowy mod Scoreboard z możliwością dowolnego przesuwania po ekranie\n✓ Opcje cieni tekstu, tła oraz ukrywania cyfr/punktów ze Scoreboarda\n✓ Minimalistyczne, czyste ramki dla wszystkich widgetów HUD w edytorze (Prawy Shift)\n✓ Poprawna polska odmiana gramatyczna licznika graczy online w launcherze"
+  "download_url": "https://github.com/Larmel144hz/moo-client/releases/download/v1.4.9/moo-client-1.4.9.jar",
+  "changelog": "🚀 Moo Client v1.4.9 (Live Online Presence Engine & Grammar):\n✓ Globalny protokół MQTT dla licznika graczy online w launcherze w czasie rzeczywistym\n✓ Błyskawiczne wykrywanie znajomych i innych graczy (<1s)\n✓ Poprawna polska odmiana gramatyczna (1 gracz / 2-4 gracze / 5+ graczy online)\n✓ Mod Scoreboard i ulepszone ramki HUD"
 }
