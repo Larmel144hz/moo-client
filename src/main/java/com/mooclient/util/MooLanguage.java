@@ -79,6 +79,9 @@ public class MooLanguage {
                 case "remove_bg_label" -> "Usuń tło z nametaga";
                 case "waypoint_scale_label" -> "Skala / Rozmiar waypointów";
                 case "death_waypoint_label" -> "Automatyczny punkt śmierci (Death Point)";
+                case "wp_all_dimensions" -> "Wszystkie wymiary";
+                case "wp_all_servers" -> "Wszystkie serwery";
+                case "wp_custom_color" -> "Własny kolor";
                 case "factor_label" -> "Współczynnik powiększenia";
                 case "smooth_zoom_label" -> "Płynne przybliżanie";
                 case "gamma_opt_title" -> "GAMMA";
@@ -177,6 +180,9 @@ public class MooLanguage {
                 case "remove_bg_label" -> "Remove Nametag Background";
                 case "waypoint_scale_label" -> "Waypoint Scale / Size";
                 case "death_waypoint_label" -> "Auto Death Waypoint";
+                case "wp_all_dimensions" -> "All Dimensions";
+                case "wp_all_servers" -> "All Servers";
+                case "wp_custom_color" -> "Custom Color";
                 case "factor_label" -> "Zoom Factor";
                 case "smooth_zoom_label" -> "Smooth Zoom";
                 case "gamma_opt_title" -> "GAMMA";

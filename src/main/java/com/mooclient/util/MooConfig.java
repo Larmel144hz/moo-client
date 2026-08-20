@@ -145,6 +145,8 @@ public class MooConfig {
             waypoints.addProperty("showBackground", com.mooclient.module.modules.WaypointsModule.isShowBackground());
             waypoints.addProperty("textShadow", com.mooclient.module.modules.WaypointsModule.isTextShadow());
             waypoints.addProperty("deathWaypoint", com.mooclient.module.modules.WaypointsModule.isDeathWaypoint());
+            waypoints.addProperty("showAllDimensions", com.mooclient.module.modules.WaypointsModule.isShowAllDimensions());
+            waypoints.addProperty("showAllServers", com.mooclient.module.modules.WaypointsModule.isShowAllServers());
             waypoints.addProperty("scale", com.mooclient.module.modules.WaypointsModule.getScale());
             waypoints.addProperty("keyCode", com.mooclient.module.modules.WaypointsModule.getKeyCode());
             waypoints.addProperty("keyName", com.mooclient.module.modules.WaypointsModule.getKeyName());
@@ -445,6 +447,12 @@ public class MooConfig {
                 }
                 if (waypoints.has("deathWaypoint")) {
                     com.mooclient.module.modules.WaypointsModule.setDeathWaypoint(waypoints.get("deathWaypoint").getAsBoolean());
+                }
+                if (waypoints.has("showAllDimensions")) {
+                    com.mooclient.module.modules.WaypointsModule.setShowAllDimensions(waypoints.get("showAllDimensions").getAsBoolean());
+                }
+                if (waypoints.has("showAllServers")) {
+                    com.mooclient.module.modules.WaypointsModule.setShowAllServers(waypoints.get("showAllServers").getAsBoolean());
                 }
                 if (waypoints.has("scale")) {
                     com.mooclient.module.modules.WaypointsModule.setScale(waypoints.get("scale").getAsFloat());

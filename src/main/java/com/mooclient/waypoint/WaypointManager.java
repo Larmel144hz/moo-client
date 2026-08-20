@@ -56,17 +56,20 @@ public class WaypointManager {
     public List<Waypoint> getWaypointsForCurrentWorld(MinecraftClient client) {
         if (client == null || client.world == null) return Collections.emptyList();
 
+        boolean allDims = com.mooclient.module.modules.WaypointsModule.isShowAllDimensions();
+        boolean allServers = com.mooclient.module.modules.WaypointsModule.isShowAllServers();
+
         String currentDim = getCurrentDimension(client);
         String currentServer = getCurrentServerOrWorld(client);
-        String currentKey = currentDim + "@" + currentServer;
+        String currentKey = currentDim + "@" + currentServer + "#" + allDims + "#" + allServers;
 
         if (cachedWorldWaypoints != null && currentKey.equals(cachedWorldKey)) {
             return cachedWorldWaypoints;
         }
 
         List<Waypoint> filtered = waypoints.stream()
-                .filter(w -> matchesDimension(w.getDimension(), currentDim))
-                .filter(w -> matchesServer(w.getServerOrWorld(), currentServer))
+                .filter(w -> allDims || matchesDimension(w.getDimension(), currentDim))
+                .filter(w -> allServers || matchesServer(w.getServerOrWorld(), currentServer))
                 .collect(Collectors.toList());
 
         this.cachedWorldWaypoints = filtered;

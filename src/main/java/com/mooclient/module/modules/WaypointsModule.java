@@ -14,6 +14,8 @@ public class WaypointsModule extends Module {
     private static boolean showBackground = true;
     private static boolean textShadow = true;
     private static boolean deathWaypoint = true;
+    private static boolean showAllDimensions = false;
+    private static boolean showAllServers = false;
     private static float scale = 1.0f; // Range: 0.5f - 2.0f
 
     // Configurable Keybind (Default: B)
@@ -101,6 +103,34 @@ public class WaypointsModule extends Module {
 
     public static void toggleDeathWaypoint() {
         deathWaypoint = !deathWaypoint;
+    }
+
+    public static boolean isShowAllDimensions() {
+        return showAllDimensions;
+    }
+
+    public static void setShowAllDimensions(boolean state) {
+        showAllDimensions = state;
+        com.mooclient.waypoint.WaypointManager.getInstance().invalidateCache();
+        com.mooclient.util.MooConfig.save();
+    }
+
+    public static void toggleShowAllDimensions() {
+        setShowAllDimensions(!showAllDimensions);
+    }
+
+    public static boolean isShowAllServers() {
+        return showAllServers;
+    }
+
+    public static void setShowAllServers(boolean state) {
+        showAllServers = state;
+        com.mooclient.waypoint.WaypointManager.getInstance().invalidateCache();
+        com.mooclient.util.MooConfig.save();
+    }
+
+    public static void toggleShowAllServers() {
+        setShowAllServers(!showAllServers);
     }
 
     public static float getScale() {

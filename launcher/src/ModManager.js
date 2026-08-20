@@ -22,7 +22,7 @@ class ModManager {
         this.localVersionPath = path.join(this.gameDir, 'installed-mod-version.json');
 
         // GitHub raw URL for version check
-        this.versionUrl = 'https://raw.githubusercontent.com/Larmel144hz/moo-client/main/mod-version.json';
+        this.versionUrl = 'https://raw.githubusercontent.com/Moo-Client/moo-client/main/mod-version.json';
 
         this.ensureDir(this.modsDir);
         this.ensureDir(this.offlineDir);
@@ -120,7 +120,7 @@ class ModManager {
      */
     async fetchFromReleasesAPI() {
         return new Promise((resolve, reject) => {
-            const apiUrl = 'https://api.github.com/repos/Larmel144hz/moo-client/releases/latest';
+            const apiUrl = 'https://api.github.com/repos/Moo-Client/moo-client/releases/latest';
             https.get(apiUrl, { headers: { 'User-Agent': 'MooClient-Launcher', 'Accept': 'application/vnd.github.v3+json' } }, (res) => {
                 if (res.statusCode !== 200) {
                     reject(new Error(`Releases API returned HTTP ${res.statusCode}`));
@@ -147,7 +147,7 @@ class ModManager {
                         }
                         // Fallback download URL if no asset found
                         if (!downloadUrl) {
-                            downloadUrl = `https://github.com/Larmel144hz/moo-client/releases/download/v${version}/moo-client-${version}.jar`;
+                            downloadUrl = `https://github.com/Moo-Client/moo-client/releases/download/v${version}/moo-client-${version}.jar`;
                         }
 
                         resolve({
@@ -169,7 +169,7 @@ class ModManager {
      */
     async fetchFromContentsAPI() {
         return new Promise((resolve, reject) => {
-            const apiUrl = 'https://api.github.com/repos/Larmel144hz/moo-client/contents/mod-version.json';
+            const apiUrl = 'https://api.github.com/repos/Moo-Client/moo-client/contents/mod-version.json';
             https.get(apiUrl, { headers: { 'User-Agent': 'MooClient-Launcher' } }, (res) => {
                 if (res.statusCode === 200) {
                     let data = '';
@@ -181,7 +181,7 @@ class ModManager {
                                 const decoded = Buffer.from(json.content, 'base64').toString('utf8');
                                 return resolve(JSON.parse(decoded));
                             }
-                        } catch (e) {}
+                        } catch (e) { }
                         reject(new Error('Could not parse contents API response'));
                     });
                 } else {
@@ -227,7 +227,7 @@ class ModManager {
     /**
      * Downloads a file from a URL to a local path.
      */
-    async downloadFile(url, destPath, onProgress = () => {}) {
+    async downloadFile(url, destPath, onProgress = () => { }) {
         return new Promise((resolve, reject) => {
             const fetch = (url) => {
                 const client = url.startsWith('https') ? https : http;
@@ -260,11 +260,11 @@ class ModManager {
                         resolve();
                     });
                     fileStream.on('error', (err) => {
-                        fs.unlink(destPath, () => {});
+                        fs.unlink(destPath, () => { });
                         reject(err);
                     });
                 }).on('error', (err) => {
-                    fs.unlink(destPath, () => {});
+                    fs.unlink(destPath, () => { });
                     reject(err);
                 });
             };
@@ -285,7 +285,7 @@ class ModManager {
                     try {
                         fs.unlinkSync(path.join(this.modsDir, file));
                         console.log(`Cleaned core library from user mods folder: ${file}`);
-                    } catch (e) {}
+                    } catch (e) { }
                 }
             }
         } catch (e) {
@@ -296,7 +296,7 @@ class ModManager {
     /**
      * Ensures Fabric API (Core Runtime) is safely present in the protected offline/multiver folder.
      */
-    async ensureFabricApi(onProgress = () => {}) {
+    async ensureFabricApi(onProgress = () => { }) {
         try {
             this.ensureDir(this.offlineDir);
             this.cleanOldMods();
@@ -316,14 +316,14 @@ class ModManager {
 
             if (fs.existsSync(tempPath) && fs.statSync(tempPath).size > 100000) {
                 if (fs.existsSync(targetPath)) {
-                    try { fs.unlinkSync(targetPath); } catch(e){}
+                    try { fs.unlinkSync(targetPath); } catch (e) { }
                 }
                 fs.renameSync(tempPath, targetPath);
                 console.log('Fabric API saved to protected offline folder:', targetPath);
                 return true;
             } else {
                 if (fs.existsSync(tempPath)) {
-                    try { fs.unlinkSync(tempPath); } catch(e){}
+                    try { fs.unlinkSync(tempPath); } catch (e) { }
                 }
                 throw new Error('Pobieranie Fabric API nie powiodło się');
             }
@@ -338,7 +338,7 @@ class ModManager {
      * @param {Function} onProgress - Callback (status, progressPercent)
      * @returns {boolean} true if mod was updated, false if already up to date
      */
-    async checkAndUpdate(onProgress = () => {}) {
+    async checkAndUpdate(onProgress = () => { }) {
         try {
             onProgress('Checking for mod updates...', 10);
 
@@ -363,7 +363,7 @@ class ModManager {
 
             // Download new version
             onProgress(`Downloading core update v${remoteVersion.version}...`, 30);
-            
+
             this.ensureDir(this.offlineDir);
             const tempJarPath = path.join(this.offlineDir, `moo-client-${remoteVersion.version}.download`);
 
@@ -375,7 +375,7 @@ class ModManager {
             if (fs.existsSync(tempJarPath) && fs.statSync(tempJarPath).size > 10000) {
                 // Save to offline/multiver/moo-client.jar
                 if (fs.existsSync(this.coreModPath)) {
-                    try { fs.unlinkSync(this.coreModPath); } catch(e){}
+                    try { fs.unlinkSync(this.coreModPath); } catch (e) { }
                 }
                 fs.renameSync(tempJarPath, this.coreModPath);
 
@@ -393,7 +393,7 @@ class ModManager {
                 return true;
             } else {
                 if (fs.existsSync(tempJarPath)) {
-                    try { fs.unlinkSync(tempJarPath); } catch (e) {}
+                    try { fs.unlinkSync(tempJarPath); } catch (e) { }
                 }
                 throw new Error('Pobrany plik moda jest uszkodzony.');
             }
@@ -488,12 +488,12 @@ class ModManager {
                         if (file && file.url) {
                             const targetPath = path.join(this.modsDir, file.filename);
                             if (!fs.existsSync(targetPath)) {
-                                await this.downloadFile(file.url, targetPath, () => {});
+                                await this.downloadFile(file.url, targetPath, () => { });
                                 installedList.push({ filename: file.filename, name: v.name || projectId });
                             }
                         }
                     }
-                } catch (e) {}
+                } catch (e) { }
 
                 if (installedList.length === 0 && visited.size === 1) {
                     throw new Error(`Brak wersji moda dla Fabric ${gameVersion}`);
@@ -509,7 +509,7 @@ class ModManager {
 
             const targetPath = path.join(this.modsDir, file.filename);
             if (!fs.existsSync(targetPath)) {
-                await this.downloadFile(file.url, targetPath, () => {});
+                await this.downloadFile(file.url, targetPath, () => { });
                 installedList.push({ filename: file.filename, name: version.name || projectId, projectId });
             }
 
@@ -524,7 +524,7 @@ class ModManager {
                                     const depFile = depVersion.files.find(f => f.primary) || depVersion.files[0];
                                     const depPath = path.join(this.modsDir, depFile.filename);
                                     if (!fs.existsSync(depPath)) {
-                                        await this.downloadFile(depFile.url, depPath, () => {});
+                                        await this.downloadFile(depFile.url, depPath, () => { });
                                         installedList.push({ filename: depFile.filename, name: depVersion.name });
                                     }
                                 }
@@ -597,7 +597,7 @@ class ModManager {
                                 }
                             }
                         }
-                    } catch (e) {}
+                    } catch (e) { }
 
                     return {
                         filename: file,
@@ -668,11 +668,11 @@ class ModManager {
 
                 const dir = path.dirname(srcPath);
                 const dirLower = dir.toLowerCase();
-                const isArchiveTemp = dirLower.includes('rar') || 
-                                      dirLower.includes('7z') || 
-                                      dirLower.includes('zip') || 
-                                      dirLower.includes('.rartemp') || 
-                                      dirLower.startsWith(tmpLower);
+                const isArchiveTemp = dirLower.includes('rar') ||
+                    dirLower.includes('7z') ||
+                    dirLower.includes('zip') ||
+                    dirLower.includes('.rartemp') ||
+                    dirLower.startsWith(tmpLower);
 
                 // Wait up to 2.5 seconds for WinRAR extraction to complete
                 for (let attempt = 0; attempt < 25; attempt++) {
@@ -683,7 +683,7 @@ class ModManager {
                                 await new Promise(r => setTimeout(r, 150));
                                 break;
                             }
-                        } catch (e) {}
+                        } catch (e) { }
                     }
                     if (fs.existsSync(srcPath)) break;
                     await new Promise(r => setTimeout(r, 100));
@@ -889,7 +889,7 @@ class ModManager {
                     const sha512 = crypto.createHash('sha512').update(fileBuf).digest('hex');
                     const cleanName = file.replace(/\.disabled$/, '');
                     fileMap[sha1] = { filename: file, cleanName, sha1, sha512 };
-                } catch (e) {}
+                } catch (e) { }
             }
 
             const sha1List = Object.keys(fileMap);
@@ -910,9 +910,9 @@ class ModManager {
                 if (!local) continue;
 
                 // Check if returned version is the EXACT SAME file as installed
-                const isSameFile = newVer.files?.some(f => 
-                    f.hashes?.sha1 === local.sha1 || 
-                    f.hashes?.sha512 === local.sha512 || 
+                const isSameFile = newVer.files?.some(f =>
+                    f.hashes?.sha1 === local.sha1 ||
+                    f.hashes?.sha512 === local.sha512 ||
                     f.filename === local.cleanName ||
                     f.filename === local.filename
                 );
@@ -972,7 +972,7 @@ class ModManager {
             this.ensureDir(this.modsDir);
             const safeName = path.basename(filename);
             const targetPath = path.join(this.modsDir, safeName);
-            
+
             const buf = Buffer.isBuffer(buffer) ? buffer : Buffer.from(buffer);
             fs.writeFileSync(targetPath, buf);
             return { success: true, filename: safeName };
