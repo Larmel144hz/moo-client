@@ -802,10 +802,13 @@ public class MooClientScreen extends Screen {
             drawBorder(context, openBtnX, openBtnY, openBtnW, openBtnH, 0xFFFFFFFF);
             drawCenteredText(context, MooLanguage.get("waypoints_open_gui"), openBtnX + openBtnW / 2, openBtnY + 7, 0xFF0A2514);
 
-            // Row 3: Waypoint Scale Selector
+            // Row 3: Waypoint Scale Slider (0-100%)
             rowY += rowH + 6;
             drawOptionRow(context, rowX, rowY, rowW, rowH, MooLanguage.get("waypoint_scale_label"));
-            renderWaypointScaleSelector(context, rowX + rowW - 216, rowY + 6, mouseX, mouseY, com.mooclient.module.modules.WaypointsModule.getScale());
+            int wpSliderW = 180;
+            int wpSliderX = rowX + rowW - wpSliderW - 8;
+            int wpPercent = com.mooclient.module.modules.WaypointsModule.getScalePercent();
+            renderPercentageSlider(context, wpSliderX, rowY + 6, wpSliderW, 22, wpPercent, mouseX, mouseY);
 
             // Row 4: Auto Death Waypoint
             rowY += rowH + 6;
@@ -1083,10 +1086,12 @@ public class MooClientScreen extends Screen {
         drawOptionRow(context, rowX, curY, rowW, rowH, MooLanguage.get("hud_snapping_label"));
         drawOptionToggle(context, rowX + rowW - 44, curY + 8, mouseX, mouseY, com.mooclient.util.MooClientSettings.isHudSnapping());
 
-        // Row 2: Scale
+        // Row 2: Scale (0-100%)
         curY += rowH + 6;
         drawOptionRow(context, rowX, curY, rowW, rowH, MooLanguage.get("hud_scale_label"));
-        renderScaleSelector(context, rowX + rowW - 206, curY + 6, mouseX, mouseY, com.mooclient.util.MooClientSettings.getHudScale());
+        int hudSliderW = 180;
+        int hudSliderX = rowX + rowW - hudSliderW - 8;
+        renderPercentageSlider(context, hudSliderX, curY + 6, hudSliderW, 22, com.mooclient.util.MooClientSettings.getHudScale(), mouseX, mouseY);
 
         // Row 3: Global Text Shadows
         curY += rowH + 6;
@@ -1367,43 +1372,36 @@ public class MooClientScreen extends Screen {
         return -1;
     }
 
-    private void renderWaypointScaleSelector(DrawContext context, int startX, int y, int mouseX, int mouseY, float currentScale) {
-        String[] labels = new String[]{"50%", "75%", "100%", "125%", "150%"};
-        float[] values = new float[]{0.5f, 0.75f, 1.0f, 1.25f, 1.5f};
-        int w = 40;
-        int gap = 3;
-        int curX = startX;
-        int h = 22;
+    private void renderPercentageSlider(DrawContext context, int x, int y, int w, int h, int percent, int mouseX, int mouseY) {
+        percent = Math.max(0, Math.min(100, percent));
+        String text = percent + "%";
 
-        for (int i = 0; i < labels.length; i++) {
-            boolean selected = Math.abs(currentScale - values[i]) < 0.08f;
-            boolean hover = mouseX >= curX && mouseX <= curX + w && mouseY >= y && mouseY <= y + h;
+        int trackW = w - 36;
+        int trackX = x;
+        int trackH = 6;
+        int trackY = y + (h - trackH) / 2;
 
-            int bg = selected ? 0xDD22C55E : (hover ? 0xCC252535 : 0x66141420);
-            int border = selected ? 0xFF4ADE80 : (hover ? 0xAAFFFFFF : 0x33FFFFFF);
-            int textColor = selected ? 0xFF0A2514 : (hover ? COLOR_TEXT_WHITE : 0xFFA0A0AB);
+        // Track background
+        context.fill(trackX, trackY, trackX + trackW, trackY + trackH, 0x55181824);
+        drawBorder(context, trackX, trackY, trackW, trackH, 0x33FFFFFF);
 
-            context.fill(curX, y, curX + w, y + h, bg);
-            drawBorder(context, curX, y, w, h, border);
-            drawCenteredText(context, labels[i], curX + w / 2, y + 7, textColor);
-
-            curX += w + gap;
+        // Filled bar (Accent color)
+        int fillW = Math.round((percent / 100.0f) * trackW);
+        if (fillW > 0) {
+            context.fill(trackX + 1, trackY + 1, trackX + fillW, trackY + trackH - 1, com.mooclient.util.MooClientSettings.getAccentColor());
         }
-    }
 
-    private int getWaypointScaleClick(int startX, int y, int mouseX, int mouseY) {
-        int w = 40;
-        int gap = 3;
-        int curX = startX;
-        int h = 22;
+        // Draggable Knob
+        int knobX = trackX + fillW - 2;
+        boolean hover = mouseX >= trackX && mouseX <= trackX + trackW && mouseY >= trackY - 4 && mouseY <= trackY + trackH + 4;
+        int knobBorder = hover ? 0xFFFFFFFF : com.mooclient.util.MooClientSettings.getAccentColor();
+        context.fill(knobX, trackY - 4, knobX + 5, trackY + trackH + 4, COLOR_TEXT_WHITE);
+        drawBorder(context, knobX, trackY - 4, 5, trackH + 8, knobBorder);
 
-        for (int i = 0; i < 5; i++) {
-            if (mouseX >= curX && mouseX <= curX + w && mouseY >= y && mouseY <= y + h) {
-                return i;
-            }
-            curX += w + gap;
-        }
-        return -1;
+        // Percentage text display on the right
+        int textX = trackX + trackW + 6;
+        int textY = y + (h - 8) / 2;
+        context.drawTextWithShadow(this.textRenderer, text, textX, textY, COLOR_TEXT_WHITE);
     }
 
     private void drawCenteredText(DrawContext context, String text, int centerX, int y, int color) {
@@ -2053,14 +2051,14 @@ public class MooClientScreen extends Screen {
                         return true;
                     }
 
-                    // Row 3: Waypoint Scale Click
+                    // Row 3: Waypoint Scale Slider (0-100%)
                     rowY += rowH + 6;
-                    int scaleClick = getWaypointScaleClick(rowX + rowW - 216, rowY + 6, (int) mouseX, (int) mouseY);
-                    if (scaleClick >= 0) {
+                    int wpSliderW = 180;
+                    int wpSliderX = rowX + rowW - wpSliderW - 8;
+                    if (mouseX >= wpSliderX - 4 && mouseX <= wpSliderX + wpSliderW + 4 && mouseY >= rowY + 2 && mouseY <= rowY + 24) {
+                        this.draggingSlider = 4;
+                        handleSliderDrag(mouseX);
                         playClickSound();
-                        float[] values = new float[]{0.5f, 0.75f, 1.0f, 1.25f, 1.5f};
-                        com.mooclient.module.modules.WaypointsModule.setScale(values[scaleClick]);
-                        com.mooclient.util.MooConfig.save();
                         return true;
                     }
 
@@ -2224,12 +2222,14 @@ public class MooClientScreen extends Screen {
                         return true;
                     }
 
-                    // Scale Selector
+                    // Scale Slider (0-100%)
                     curY += rowH + 6;
-                    int scaleClick = getSelector3Click(rowX + rowW - 206, curY + 6, (int) mouseX, (int) mouseY);
-                    if (scaleClick >= 0) {
+                    int hudSliderW = 180;
+                    int hudSliderX = rowX + rowW - hudSliderW - 8;
+                    if (mouseX >= hudSliderX - 4 && mouseX <= hudSliderX + hudSliderW + 4 && mouseY >= curY + 2 && mouseY <= curY + 24) {
+                        this.draggingSlider = 3;
+                        handleSliderDrag(mouseX);
                         playClickSound();
-                        com.mooclient.util.MooClientSettings.setHudScale(scaleClick);
                         return true;
                     }
 
@@ -2286,23 +2286,52 @@ public class MooClientScreen extends Screen {
     }
 
     private void handleSliderDrag(double mouseX) {
-        int panelW = 560;
-        int panelX = (this.width - panelW) / 2;
-        int sliderStartX = panelX + 50;
-        int sliderW = 210;
+        if (currentView == View.SETTINGS) {
+            if (settingsTab == 0 && draggingSlider >= 0 && draggingSlider <= 2) {
+                int panelW = 560;
+                int panelX = (this.width - panelW) / 2;
+                int sliderStartX = panelX + 50;
+                int sliderW = 210;
 
-        float clamped = (float) Math.max(0, Math.min(sliderW, mouseX - sliderStartX));
-        int val = Math.round((clamped / (float) sliderW) * 255);
+                float clamped = (float) Math.max(0, Math.min(sliderW, mouseX - sliderStartX));
+                int val = Math.round((clamped / (float) sliderW) * 255);
 
-        if (draggingSlider == 0) {
-            com.mooclient.util.MooClientSettings.setCustomRed(val);
-            com.mooclient.util.MooClientSettings.setAccentPreset(com.mooclient.util.MooClientSettings.AccentColorPreset.CUSTOM);
-        } else if (draggingSlider == 1) {
-            com.mooclient.util.MooClientSettings.setCustomGreen(val);
-            com.mooclient.util.MooClientSettings.setAccentPreset(com.mooclient.util.MooClientSettings.AccentColorPreset.CUSTOM);
-        } else if (draggingSlider == 2) {
-            com.mooclient.util.MooClientSettings.setCustomBlue(val);
-            com.mooclient.util.MooClientSettings.setAccentPreset(com.mooclient.util.MooClientSettings.AccentColorPreset.CUSTOM);
+                if (draggingSlider == 0) {
+                    com.mooclient.util.MooClientSettings.setCustomRed(val);
+                    com.mooclient.util.MooClientSettings.setAccentPreset(com.mooclient.util.MooClientSettings.AccentColorPreset.CUSTOM);
+                } else if (draggingSlider == 1) {
+                    com.mooclient.util.MooClientSettings.setCustomGreen(val);
+                    com.mooclient.util.MooClientSettings.setAccentPreset(com.mooclient.util.MooClientSettings.AccentColorPreset.CUSTOM);
+                } else if (draggingSlider == 2) {
+                    com.mooclient.util.MooClientSettings.setCustomBlue(val);
+                    com.mooclient.util.MooClientSettings.setAccentPreset(com.mooclient.util.MooClientSettings.AccentColorPreset.CUSTOM);
+                }
+            } else if (settingsTab == 1 && draggingSlider == 3) {
+                int panelW = 560;
+                int panelX = (this.width - panelW) / 2;
+                int rowX = panelX + 20;
+                int rowW = panelW - 40;
+                int sliderW = 180;
+                int sliderX = rowX + rowW - sliderW - 8;
+                int trackW = sliderW - 36;
+
+                float clamped = (float) Math.max(0, Math.min(trackW, mouseX - sliderX));
+                int val = Math.round((clamped / (float) trackW) * 100);
+                com.mooclient.util.MooClientSettings.setHudScale(val);
+            }
+        } else if (currentView == View.OPTIONS && draggingSlider == 4) {
+            int panelW = 440;
+            int panelX = (this.width - panelW) / 2;
+            int rowX = panelX + 16;
+            int rowW = panelW - 32;
+            int sliderW = 180;
+            int sliderX = rowX + rowW - sliderW - 8;
+            int trackW = sliderW - 36;
+
+            float clamped = (float) Math.max(0, Math.min(trackW, mouseX - sliderX));
+            int val = Math.round((clamped / (float) trackW) * 100);
+            com.mooclient.module.modules.WaypointsModule.setScalePercent(val);
+            com.mooclient.util.MooConfig.save();
         }
     }
 
@@ -2375,7 +2404,7 @@ public class MooClientScreen extends Screen {
                 return true;
             }
         }
-        if (currentView == View.SETTINGS && draggingSlider >= 0) {
+        if ((currentView == View.SETTINGS || currentView == View.OPTIONS) && draggingSlider >= 0) {
             handleSliderDrag(mouseX);
             return true;
         }

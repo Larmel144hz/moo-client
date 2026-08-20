@@ -474,7 +474,13 @@ public class MooConfig {
                 if (settings.has("customGreen")) MooClientSettings.setCustomGreen(settings.get("customGreen").getAsInt());
                 if (settings.has("customBlue")) MooClientSettings.setCustomBlue(settings.get("customBlue").getAsInt());
                 if (settings.has("hudSnapping")) MooClientSettings.setHudSnapping(settings.get("hudSnapping").getAsBoolean());
-                if (settings.has("hudScale")) MooClientSettings.setHudScale(settings.get("hudScale").getAsInt());
+                if (settings.has("hudScale")) {
+                    int scale = settings.get("hudScale").getAsInt();
+                    if (scale <= 2) {
+                        scale = (scale == 0 ? 85 : (scale == 1 ? 100 : 115));
+                    }
+                    MooClientSettings.setHudScale(scale);
+                }
                 if (settings.has("globalTextShadow")) MooClientSettings.setGlobalTextShadow(settings.get("globalTextShadow").getAsBoolean());
                 if (settings.has("menuBackgroundDim")) MooClientSettings.setMenuBackgroundDim(settings.get("menuBackgroundDim").getAsInt());
                 if (settings.has("guiAnimations")) MooClientSettings.setGuiAnimations(settings.get("guiAnimations").getAsBoolean());

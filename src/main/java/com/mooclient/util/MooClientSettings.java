@@ -78,7 +78,7 @@ public class MooClientSettings {
     private static int customBlue = 113;
 
     private static boolean hudSnapping = true;
-    private static int hudScale = 1; // 0 = 85% (Compact), 1 = 100% (Normal), 2 = 115% (Large)
+    private static int hudScale = 100; // 0% - 100%
     private static boolean globalTextShadow = true;
     private static int menuBackgroundDim = 1; // 0 = 30% (Light), 1 = 50% (Medium), 2 = 75% (Dark)
     private static boolean guiAnimations = true;
@@ -152,7 +152,8 @@ public class MooClientSettings {
     public static void toggleHudSnapping() { setHudSnapping(!hudSnapping); }
 
     public static int getHudScale() { return hudScale; }
-    public static void setHudScale(int scale) { hudScale = scale; MooConfig.save(); }
+    public static void setHudScale(int scale) { hudScale = Math.max(0, Math.min(100, scale)); MooConfig.save(); }
+    public static float getHudScaleFactor() { return Math.max(0.2f, hudScale / 100.0f); }
 
     public static boolean isGlobalTextShadow() { return globalTextShadow; }
     public static void setGlobalTextShadow(boolean shadow) {

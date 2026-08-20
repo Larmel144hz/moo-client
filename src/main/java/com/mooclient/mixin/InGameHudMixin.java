@@ -33,6 +33,9 @@ public class InGameHudMixin {
             return;
         }
 
+        float hudScale = com.mooclient.util.MooClientSettings.getHudScaleFactor();
+        boolean customScale = (hudScale != 1.0f);
+
         // 1. FPS Module Rendering
         if (FpsModule.isFpsEnabled()) {
             int fps = client.getCurrentFps();
@@ -48,11 +51,18 @@ public class InGameHudMixin {
             }
 
             int textWidth = client.textRenderer.getWidth(fpsText);
-            FpsModule.width = textWidth + 6;
-            FpsModule.height = 12;
+            FpsModule.width = (int) Math.round((textWidth + 6) * hudScale);
+            FpsModule.height = (int) Math.round(12 * hudScale);
 
             int x = FpsModule.posX;
             int y = FpsModule.posY;
+
+            if (customScale) {
+                context.getMatrices().push();
+                context.getMatrices().translate(x, y, 0);
+                context.getMatrices().scale(hudScale, hudScale, 1.0f);
+                context.getMatrices().translate(-x, -y, 0);
+            }
 
             if (style == FpsModule.FpsStyle.MOO_CLIENT) {
                 if (FpsModule.isShowBackground()) {
@@ -65,6 +75,10 @@ public class InGameHudMixin {
                     context.fill(x - 2, y - 2, x + textWidth + 2, y + 10, 0x66000000);
                 }
                 context.drawText(client.textRenderer, fpsText, x, y, 0xFFFFFFFF, FpsModule.isTextShadow());
+            }
+
+            if (customScale) {
+                context.getMatrices().pop();
             }
         }
 
@@ -82,11 +96,18 @@ public class InGameHudMixin {
             }
 
             int textWidth = client.textRenderer.getWidth(sprintText);
-            ToggleSprintModule.width = textWidth + 6;
-            ToggleSprintModule.height = 12;
+            ToggleSprintModule.width = (int) Math.round((textWidth + 6) * hudScale);
+            ToggleSprintModule.height = (int) Math.round(12 * hudScale);
 
             int x = ToggleSprintModule.posX;
             int y = ToggleSprintModule.posY;
+
+            if (customScale) {
+                context.getMatrices().push();
+                context.getMatrices().translate(x, y, 0);
+                context.getMatrices().scale(hudScale, hudScale, 1.0f);
+                context.getMatrices().translate(-x, -y, 0);
+            }
 
             if (style == ToggleSprintModule.SprintStyle.MOO_CLIENT) {
                 context.fill(x - 2, y - 2, x + textWidth + 4, y + 10, 0x88000000);
@@ -97,6 +118,10 @@ public class InGameHudMixin {
                     context.fill(x - 2, y - 2, x + textWidth + 2, y + 10, 0x66000000);
                 }
                 context.drawText(client.textRenderer, sprintText, x, y, 0xFFFFFFFF, ToggleSprintModule.isTextShadow());
+            }
+
+            if (customScale) {
+                context.getMatrices().pop();
             }
         }
 
@@ -117,6 +142,13 @@ public class InGameHudMixin {
                 int totalH = 0;
                 int rowH = (pStyle == PotionEffectsModule.PotionStyle.COMPACT) ? 14 : 22;
                 int rowGap = (pStyle == PotionEffectsModule.PotionStyle.COMPACT) ? 3 : 4;
+
+                if (customScale) {
+                    context.getMatrices().push();
+                    context.getMatrices().translate(startX, curY, 0);
+                    context.getMatrices().scale(hudScale, hudScale, 1.0f);
+                    context.getMatrices().translate(-startX, -curY, 0);
+                }
 
                 if (effects.isEmpty() && isMenu) {
                     // Preview dummy effects in MooClientScreen menu
@@ -243,8 +275,12 @@ public class InGameHudMixin {
                     }
                 }
 
-                PotionEffectsModule.width = maxW + 4;
-                PotionEffectsModule.height = Math.max(26, totalH);
+                if (customScale) {
+                    context.getMatrices().pop();
+                }
+
+                PotionEffectsModule.width = (int) Math.round((maxW + 4) * hudScale);
+                PotionEffectsModule.height = (int) Math.round(Math.max(26, totalH) * hudScale);
             }
         }
 
@@ -263,11 +299,18 @@ public class InGameHudMixin {
             }
 
             int textWidth = client.textRenderer.getWidth(pingText);
-            com.mooclient.module.modules.PingModule.width = textWidth + 6;
-            com.mooclient.module.modules.PingModule.height = 12;
+            com.mooclient.module.modules.PingModule.width = (int) Math.round((textWidth + 6) * hudScale);
+            com.mooclient.module.modules.PingModule.height = (int) Math.round(12 * hudScale);
 
             int x = com.mooclient.module.modules.PingModule.posX;
             int y = com.mooclient.module.modules.PingModule.posY;
+
+            if (customScale) {
+                context.getMatrices().push();
+                context.getMatrices().translate(x, y, 0);
+                context.getMatrices().scale(hudScale, hudScale, 1.0f);
+                context.getMatrices().translate(-x, -y, 0);
+            }
 
             if (style == com.mooclient.module.modules.PingModule.PingStyle.MOO_CLIENT) {
                 if (com.mooclient.module.modules.PingModule.isShowBackground()) {
@@ -280,6 +323,10 @@ public class InGameHudMixin {
                     context.fill(x - 2, y - 2, x + textWidth + 2, y + 10, 0x66000000);
                 }
                 context.drawText(client.textRenderer, pingText, x, y, 0xFFFFFFFF, com.mooclient.module.modules.PingModule.isTextShadow());
+            }
+
+            if (customScale) {
+                context.getMatrices().pop();
             }
         }
     }

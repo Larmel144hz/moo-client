@@ -137,8 +137,16 @@ public class WaypointsModule extends Module {
         return scale;
     }
 
+    public static int getScalePercent() {
+        return Math.max(0, Math.min(100, Math.round(scale * 100.0f)));
+    }
+
+    public static void setScalePercent(int percent) {
+        setScale(Math.max(0.1f, Math.min(100, percent) / 100.0f));
+    }
+
     public static void setScale(float newScale) {
-        scale = Math.max(0.4f, Math.min(2.5f, Math.round(newScale * 100.0f) / 100.0f));
+        scale = Math.max(0.1f, Math.min(2.5f, Math.round(newScale * 100.0f) / 100.0f));
     }
 
     public static int getKeyCode() {
