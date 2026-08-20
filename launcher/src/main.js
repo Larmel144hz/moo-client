@@ -466,13 +466,16 @@ function getActualLauncherVersion() {
 // =============================================
 let launcherOnlineCount = 1;
 const net = require('net');
+const tls = require('tls');
 const crypto = require('crypto');
 const launcherClientId = 'moo_launcher_' + crypto.randomBytes(6).toString('hex');
 const activeUsers = new Map(); // id -> timestamp
 
 const MQTT_BROKERS = [
-    { host: 'broker.hivemq.com', port: 1883 },
-    { host: 'broker.emqx.io', port: 1883 }
+    { host: 'broker.hivemq.com', port: 8883, tls: true },
+    { host: 'broker.hivemq.com', port: 1883, tls: false },
+    { host: 'broker.emqx.io', port: 8883, tls: true },
+    { host: 'broker.emqx.io', port: 1883, tls: false }
 ];
 let currentBrokerIndex = 0;
 let mqttSocket = null;
@@ -480,6 +483,72 @@ let isMqttConnected = false;
 let reconnectTimer = null;
 let pingTimer = null;
 let presenceTimer = null;
+
+class MqttStreamParser {
+    constructor(onPublish) {
+        this.onPublish = onPublish;
+        this.buffer = Buffer.alloc(0);
+    }
+
+    feed(chunk) {
+        this.buffer = Buffer.concat([this.buffer, chunk]);
+        while (this.buffer.length >= 2) {
+            const firstByte = this.buffer[0];
+            const packetType = (firstByte >> 4) & 0x0F;
+            const qos = (firstByte >> 1) & 0x03;
+
+            let multiplier = 1;
+            let value = 0;
+            let lenBytes = 0;
+            let complete = false;
+
+            for (let i = 1; i < this.buffer.length && i <= 4; i++) {
+                const encodedByte = this.buffer[i];
+                value += (encodedByte & 127) * multiplier;
+                multiplier *= 128;
+                lenBytes++;
+                if ((encodedByte & 128) === 0) {
+                    complete = true;
+                    break;
+                }
+            }
+            if (!complete) break;
+
+            const headerLen = 1 + lenBytes;
+            const totalPacketLen = headerLen + value;
+            if (this.buffer.length < totalPacketLen) break;
+
+            const packet = this.buffer.subarray(0, totalPacketLen);
+            this.buffer = this.buffer.subarray(totalPacketLen);
+
+            if (packetType === 3) { // PUBLISH
+                let offset = headerLen;
+                if (packet.length >= offset + 2) {
+                    const topicLen = packet.readUInt16BE(offset);
+                    offset += 2;
+                    if (packet.length >= offset + topicLen) {
+                        const topic = packet.subarray(offset, offset + topicLen).toString('utf8');
+                        offset += topicLen;
+                        if (qos > 0) offset += 2; // skip Packet Identifier
+                        const payload = packet.subarray(offset).toString('utf8');
+                        this.onPublish(topic, payload);
+                    }
+                }
+            }
+        }
+    }
+}
+
+function encodeMqttLength(len) {
+    const bytes = [];
+    do {
+        let byte = len % 128;
+        len = Math.floor(len / 128);
+        if (len > 0) byte |= 128;
+        bytes.push(byte);
+    } while (len > 0);
+    return Buffer.from(bytes);
+}
 
 function setupLauncherPresence() {
     function getActiveAccountName() {
@@ -502,9 +571,10 @@ function setupLauncherPresence() {
 
             const topicBytes = Buffer.from(topic);
             const payloadBytes = Buffer.from(payload);
-            const remain = 2 + topicBytes.length + payloadBytes.length;
+            const remain = encodeMqttLength(2 + topicBytes.length + payloadBytes.length);
             const pubPacket = Buffer.concat([
-                Buffer.from([0x30, remain]),
+                Buffer.from([0x30]),
+                remain,
                 Buffer.from([(topicBytes.length >> 8) & 0xFF, topicBytes.length & 0xFF]),
                 topicBytes,
                 payloadBytes
@@ -516,8 +586,7 @@ function setupLauncherPresence() {
     function sendMqttPing() {
         if (!mqttSocket || !isMqttConnected) return;
         try {
-            // MQTT PINGREQ: 0xC0, 0x00
-            mqttSocket.write(Buffer.from([0xC0, 0x00]));
+            mqttSocket.write(Buffer.from([0xC0, 0x00])); // PINGREQ
         } catch (e) {}
     }
 
@@ -529,19 +598,35 @@ function setupLauncherPresence() {
         isMqttConnected = false;
 
         const broker = MQTT_BROKERS[currentBrokerIndex];
-        console.log(`[Presence] Connecting to MQTT broker: ${broker.host}:${broker.port}...`);
+        console.log(`[Presence] Connecting to MQTT broker: ${broker.host}:${broker.port} (TLS: ${broker.tls})...`);
 
         try {
-            const socket = net.createConnection({ host: broker.host, port: broker.port, timeout: 6000 });
+            const parser = new MqttStreamParser((topic, payload) => {
+                try {
+                    const data = JSON.parse(payload);
+                    const userId = data.id || (data.uuid && data.uuid.length > 5 ? data.uuid : null) || (data.u && data.u.length > 0 ? 'mc_' + data.u.toLowerCase() : null);
+                    if (userId) {
+                        activeUsers.set(userId, Date.now());
+                        updateCountAndBroadcast();
+                    }
+                } catch (e) {}
+            });
+
+            const connectOptions = { host: broker.host, port: broker.port, timeout: 6000 };
+            const socket = broker.tls
+                ? tls.connect(broker.port, broker.host, { rejectUnauthorized: false, timeout: 6000 })
+                : net.createConnection(connectOptions);
+
             mqttSocket = socket;
 
             socket.on('connect', () => {
                 // 1. MQTT CONNECT
                 const clientBytes = Buffer.from(launcherClientId);
                 const varHeader = Buffer.from([0x00, 0x04, 0x4D, 0x51, 0x54, 0x54, 0x04, 0x02, 0x00, 0x3C]); // Clean Session, 60s
-                const remainLen = varHeader.length + 2 + clientBytes.length;
+                const rem = encodeMqttLength(varHeader.length + 2 + clientBytes.length);
                 const packet = Buffer.concat([
-                    Buffer.from([0x10, remainLen]),
+                    Buffer.from([0x10]),
+                    rem,
                     varHeader,
                     Buffer.from([(clientBytes.length >> 8) & 0xFF, clientBytes.length & 0xFF]),
                     clientBytes
@@ -559,9 +644,11 @@ function setupLauncherPresence() {
 
                     // 2. MQTT SUBSCRIBE to "mooclient/#"
                     const topicBytes = Buffer.from('mooclient/#');
-                    const subRemain = 2 + 2 + topicBytes.length + 1;
+                    const subRem = encodeMqttLength(2 + 2 + topicBytes.length + 1);
                     const subPacket = Buffer.concat([
-                        Buffer.from([0x82, subRemain, 0x00, 0x01]),
+                        Buffer.from([0x82]),
+                        subRem,
+                        Buffer.from([0x00, 0x01]),
                         Buffer.from([(topicBytes.length >> 8) & 0xFF, topicBytes.length & 0xFF]),
                         topicBytes,
                         Buffer.from([0x00]) // QoS 0
@@ -570,34 +657,10 @@ function setupLauncherPresence() {
 
                     // Send immediate presence broadcast
                     sendPresencePing();
-                    return;
                 }
 
-                // Handle PUBLISH packets (0x30 QoS 0)
-                for (let i = 0; i < buf.length; i++) {
-                    if ((buf[i] & 0xF0) === 0x30) {
-                        if (i + 1 >= buf.length) break;
-                        const packetRemain = buf[i + 1];
-                        if (i + 2 + packetRemain <= buf.length) {
-                            const topicLen = (buf[i + 2] << 8) | buf[i + 3];
-                            const payloadStart = i + 4 + topicLen;
-                            const payloadLen = (i + 2 + packetRemain) - payloadStart;
-
-                            if (payloadLen > 0 && payloadStart + payloadLen <= buf.length) {
-                                try {
-                                    const jsonStr = buf.subarray(payloadStart, payloadStart + payloadLen).toString('utf8');
-                                    const data = JSON.parse(jsonStr);
-                                    const userId = data.id || (data.uuid && data.uuid.length > 5 ? data.uuid : null) || (data.u && data.u.length > 0 ? 'mc_' + data.u.toLowerCase() : null);
-                                    if (userId) {
-                                        activeUsers.set(userId, Date.now());
-                                        updateCountAndBroadcast();
-                                    }
-                                } catch (e) {}
-                            }
-                            i += 1 + packetRemain;
-                        }
-                    }
-                }
+                // Feed parser for all incoming packets
+                parser.feed(buf);
             });
 
             socket.on('timeout', () => {

@@ -3,7 +3,7 @@ const https = require('https');
 const fs = require('fs');
 const path = require('path');
 
-const VERSION = '1.4.9';
+const VERSION = '1.5.0';
 
 function getGitHubToken() {
     try {
@@ -80,7 +80,7 @@ function uploadAsset(uploadUrl, token, filePath, fileName, contentType) {
         res = await apiRequest('POST', '/repos/Moo-Client/moo-client/releases', token, {
             tag_name: `v${VERSION}`,
             name: `Moo Client v${VERSION}`,
-            body: '🚀 **Moo Client v1.4.9 (Live Online Presence Engine & Grammar)**\n\n✓ Globalny protokół MQTT dla licznika graczy online w launcherze w czasie rzeczywistym\n✓ Błyskawiczne wykrywanie znajomych i innych graczy (<1s)\n✓ Poprawna polska odmiana gramatyczna (1 gracz / 2-4 gracze / 5+ graczy online)\n✓ Mod Scoreboard i ulepszone ramki HUD',
+            body: '🚀 **Moo Client v1.5.0 (TLS Encrypted Global Presence Engine & Grammar)**\n\n✓ Bezpieczny, szyfrowany protokół TLS 8883 MQTT dla globalnej synchronizacji obecności graczy\n✓ Błyskawiczna detekcja uruchomionych launcherów i graczy w grze\n✓ Poprawna polska odmiana gramatyczna (1 gracz / 2-4 gracze / 5+ graczy online)\n✓ Mod Scoreboard i ulepszone ramki HUD',
             draft: false,
             prerelease: false
         });
