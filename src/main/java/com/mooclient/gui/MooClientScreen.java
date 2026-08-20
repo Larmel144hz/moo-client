@@ -114,25 +114,25 @@ public class MooClientScreen extends Screen {
      */
     private void renderDraggableHudWidgets(DrawContext context, int mouseX, int mouseY) {
         if (this.client == null) return;
+        float hudScale = com.mooclient.util.MooClientSettings.getHudScaleFactor();
 
         // 1. Draggable FPS Widget
         if (FpsModule.isFpsEnabled()) {
             int fps = this.client.getCurrentFps();
             String fpsText = FpsModule.getStyle() == FpsModule.FpsStyle.BRACKETS ? "[" + fps + " FPS]" : (FpsModule.isShowPrefix() ? "FPS: " + fps : fps + " FPS");
             int textWidth = this.textRenderer.getWidth(fpsText);
-            int boxW = textWidth + 7;
-            int boxH = 12;
+            int boxW = (int) Math.round((textWidth + 4) * hudScale);
+            int boxH = (int) Math.round(12 * hudScale);
             FpsModule.width = boxW;
             FpsModule.height = boxH;
 
             int x = FpsModule.posX;
             int y = FpsModule.posY;
 
-            boolean hovered = mouseX >= x - 3 && mouseX <= x - 3 + boxW && mouseY >= y - 2 && mouseY <= y - 2 + boxH;
+            boolean hovered = mouseX >= x - 2 && mouseX <= x - 2 + boxW && mouseY >= y - 2 && mouseY <= y - 2 + boxH;
+            boolean isDragging = "FPS".equals(draggingWidget);
 
-            if (hovered || "FPS".equals(draggingWidget)) {
-                drawBorder(context, x - 3, y - 2, boxW, boxH, 0x88FFFFFF);
-            }
+            renderWidgetBoundingBox(context, x - 2, y - 2, boxW, boxH, hovered, isDragging, "FPS");
         }
 
         // 2. Draggable Sprint Widget Preview
@@ -147,19 +147,18 @@ public class MooClientScreen extends Screen {
                 sprintText = "Sprinting (Toggled)";
             }
             int textWidth = this.textRenderer.getWidth(sprintText);
-            int boxW = textWidth + 7;
-            int boxH = 12;
+            int boxW = (int) Math.round((textWidth + 4) * hudScale);
+            int boxH = (int) Math.round(12 * hudScale);
             ToggleSprintModule.width = boxW;
             ToggleSprintModule.height = boxH;
 
             int x = ToggleSprintModule.posX;
             int y = ToggleSprintModule.posY;
 
-            boolean hovered = mouseX >= x - 3 && mouseX <= x - 3 + boxW && mouseY >= y - 2 && mouseY <= y - 2 + boxH;
+            boolean hovered = mouseX >= x - 2 && mouseX <= x - 2 + boxW && mouseY >= y - 2 && mouseY <= y - 2 + boxH;
+            boolean isDragging = "SPRINT".equals(draggingWidget);
 
-            if (hovered || "SPRINT".equals(draggingWidget)) {
-                drawBorder(context, x - 3, y - 2, boxW, boxH, 0x88FFFFFF);
-            }
+            renderWidgetBoundingBox(context, x - 2, y - 2, boxW, boxH, hovered, isDragging, "Sprint");
         }
 
         // 3. Draggable Potion Effects Widget Preview
@@ -169,11 +168,10 @@ public class MooClientScreen extends Screen {
             int boxW = PotionEffectsModule.width;
             int boxH = PotionEffectsModule.height;
 
-            boolean hovered = mouseX >= x - 3 && mouseX <= x - 3 + boxW && mouseY >= y - 2 && mouseY <= y - 2 + boxH;
+            boolean hovered = mouseX >= x - 2 && mouseX <= x - 2 + boxW && mouseY >= y - 2 && mouseY <= y - 2 + boxH;
+            boolean isDragging = "POTIONS".equals(draggingWidget);
 
-            if (hovered || "POTIONS".equals(draggingWidget)) {
-                drawBorder(context, x - 3, y - 2, boxW, boxH, 0x88FFFFFF);
-            }
+            renderWidgetBoundingBox(context, x - 2, y - 2, boxW, boxH, hovered, isDragging, "Potions");
         }
 
         // 4. Draggable Ping Widget Preview
@@ -181,26 +179,69 @@ public class MooClientScreen extends Screen {
             int ping = com.mooclient.module.modules.PingModule.getCurrentPing();
             String pingText = com.mooclient.module.modules.PingModule.getStyle() == com.mooclient.module.modules.PingModule.PingStyle.BRACKETS ? "[" + ping + " ms]" : (com.mooclient.module.modules.PingModule.isShowPrefix() ? "Ping: " + ping + " ms" : ping + " ms");
             int textWidth = this.textRenderer.getWidth(pingText);
-            int boxW = textWidth + 7;
-            int boxH = 12;
+            int boxW = (int) Math.round((textWidth + 4) * hudScale);
+            int boxH = (int) Math.round(12 * hudScale);
             com.mooclient.module.modules.PingModule.width = boxW;
             com.mooclient.module.modules.PingModule.height = boxH;
 
             int x = com.mooclient.module.modules.PingModule.posX;
             int y = com.mooclient.module.modules.PingModule.posY;
 
-            boolean hovered = mouseX >= x - 3 && mouseX <= x - 3 + boxW && mouseY >= y - 2 && mouseY <= y - 2 + boxH;
+            boolean hovered = mouseX >= x - 2 && mouseX <= x - 2 + boxW && mouseY >= y - 2 && mouseY <= y - 2 + boxH;
+            boolean isDragging = "PING".equals(draggingWidget);
 
-            if (hovered || "PING".equals(draggingWidget)) {
-                drawBorder(context, x - 3, y - 2, boxW, boxH, 0x88FFFFFF);
-            }
+            renderWidgetBoundingBox(context, x - 2, y - 2, boxW, boxH, hovered, isDragging, "Ping");
         }
 
         // 5. Draggable Scoreboard Widget Preview
         if (com.mooclient.module.modules.ScoreboardModule.isScoreboardEnabled()) {
-            int totalWidth = 110;
+            net.minecraft.scoreboard.ScoreboardObjective obj = null;
+            if (this.client != null && this.client.world != null && this.client.world.getScoreboard() != null) {
+                obj = this.client.world.getScoreboard().getObjectiveForSlot(net.minecraft.scoreboard.ScoreboardDisplaySlot.SIDEBAR);
+            }
+
+            int totalWidth;
+            int totalHeight;
             int lineHeight = 9;
-            int totalHeight = 7 * lineHeight;
+
+            if (obj != null) {
+                net.minecraft.scoreboard.Scoreboard scoreboard = obj.getScoreboard();
+                net.minecraft.scoreboard.number.NumberFormat numberFormat = obj.getNumberFormatOr(net.minecraft.scoreboard.number.StyledNumberFormat.RED);
+
+                java.util.Collection<net.minecraft.scoreboard.ScoreboardEntry> rawEntries = scoreboard.getScoreboardEntries(obj);
+                java.util.List<net.minecraft.scoreboard.ScoreboardEntry> filtered = rawEntries.stream()
+                        .filter(e -> !e.hidden())
+                        .sorted(java.util.Comparator.comparing(net.minecraft.scoreboard.ScoreboardEntry::value).reversed().thenComparing(net.minecraft.scoreboard.ScoreboardEntry::owner, String.CASE_INSENSITIVE_ORDER))
+                        .limit(15)
+                        .toList();
+
+                net.minecraft.text.Text titleText = obj.getDisplayName();
+                int titleWidth = this.textRenderer.getWidth(titleText);
+                int maxEntryWidth = titleWidth;
+                int colonWidth = this.textRenderer.getWidth(": ");
+                boolean showScores = com.mooclient.module.modules.ScoreboardModule.isShowScores();
+
+                for (net.minecraft.scoreboard.ScoreboardEntry entry : filtered) {
+                    net.minecraft.scoreboard.Team team = scoreboard.getScoreHolderTeam(entry.owner());
+                    net.minecraft.text.Text nameText = net.minecraft.scoreboard.Team.decorateName(team, entry.name());
+                    int nameWidth = this.textRenderer.getWidth(nameText);
+                    int rowW = nameWidth;
+                    if (showScores) {
+                        net.minecraft.text.Text scoreText = entry.formatted(numberFormat);
+                        int scoreWidth = this.textRenderer.getWidth(scoreText);
+                        if (scoreWidth > 0) {
+                            rowW += colonWidth + scoreWidth;
+                        }
+                    }
+                    maxEntryWidth = Math.max(maxEntryWidth, rowW);
+                }
+
+                totalWidth = maxEntryWidth;
+                totalHeight = (filtered.size() + 1) * lineHeight;
+            } else {
+                totalWidth = 110;
+                totalHeight = 7 * lineHeight;
+            }
 
             if (com.mooclient.module.modules.ScoreboardModule.posX < 0 || com.mooclient.module.modules.ScoreboardModule.posY < 0) {
                 com.mooclient.module.modules.ScoreboardModule.posX = this.width - totalWidth - 10;
@@ -209,18 +250,59 @@ public class MooClientScreen extends Screen {
 
             int x = com.mooclient.module.modules.ScoreboardModule.posX;
             int y = com.mooclient.module.modules.ScoreboardModule.posY;
-            int boxW = (int) Math.round((totalWidth + 8) * com.mooclient.util.MooClientSettings.getHudScaleFactor());
-            int boxH = (int) Math.round((totalHeight + 4) * com.mooclient.util.MooClientSettings.getHudScaleFactor());
+            int boxW = (int) Math.round((totalWidth + 4) * hudScale);
+            int boxH = (int) Math.round((totalHeight + 3) * hudScale);
             com.mooclient.module.modules.ScoreboardModule.width = boxW;
             com.mooclient.module.modules.ScoreboardModule.height = boxH;
 
-            renderScoreboardPreview(context, x, y, totalWidth, lineHeight);
-
-            boolean hovered = mouseX >= x - 3 && mouseX <= x - 3 + boxW && mouseY >= y - 2 && mouseY <= y - 2 + boxH;
-            if (hovered || "SCOREBOARD".equals(draggingWidget)) {
-                drawBorder(context, x - 3, y - 2, boxW, boxH, 0x88FFFFFF);
+            if (obj == null) {
+                renderScoreboardPreview(context, x, y, totalWidth, lineHeight);
             }
+
+            boolean hovered = mouseX >= x - 2 && mouseX <= x - 2 + boxW && mouseY >= y - 2 && mouseY <= y - 2 + boxH;
+            boolean isDragging = "SCOREBOARD".equals(draggingWidget);
+
+            renderWidgetBoundingBox(context, x - 2, y - 2, boxW, boxH, hovered, isDragging, "Scoreboard");
         }
+    }
+
+    private void renderWidgetBoundingBox(DrawContext context, int x, int y, int w, int h, boolean hovered, boolean isDragging, String name) {
+        int accent = com.mooclient.util.MooClientSettings.getAccentColor();
+        int accentHover = com.mooclient.util.MooClientSettings.getAccentHoverColor();
+
+        int bg;
+        int border;
+        int textColor;
+
+        if (isDragging) {
+            bg = com.mooclient.util.MooClientSettings.getAccentGlowColor(0x45);
+            border = accentHover;
+            textColor = COLOR_TEXT_WHITE;
+        } else if (hovered) {
+            bg = com.mooclient.util.MooClientSettings.getAccentGlowColor(0x2E);
+            border = accent;
+            textColor = COLOR_TEXT_WHITE;
+        } else {
+            // Always visible when Right Shift HUD editor is open!
+            bg = 0x22101018;
+            border = 0x66FFFFFF;
+            textColor = 0xBBFFFFFF;
+        }
+
+        context.fill(x, y, x + w, y + h, bg);
+        drawBorder(context, x, y, w, h, border);
+
+        // Small tag badge on top-left of the box
+        String label = "✢ " + name;
+        int labelW = this.textRenderer.getWidth(label);
+        int tagH = 10;
+        int tagY = y - tagH - 1;
+        if (tagY < 2) tagY = y + 2; // if close to top edge, show inside
+        int tagBg = (hovered || isDragging) ? 0xEE141420 : 0xBB101018;
+        int tagBorder = (hovered || isDragging) ? border : 0x44FFFFFF;
+        context.fill(x, tagY, x + labelW + 6, tagY + tagH, tagBg);
+        drawBorder(context, x, tagY, labelW + 6, tagH, tagBorder);
+        context.drawTextWithShadow(this.textRenderer, label, x + 3, tagY + 1, (hovered || isDragging) ? textColor : 0xFFA0A0AB);
     }
 
     private void renderScoreboardPreview(DrawContext context, int x, int y, int totalWidth, int lineHeight) {
@@ -262,8 +344,8 @@ public class MooClientScreen extends Screen {
         if (showBg) {
             int titleBg = 0x66000000;
             int bodyBg = 0x44000000;
-            context.fill(x - 3, y - 2, x + totalWidth + 3, y + lineHeight - 1, titleBg);
-            context.fill(x - 3, y + lineHeight - 1, x + totalWidth + 3, y + totalH + 1, bodyBg);
+            context.fill(x - 2, y - 2, x + totalWidth + 2, y + lineHeight - 1, titleBg);
+            context.fill(x - 2, y + lineHeight - 1, x + totalWidth + 2, y + totalH + 1, bodyBg);
         }
 
         context.drawText(this.textRenderer, title, x + (totalWidth - titleW) / 2, y, 0xFFFFFFFF, shadow);

@@ -420,8 +420,8 @@ public class InGameHudMixin {
         float hudScale = com.mooclient.util.MooClientSettings.getHudScaleFactor();
         boolean customScale = (hudScale != 1.0f);
 
-        ScoreboardModule.width = (int) Math.round((totalWidth + 8) * hudScale);
-        ScoreboardModule.height = (int) Math.round((totalHeight + 4) * hudScale);
+        ScoreboardModule.width = (int) Math.round((totalWidth + 4) * hudScale);
+        ScoreboardModule.height = (int) Math.round((totalHeight + 3) * hudScale);
 
         if (customScale) {
             context.getMatrices().push();
@@ -436,10 +436,10 @@ public class InGameHudMixin {
 
         if (showBg) {
             // Title background
-            context.fill(startX - 3, startY - 2, startX + totalWidth + 3, startY + lineHeight - 1, titleBg);
+            context.fill(startX - 2, startY - 2, startX + totalWidth + 2, startY + lineHeight - 1, titleBg);
             // Body background
             if (entryCount > 0) {
-                context.fill(startX - 3, startY + lineHeight - 1, startX + totalWidth + 3, startY + totalHeight + 1, bodyBg);
+                context.fill(startX - 2, startY + lineHeight - 1, startX + totalWidth + 2, startY + totalHeight + 1, bodyBg);
             }
         }
 
