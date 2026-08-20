@@ -1006,10 +1006,10 @@ public class MooClientScreen extends Screen {
             drawBorder(context, mBtnX, mBtnY, mBtnW, mBtnH, 0x55FFFFFF);
             drawCenteredText(context, "ENABLED", mBtnX + mBtnW / 2, mBtnY + 6, 0xFF082212);
 
-            // Hex Code display
+            // Hex / RGB Code display
             int hexCol = com.mooclient.util.MooClientSettings.getAccentColor();
-            String hexStr = String.format("#%06X", (0xFFFFFF & hexCol));
-            drawCenteredText(context, "HEX: " + hexStr, prevX + prevW / 2, prevY + 50, 0x88FFFFFF);
+            String codeText = (activePreset == com.mooclient.util.MooClientSettings.AccentColorPreset.CHROMA) ? "RGB" : ("HEX: " + String.format("#%06X", (0xFFFFFF & hexCol)));
+            drawCenteredText(context, codeText, prevX + prevW / 2, prevY + 50, 0x88FFFFFF);
         } else {
             // Centered Live Preview Box when a standard preset is selected
             int prevW = 320;
@@ -1031,10 +1031,10 @@ public class MooClientScreen extends Screen {
             drawBorder(context, mBtnX, mBtnY, mBtnW, mBtnH, 0x55FFFFFF);
             drawCenteredText(context, "ENABLED", mBtnX + mBtnW / 2, mBtnY + 6, 0xFF082212);
 
-            // Hex Code display
+            // Hex / RGB Code display
             int hexCol = com.mooclient.util.MooClientSettings.getAccentColor();
-            String hexStr = String.format("#%06X", (0xFFFFFF & hexCol));
-            drawCenteredText(context, "HEX: " + hexStr, prevX + prevW / 2, prevY + 50, 0x88FFFFFF);
+            String codeText = (activePreset == com.mooclient.util.MooClientSettings.AccentColorPreset.CHROMA) ? "RGB" : ("HEX: " + String.format("#%06X", (0xFFFFFF & hexCol)));
+            drawCenteredText(context, codeText, prevX + prevW / 2, prevY + 50, 0x88FFFFFF);
         }
     }
 
