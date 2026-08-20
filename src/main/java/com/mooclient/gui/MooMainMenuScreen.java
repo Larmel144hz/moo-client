@@ -417,8 +417,14 @@ public class MooMainMenuScreen extends Screen {
                 accountsPopupOpen = false;
                 return true;
             }
+            return true;
         }
         return super.keyPressed(keyCode, scanCode, modifiers);
+    }
+
+    @Override
+    public boolean shouldCloseOnEsc() {
+        return false;
     }
 
     private void playClickSound() {

@@ -2443,6 +2443,8 @@ public class MooClientScreen extends Screen {
                 } catch (Exception ignored) {}
                 return true;
             }
+            // Consume key when searching so inventory key (E) doesn't close the screen
+            return true;
         }
 
         // If editing macro command text
@@ -2462,8 +2464,21 @@ public class MooClientScreen extends Screen {
                     com.mooclient.util.MooConfig.save();
                     playClickSound();
                     return true;
+                } else if (keyCode == org.lwjgl.glfw.GLFW.GLFW_KEY_V && (modifiers & org.lwjgl.glfw.GLFW.GLFW_MOD_CONTROL) != 0) {
+                    try {
+                        if (this.client != null && this.client.keyboard != null) {
+                            String clip = this.client.keyboard.getClipboard();
+                            if (clip != null && !clip.isEmpty()) {
+                                m.setCommand(m.getCommand() + clip.trim());
+                                com.mooclient.util.MooConfig.save();
+                            }
+                        }
+                    } catch (Exception ignored) {}
+                    return true;
                 }
             }
+            // Consume key when editing macro text
+            return true;
         }
 
         // If listening for macro keybind
@@ -2493,6 +2508,7 @@ public class MooClientScreen extends Screen {
                 playClickSound();
                 return true;
             }
+            return true;
         }
 
         // If listening for new keybind in Sprint, Freelook, Zoom options
@@ -2529,11 +2545,12 @@ public class MooClientScreen extends Screen {
             return true;
         }
 
-        if (keyCode == 344 && editingMacroIndex < 0 && listeningMacroIndex < 0 && !listeningForKeybind) { // GLFW_KEY_RIGHT_SHIFT
+        if (keyCode == GLFW.GLFW_KEY_RIGHT_SHIFT) {
             this.close();
             return true;
         }
-        if (keyCode == 256) { // GLFW_KEY_ESCAPE
+
+        if (keyCode == GLFW.GLFW_KEY_ESCAPE) {
             if (currentView == View.OPTIONS || currentView == View.SETTINGS) {
                 this.currentView = View.MODS;
                 return true;
@@ -2545,6 +2562,12 @@ public class MooClientScreen extends Screen {
                 return true;
             }
         }
+
+        // Prevent inventory key (e.g. E) from closing MooClientScreen
+        if (this.client != null && this.client.options.inventoryKey.matchesKey(keyCode, scanCode)) {
+            return false;
+        }
+
         return super.keyPressed(keyCode, scanCode, modifiers);
     }
 

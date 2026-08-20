@@ -958,15 +958,54 @@ public class MooWaypointScreen extends Screen {
             } else if (keyCode == GLFW.GLFW_KEY_ESCAPE) {
                 activeInput = 0;
                 return true;
+            } else if (keyCode == GLFW.GLFW_KEY_V && (modifiers & GLFW.GLFW_MOD_CONTROL) != 0) {
+                try {
+                    if (this.client != null && this.client.keyboard != null) {
+                        String clip = this.client.keyboard.getClipboard();
+                        if (clip != null && !clip.isEmpty()) {
+                            if (activeInput == 1) searchFilter += clip.trim();
+                            else if (activeInput == 2) newName += clip.trim();
+                            else if (activeInput == 3) newX += clip.trim();
+                            else if (activeInput == 4) newY += clip.trim();
+                            else if (activeInput == 5) newZ += clip.trim();
+                        }
+                    }
+                } catch (Exception ignored) {}
+                return true;
             }
+
+            // Consume all other keys when typing so inventory key (E) doesn't close the GUI
+            return true;
         }
 
-        if (keyCode == GLFW.GLFW_KEY_ESCAPE) {
+        if (keyCode == GLFW.GLFW_KEY_ESCAPE || keyCode == GLFW.GLFW_KEY_RIGHT_SHIFT) {
             this.close();
             return true;
         }
 
+        // Check if user pressed waypoint keybind to toggle/close
+        if (keyCode == com.mooclient.module.modules.WaypointsModule.getKeyCode()) {
+            this.close();
+            return true;
+        }
+
+        // Prevent inventory key (e.g. E) from closing the waypoint screen
+        if (this.client != null && this.client.options.inventoryKey.matchesKey(keyCode, scanCode)) {
+            return false;
+        }
+
         return super.keyPressed(keyCode, scanCode, modifiers);
+    }
+
+    @Override
+    public boolean shouldCloseOnEsc() {
+        return false;
+    }
+
+    @Override
+    public void close() {
+        com.mooclient.util.MooConfig.save();
+        super.close();
     }
 
     private void drawCenteredText(DrawContext context, String text, int centerX, int y, int color) {
