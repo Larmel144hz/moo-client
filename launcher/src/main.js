@@ -461,73 +461,200 @@ function getActualLauncherVersion() {
 }
 
 // =============================================
-// Live Presence Manager (Online Launcher Users)
+// Live Presence Manager (Online Launcher & Game Users)
+// Ultra-fast, global MQTT protocol with zero lag & auto-reconnect
 // =============================================
 let launcherOnlineCount = 1;
-const LAUNCHER_PRESENCE_TOPIC = 'mooclient_launcher_presence_2026';
+const net = require('net');
 const crypto = require('crypto');
 const launcherClientId = 'moo_launcher_' + crypto.randomBytes(6).toString('hex');
+const activeUsers = new Map(); // id -> timestamp
+
+const MQTT_BROKERS = [
+    { host: 'broker.hivemq.com', port: 1883 },
+    { host: 'broker.emqx.io', port: 1883 }
+];
+let currentBrokerIndex = 0;
+let mqttSocket = null;
+let isMqttConnected = false;
+let reconnectTimer = null;
+let pingTimer = null;
+let presenceTimer = null;
 
 function setupLauncherPresence() {
-    function pingAndFetch() {
+    function getActiveAccountName() {
         try {
-            const postPayload = JSON.stringify({
-                name: "mooclient_launcher_presence",
-                data: { id: launcherClientId, t: Date.now() }
+            const acc = gameManager.getAccount();
+            if (acc && acc.name) return acc.name;
+        } catch (e) {}
+        return 'LauncherUser';
+    }
+
+    function sendPresencePing() {
+        if (!mqttSocket || !isMqttConnected) return;
+        try {
+            const topic = 'mooclient/presence_launcher';
+            const payload = JSON.stringify({
+                id: launcherClientId,
+                u: getActiveAccountName(),
+                t: Date.now()
             });
 
-            const postReq = https.request({
-                hostname: 'api.restful-api.dev',
-                path: '/objects',
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'User-Agent': 'MooClient'
-                },
-                timeout: 4000
-            });
-            postReq.on('error', () => {});
-            postReq.write(postPayload);
-            postReq.end();
-
-            const getReq = https.request({
-                hostname: 'api.restful-api.dev',
-                path: '/objects',
-                method: 'GET',
-                headers: {
-                    'User-Agent': 'MooClient'
-                },
-                timeout: 4000
-            }, (res) => {
-                let data = '';
-                res.on('data', chunk => data += chunk);
-                res.on('end', () => {
-                    try {
-                        const list = JSON.parse(data);
-                        const active = new Set();
-                        const now = Date.now();
-                        if (Array.isArray(list)) {
-                            for (const item of list) {
-                                if (item.name === "mooclient_launcher_presence" && item.data && item.data.id) {
-                                    if (now - (item.data.t || 0) < 60000) {
-                                        active.add(item.data.id);
-                                    }
-                                }
-                            }
-                        }
-                        active.add(launcherClientId);
-                        launcherOnlineCount = Math.max(1, active.size);
-                        sendToRenderer('online-users-count', launcherOnlineCount);
-                    } catch (e) {}
-                });
-            });
-            getReq.on('error', () => {});
-            getReq.end();
+            const topicBytes = Buffer.from(topic);
+            const payloadBytes = Buffer.from(payload);
+            const remain = 2 + topicBytes.length + payloadBytes.length;
+            const pubPacket = Buffer.concat([
+                Buffer.from([0x30, remain]),
+                Buffer.from([(topicBytes.length >> 8) & 0xFF, topicBytes.length & 0xFF]),
+                topicBytes,
+                payloadBytes
+            ]);
+            mqttSocket.write(pubPacket);
         } catch (e) {}
     }
 
-    pingAndFetch();
-    setInterval(pingAndFetch, 8000);
+    function sendMqttPing() {
+        if (!mqttSocket || !isMqttConnected) return;
+        try {
+            // MQTT PINGREQ: 0xC0, 0x00
+            mqttSocket.write(Buffer.from([0xC0, 0x00]));
+        } catch (e) {}
+    }
+
+    function connectMqtt() {
+        if (mqttSocket) {
+            try { mqttSocket.destroy(); } catch (e) {}
+            mqttSocket = null;
+        }
+        isMqttConnected = false;
+
+        const broker = MQTT_BROKERS[currentBrokerIndex];
+        console.log(`[Presence] Connecting to MQTT broker: ${broker.host}:${broker.port}...`);
+
+        try {
+            const socket = net.createConnection({ host: broker.host, port: broker.port, timeout: 6000 });
+            mqttSocket = socket;
+
+            socket.on('connect', () => {
+                // 1. MQTT CONNECT
+                const clientBytes = Buffer.from(launcherClientId);
+                const varHeader = Buffer.from([0x00, 0x04, 0x4D, 0x51, 0x54, 0x54, 0x04, 0x02, 0x00, 0x3C]); // Clean Session, 60s
+                const remainLen = varHeader.length + 2 + clientBytes.length;
+                const packet = Buffer.concat([
+                    Buffer.from([0x10, remainLen]),
+                    varHeader,
+                    Buffer.from([(clientBytes.length >> 8) & 0xFF, clientBytes.length & 0xFF]),
+                    clientBytes
+                ]);
+                socket.write(packet);
+            });
+
+            let connAcked = false;
+            socket.on('data', (buf) => {
+                // Handle CONNACK
+                if (!connAcked && buf[0] === 0x20) {
+                    connAcked = true;
+                    isMqttConnected = true;
+                    console.log(`[Presence] Connected to ${broker.host}! Subscribing to mooclient/#...`);
+
+                    // 2. MQTT SUBSCRIBE to "mooclient/#"
+                    const topicBytes = Buffer.from('mooclient/#');
+                    const subRemain = 2 + 2 + topicBytes.length + 1;
+                    const subPacket = Buffer.concat([
+                        Buffer.from([0x82, subRemain, 0x00, 0x01]),
+                        Buffer.from([(topicBytes.length >> 8) & 0xFF, topicBytes.length & 0xFF]),
+                        topicBytes,
+                        Buffer.from([0x00]) // QoS 0
+                    ]);
+                    socket.write(subPacket);
+
+                    // Send immediate presence broadcast
+                    sendPresencePing();
+                    return;
+                }
+
+                // Handle PUBLISH packets (0x30 QoS 0)
+                for (let i = 0; i < buf.length; i++) {
+                    if ((buf[i] & 0xF0) === 0x30) {
+                        if (i + 1 >= buf.length) break;
+                        const packetRemain = buf[i + 1];
+                        if (i + 2 + packetRemain <= buf.length) {
+                            const topicLen = (buf[i + 2] << 8) | buf[i + 3];
+                            const payloadStart = i + 4 + topicLen;
+                            const payloadLen = (i + 2 + packetRemain) - payloadStart;
+
+                            if (payloadLen > 0 && payloadStart + payloadLen <= buf.length) {
+                                try {
+                                    const jsonStr = buf.subarray(payloadStart, payloadStart + payloadLen).toString('utf8');
+                                    const data = JSON.parse(jsonStr);
+                                    const userId = data.id || (data.uuid && data.uuid.length > 5 ? data.uuid : null) || (data.u && data.u.length > 0 ? 'mc_' + data.u.toLowerCase() : null);
+                                    if (userId) {
+                                        activeUsers.set(userId, Date.now());
+                                        updateCountAndBroadcast();
+                                    }
+                                } catch (e) {}
+                            }
+                            i += 1 + packetRemain;
+                        }
+                    }
+                }
+            });
+
+            socket.on('timeout', () => {
+                socket.destroy();
+            });
+
+            socket.on('error', (err) => {
+                console.log(`[Presence] Broker ${broker.host} error:`, err.message);
+            });
+
+            socket.on('close', () => {
+                isMqttConnected = false;
+                currentBrokerIndex = (currentBrokerIndex + 1) % MQTT_BROKERS.length;
+                scheduleReconnect();
+            });
+        } catch (e) {
+            scheduleReconnect();
+        }
+    }
+
+    function scheduleReconnect() {
+        if (reconnectTimer) clearTimeout(reconnectTimer);
+        reconnectTimer = setTimeout(connectMqtt, 3000);
+    }
+
+    function updateCountAndBroadcast() {
+        const now = Date.now();
+        // Purge inactive entries older than 15 seconds
+        for (const [id, lastSeen] of activeUsers.entries()) {
+            if (now - lastSeen > 15000) {
+                activeUsers.delete(id);
+            }
+        }
+        // Always include self
+        activeUsers.set(launcherClientId, now);
+
+        const newCount = Math.max(1, activeUsers.size);
+        if (newCount !== launcherOnlineCount) {
+            launcherOnlineCount = newCount;
+            sendToRenderer('online-users-count', launcherOnlineCount);
+        }
+    }
+
+    // Connect initially
+    connectMqtt();
+
+    // Broadcast presence every 4 seconds
+    presenceTimer = setInterval(() => {
+        sendPresencePing();
+        updateCountAndBroadcast();
+    }, 4000);
+
+    // Keepalive ping every 25 seconds
+    pingTimer = setInterval(sendMqttPing, 25000);
+
+    // Cleanup & count refresh every 2 seconds
+    setInterval(updateCountAndBroadcast, 2000);
 }
 
 // Helper: send message to renderer
