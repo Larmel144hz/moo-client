@@ -1,6 +1,6 @@
 {
   "name": "moo-client-launcher",
-  "version": "1.5.2",
+  "version": "1.5.3",
   "description": "Moo Client Launcher — Premium Minecraft Client inspired by Lunar Client",
   "main": "src/main.js",
   "scripts": {
@@ -39,7 +39,8 @@
         }
       ],
       "icon": "build/icon.ico",
-      "signAndEditExecutable": false
+      "signAndEditExecutable": false,
+      "sign": null
     },
     "nsis": {
       "oneClick": false,
@@ -57,7 +58,7 @@
     },
     "publish": {
       "provider": "github",
-      "owner": "Larmel144hz",
+      "owner": "Moo-Client",
       "repo": "moo-client"
     }
   },

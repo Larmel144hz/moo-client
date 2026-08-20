@@ -1,6 +1,6 @@
 {
-  "version": "1.5.2",
+  "version": "1.5.3",
   "minecraft": "1.21.4",
-  "download_url": "https://github.com/Moo-Client/moo-client/releases/download/v1.5.2/moo-client-1.5.2.jar",
-  "changelog": "🚀 Moo Client v1.5.2 (Dual-Layer Hybrid Real-Time Presence Engine):\n✓ Niezawodna synchronizacja obecności przez Universal HTTPS SSE Stream (port 443)\n✓ Błyskawiczny Ping-Back (<50ms) pomiędzy wszystkimi uruchomionymi launcherami\n✓ Pełna kompatybilność ze wszystkimi dostawcami internetu i zaporami firewall\n✓ Poprawna polska gramatyka graczy online"
+  "download_url": "https://github.com/Moo-Client/moo-client/releases/download/v1.5.3/moo-client-1.5.3.jar",
+  "changelog": "🚀 Moo Client v1.5.3 (Ultra-Fast Dual-Layer Presence & Universal Network Engine):\n✓ Niezawodny licznik graczy online działający przez Universal HTTPS SSE Stream (port 443)\n✓ Błyskawiczne wykrywanie włączonych launcherów u znajomych (<50ms)\n✓ Pełna odporność na zapory sieciowe, NAT i blokady portów\n✓ Poprawna polska odmiana gramatyczna (1 gracz / 2-4 gracze / 5+ graczy online)"
 }
