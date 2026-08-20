@@ -38,6 +38,11 @@ public class MooLanguage {
                 case "ping_desc" -> "Opóźnienie połączenia z serwerem";
                 case "macro_desc" -> "Własne komendy pod klawiszami";
                 case "waypoints_desc" -> "Punkty nawigacyjne i promień w świecie";
+                case "scoreboard_desc" -> "Dostosuj pozycję, tło, cienie i cyfry tablicy wyników";
+                case "scoreboard_opt_title" -> "SCOREBOARD";
+                case "scoreboard_opt_subtitle" -> "Przesuwaj tablicę wyników, włącz cienie tekstu, ukrywaj tło i cyfry.";
+                case "scoreboard_scores_label" -> "Wyświetlaj cyfry / punkty (Scores)";
+                case "reset_pos_btn" -> "↺ Zresetuj pozycję";
                 case "fps_opt_title" -> "FPS";
                 case "fps_opt_subtitle" -> "Wyświetlaj i dostosuj swój licznik klatek na HUDzie.";
                 case "ping_opt_title" -> "PING";
@@ -139,6 +144,10 @@ public class MooLanguage {
                 case "ping_desc" -> "Ping Latency on HUD";
                 case "macro_desc" -> "Macro Command Keybinds";
                 case "waypoints_desc" -> "In-world waypoints and beacon beams";
+                case "scoreboard_desc" -> "Customize scoreboard position, background, shadows and scores";
+                case "scoreboard_opt_title" -> "SCOREBOARD";
+                case "scoreboard_opt_subtitle" -> "Reposition scoreboard, toggle text shadow, background and scores.";
+                case "scoreboard_scores_label" -> "Show Scores / Numbers";
                 case "fps_opt_title" -> "FPS";
                 case "fps_opt_subtitle" -> "Display and customize your FPS on the HUD.";
                 case "ping_opt_title" -> "PING";

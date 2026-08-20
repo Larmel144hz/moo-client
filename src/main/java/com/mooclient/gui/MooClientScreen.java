@@ -195,6 +195,92 @@ public class MooClientScreen extends Screen {
                 drawBorder(context, x - 3, y - 2, boxW, boxH, 0x88FFFFFF);
             }
         }
+
+        // 5. Draggable Scoreboard Widget Preview
+        if (com.mooclient.module.modules.ScoreboardModule.isScoreboardEnabled()) {
+            int totalWidth = 110;
+            int lineHeight = 9;
+            int totalHeight = 7 * lineHeight;
+
+            if (com.mooclient.module.modules.ScoreboardModule.posX < 0 || com.mooclient.module.modules.ScoreboardModule.posY < 0) {
+                com.mooclient.module.modules.ScoreboardModule.posX = this.width - totalWidth - 10;
+                com.mooclient.module.modules.ScoreboardModule.posY = this.height / 2 - totalHeight / 2;
+            }
+
+            int x = com.mooclient.module.modules.ScoreboardModule.posX;
+            int y = com.mooclient.module.modules.ScoreboardModule.posY;
+            int boxW = (int) Math.round((totalWidth + 8) * com.mooclient.util.MooClientSettings.getHudScaleFactor());
+            int boxH = (int) Math.round((totalHeight + 4) * com.mooclient.util.MooClientSettings.getHudScaleFactor());
+            com.mooclient.module.modules.ScoreboardModule.width = boxW;
+            com.mooclient.module.modules.ScoreboardModule.height = boxH;
+
+            renderScoreboardPreview(context, x, y, totalWidth, lineHeight);
+
+            boolean hovered = mouseX >= x - 3 && mouseX <= x - 3 + boxW && mouseY >= y - 2 && mouseY <= y - 2 + boxH;
+            if (hovered || "SCOREBOARD".equals(draggingWidget)) {
+                drawBorder(context, x - 3, y - 2, boxW, boxH, 0x88FFFFFF);
+            }
+        }
+    }
+
+    private void renderScoreboardPreview(DrawContext context, int x, int y, int totalWidth, int lineHeight) {
+        if (this.client != null && this.client.world != null && this.client.world.getScoreboard() != null) {
+            net.minecraft.scoreboard.ScoreboardObjective obj = this.client.world.getScoreboard().getObjectiveForSlot(net.minecraft.scoreboard.ScoreboardDisplaySlot.SIDEBAR);
+            if (obj != null) {
+                return;
+            }
+        }
+
+        float hudScale = com.mooclient.util.MooClientSettings.getHudScaleFactor();
+        boolean customScale = (hudScale != 1.0f);
+
+        if (customScale) {
+            context.getMatrices().push();
+            context.getMatrices().translate(x, y, 0);
+            context.getMatrices().scale(hudScale, hudScale, 1.0f);
+            context.getMatrices().translate(-x, -y, 0);
+        }
+
+        boolean showBg = com.mooclient.module.modules.ScoreboardModule.isShowBackground();
+        boolean shadow = com.mooclient.module.modules.ScoreboardModule.isTextShadow();
+        boolean showScores = com.mooclient.module.modules.ScoreboardModule.isShowScores();
+
+        String title = "§e§lMOO CLIENT";
+        int titleW = this.textRenderer.getWidth(title);
+        String[] dummyLines = new String[]{
+                "§720/08/26  m144",
+                "§fOnline: §a1,337",
+                "§fKills: §a42",
+                "§fDeaths: §c3",
+                "§fPing: §a12ms",
+                "§ewww.mooclient.com"
+        };
+        int[] dummyScores = new int[]{6, 5, 4, 3, 2, 1};
+
+        int totalH = (dummyLines.length + 1) * lineHeight;
+
+        if (showBg) {
+            int titleBg = 0x66000000;
+            int bodyBg = 0x44000000;
+            context.fill(x - 3, y - 2, x + totalWidth + 3, y + lineHeight - 1, titleBg);
+            context.fill(x - 3, y + lineHeight - 1, x + totalWidth + 3, y + totalH + 1, bodyBg);
+        }
+
+        context.drawText(this.textRenderer, title, x + (totalWidth - titleW) / 2, y, 0xFFFFFFFF, shadow);
+
+        for (int i = 0; i < dummyLines.length; i++) {
+            int rowY = y + (i + 1) * lineHeight;
+            context.drawText(this.textRenderer, dummyLines[i], x, rowY, 0xFFFFFFFF, shadow);
+            if (showScores) {
+                String sc = String.valueOf(dummyScores[i]);
+                int scW = this.textRenderer.getWidth(sc);
+                context.drawText(this.textRenderer, sc, x + totalWidth - scW, rowY, 0xFFFF5555, shadow);
+            }
+        }
+
+        if (customScale) {
+            context.getMatrices().pop();
+        }
     }
 
     /**
@@ -394,6 +480,8 @@ public class MooClientScreen extends Screen {
                 icon = "📡";
             } else if (module.getName().equalsIgnoreCase("Waypoints")) {
                 icon = "📍";
+            } else if (module.getName().equalsIgnoreCase("Scoreboard")) {
+                icon = "📋";
             } else {
                 icon = "⌨";
             }
@@ -829,6 +917,39 @@ public class MooClientScreen extends Screen {
             rowY += rowH + 6;
             drawOptionRow(context, rowX, rowY, rowW, rowH, MooLanguage.get("shadow_label"));
             drawOptionToggle(context, rowX + rowW - 44, rowY + 8, mouseX, mouseY, com.mooclient.module.modules.WaypointsModule.isTextShadow());
+
+        } else if (modName.equalsIgnoreCase("Scoreboard")) {
+            // Row 1: Enable / Disable Toggle
+            drawOptionRow(context, rowX, rowY, rowW, rowH, MooLanguage.get("enabled"));
+            drawOptionToggle(context, rowX + rowW - 44, rowY + 8, mouseX, mouseY, com.mooclient.module.modules.ScoreboardModule.isScoreboardEnabled());
+
+            // Row 2: Text Shadow (Cień tekstu)
+            rowY += rowH + 6;
+            drawOptionRow(context, rowX, rowY, rowW, rowH, MooLanguage.get("shadow_label"));
+            drawOptionToggle(context, rowX + rowW - 44, rowY + 8, mouseX, mouseY, com.mooclient.module.modules.ScoreboardModule.isTextShadow());
+
+            // Row 3: Background (Tło)
+            rowY += rowH + 6;
+            drawOptionRow(context, rowX, rowY, rowW, rowH, MooLanguage.get("bg_label"));
+            drawOptionToggle(context, rowX + rowW - 44, rowY + 8, mouseX, mouseY, com.mooclient.module.modules.ScoreboardModule.isShowBackground());
+
+            // Row 4: Show Scores / Numbers (Cyfry po prawej)
+            rowY += rowH + 6;
+            drawOptionRow(context, rowX, rowY, rowW, rowH, MooLanguage.get("scoreboard_scores_label"));
+            drawOptionToggle(context, rowX + rowW - 44, rowY + 8, mouseX, mouseY, com.mooclient.module.modules.ScoreboardModule.isShowScores());
+
+            // Row 5: Reset Position
+            rowY += rowH + 6;
+            int rBtnW = 160;
+            int rBtnH = 22;
+            int rBtnX = rowX + rowW - rBtnW - 10;
+            int rBtnY = rowY + 6;
+            boolean rHover = mouseX >= rBtnX && mouseX <= rBtnX + rBtnW && mouseY >= rBtnY && mouseY <= rBtnY + rBtnH;
+            int rBg = rHover ? 0xCC252535 : 0x66141420;
+            drawOptionRow(context, rowX, rowY, rowW, rowH, "Pozycja na ekranie");
+            context.fill(rBtnX, rBtnY, rBtnX + rBtnW, rBtnY + rBtnH, rBg);
+            drawBorder(context, rBtnX, rBtnY, rBtnW, rBtnH, rHover ? 0xAAFFFFFF : 0x33FFFFFF);
+            drawCenteredText(context, MooLanguage.get("reset_pos_btn"), rBtnX + rBtnW / 2, rBtnY + 7, rHover ? COLOR_TEXT_WHITE : 0xFFA0A0AB);
 
         } else {
             // Gamma Options
@@ -1546,6 +1667,19 @@ public class MooClientScreen extends Screen {
                     }
                 }
 
+                if (com.mooclient.module.modules.ScoreboardModule.isScoreboardEnabled()) {
+                    int x = com.mooclient.module.modules.ScoreboardModule.posX;
+                    int y = com.mooclient.module.modules.ScoreboardModule.posY;
+                    int w = com.mooclient.module.modules.ScoreboardModule.width;
+                    int h = com.mooclient.module.modules.ScoreboardModule.height;
+                    if (mouseX >= x - 4 && mouseX <= x + w + 4 && mouseY >= y - 4 && mouseY <= y + h + 4) {
+                        draggingWidget = "SCOREBOARD";
+                        dragOffsetX = (int) mouseX - x;
+                        dragOffsetY = (int) mouseY - y;
+                        return true;
+                    }
+                }
+
                 int centerX = this.width / 2;
                 int centerY = this.height / 2;
                 int btnW = 140;
@@ -2097,6 +2231,56 @@ public class MooClientScreen extends Screen {
                         com.mooclient.util.MooConfig.save();
                         return true;
                     }
+                } else if (modName.equalsIgnoreCase("Scoreboard")) {
+                    // Row 1: Enable / Disable
+                    if (mouseX >= rowX + rowW - 44 && mouseX <= rowX + rowW - 10 && mouseY >= rowY + 8 && mouseY <= rowY + 26) {
+                        playClickSound();
+                        boolean newState = !com.mooclient.module.modules.ScoreboardModule.isScoreboardEnabled();
+                        com.mooclient.module.modules.ScoreboardModule.setScoreboardEnabled(newState);
+                        selectedModule.setEnabled(newState);
+                        com.mooclient.util.MooConfig.save();
+                        return true;
+                    }
+
+                    // Row 2: Text Shadow
+                    rowY += rowH + 6;
+                    if (mouseX >= rowX + rowW - 44 && mouseX <= rowX + rowW - 10 && mouseY >= rowY + 8 && mouseY <= rowY + 26) {
+                        playClickSound();
+                        com.mooclient.module.modules.ScoreboardModule.toggleTextShadow();
+                        com.mooclient.util.MooConfig.save();
+                        return true;
+                    }
+
+                    // Row 3: Background
+                    rowY += rowH + 6;
+                    if (mouseX >= rowX + rowW - 44 && mouseX <= rowX + rowW - 10 && mouseY >= rowY + 8 && mouseY <= rowY + 26) {
+                        playClickSound();
+                        com.mooclient.module.modules.ScoreboardModule.toggleShowBackground();
+                        com.mooclient.util.MooConfig.save();
+                        return true;
+                    }
+
+                    // Row 4: Show Scores / Numbers
+                    rowY += rowH + 6;
+                    if (mouseX >= rowX + rowW - 44 && mouseX <= rowX + rowW - 10 && mouseY >= rowY + 8 && mouseY <= rowY + 26) {
+                        playClickSound();
+                        com.mooclient.module.modules.ScoreboardModule.toggleShowScores();
+                        com.mooclient.util.MooConfig.save();
+                        return true;
+                    }
+
+                    // Row 5: Reset Position
+                    rowY += rowH + 6;
+                    int rBtnW = 160;
+                    int rBtnH = 22;
+                    int rBtnX = rowX + rowW - rBtnW - 10;
+                    int rBtnY = rowY + 6;
+                    if (mouseX >= rBtnX && mouseX <= rBtnX + rBtnW && mouseY >= rBtnY && mouseY <= rBtnY + rBtnH) {
+                        playClickSound();
+                        com.mooclient.module.modules.ScoreboardModule.resetPosition();
+                        com.mooclient.util.MooConfig.save();
+                        return true;
+                    }
                 } else {
                     if (mouseX >= rowX + rowW - 44 && mouseX <= rowX + rowW - 10 && mouseY >= rowY + 8 && mouseY <= rowY + 26) {
                         playClickSound();
@@ -2401,6 +2585,14 @@ public class MooClientScreen extends Screen {
                 }
                 com.mooclient.module.modules.PingModule.posX = Math.max(2, Math.min(this.width - com.mooclient.module.modules.PingModule.width - 2, newX));
                 com.mooclient.module.modules.PingModule.posY = Math.max(2, Math.min(this.height - com.mooclient.module.modules.PingModule.height - 2, newY));
+                return true;
+            } else if ("SCOREBOARD".equals(draggingWidget)) {
+                if (com.mooclient.util.MooClientSettings.isHudSnapping()) {
+                    if (Math.abs(newX - (this.width - com.mooclient.module.modules.ScoreboardModule.width - 10)) < 12) newX = this.width - com.mooclient.module.modules.ScoreboardModule.width - 10;
+                    if (Math.abs(newY - (this.height - com.mooclient.module.modules.ScoreboardModule.height - 10)) < 12) newY = this.height - com.mooclient.module.modules.ScoreboardModule.height - 10;
+                }
+                com.mooclient.module.modules.ScoreboardModule.posX = Math.max(2, Math.min(this.width - com.mooclient.module.modules.ScoreboardModule.width - 2, newX));
+                com.mooclient.module.modules.ScoreboardModule.posY = Math.max(2, Math.min(this.height - com.mooclient.module.modules.ScoreboardModule.height - 2, newY));
                 return true;
             }
         }

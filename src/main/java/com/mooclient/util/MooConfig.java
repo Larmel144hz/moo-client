@@ -152,6 +152,16 @@ public class MooConfig {
             waypoints.addProperty("keyName", com.mooclient.module.modules.WaypointsModule.getKeyName());
             root.add("waypoints", waypoints);
 
+            // Scoreboard Module
+            JsonObject scoreboard = new JsonObject();
+            scoreboard.addProperty("enabled", com.mooclient.module.modules.ScoreboardModule.isScoreboardEnabled());
+            scoreboard.addProperty("textShadow", com.mooclient.module.modules.ScoreboardModule.isTextShadow());
+            scoreboard.addProperty("showBackground", com.mooclient.module.modules.ScoreboardModule.isShowBackground());
+            scoreboard.addProperty("showScores", com.mooclient.module.modules.ScoreboardModule.isShowScores());
+            scoreboard.addProperty("posX", com.mooclient.module.modules.ScoreboardModule.posX);
+            scoreboard.addProperty("posY", com.mooclient.module.modules.ScoreboardModule.posY);
+            root.add("scoreboard", scoreboard);
+
             // Global Client Settings
             JsonObject settings = new JsonObject();
             settings.addProperty("accentPreset", MooClientSettings.getAccentPreset().name());
@@ -459,6 +469,31 @@ public class MooConfig {
                 }
                 if (waypoints.has("keyCode") && waypoints.has("keyName")) {
                     com.mooclient.module.modules.WaypointsModule.setKeybind(waypoints.get("keyCode").getAsInt(), waypoints.get("keyName").getAsString());
+                }
+            }
+
+            // Scoreboard Module
+            if (root.has("scoreboard")) {
+                JsonObject scoreboard = root.getAsJsonObject("scoreboard");
+                if (scoreboard.has("enabled")) {
+                    boolean state = scoreboard.get("enabled").getAsBoolean();
+                    com.mooclient.module.modules.ScoreboardModule.setScoreboardEnabled(state);
+                    ModuleManager.getInstance().getModule("Scoreboard").ifPresent(m -> m.setEnabled(state));
+                }
+                if (scoreboard.has("textShadow")) {
+                    com.mooclient.module.modules.ScoreboardModule.setTextShadow(scoreboard.get("textShadow").getAsBoolean());
+                }
+                if (scoreboard.has("showBackground")) {
+                    com.mooclient.module.modules.ScoreboardModule.setShowBackground(scoreboard.get("showBackground").getAsBoolean());
+                }
+                if (scoreboard.has("showScores")) {
+                    com.mooclient.module.modules.ScoreboardModule.setShowScores(scoreboard.get("showScores").getAsBoolean());
+                }
+                if (scoreboard.has("posX")) {
+                    com.mooclient.module.modules.ScoreboardModule.posX = scoreboard.get("posX").getAsInt();
+                }
+                if (scoreboard.has("posY")) {
+                    com.mooclient.module.modules.ScoreboardModule.posY = scoreboard.get("posY").getAsInt();
                 }
             }
 

@@ -144,6 +144,8 @@ public class MooClientSettings {
         PotionEffectsModule.posX = 10;
         PotionEffectsModule.posY = 58;
 
+        com.mooclient.module.modules.ScoreboardModule.resetPosition();
+
         MooConfig.save();
     }
 

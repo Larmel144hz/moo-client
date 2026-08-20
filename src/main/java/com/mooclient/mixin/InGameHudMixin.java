@@ -2,6 +2,7 @@ package com.mooclient.mixin;
 
 import com.mooclient.module.modules.FpsModule;
 import com.mooclient.module.modules.PotionEffectsModule;
+import com.mooclient.module.modules.ScoreboardModule;
 import com.mooclient.module.modules.ToggleSprintModule;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
@@ -13,15 +14,24 @@ import net.minecraft.entity.effect.StatusEffect;
 import net.minecraft.entity.effect.StatusEffectInstance;
 import net.minecraft.entity.effect.StatusEffects;
 import net.minecraft.registry.entry.RegistryEntry;
+import net.minecraft.scoreboard.Scoreboard;
+import net.minecraft.scoreboard.ScoreboardEntry;
+import net.minecraft.scoreboard.ScoreboardObjective;
+import net.minecraft.scoreboard.Team;
+import net.minecraft.scoreboard.number.NumberFormat;
+import net.minecraft.scoreboard.number.StyledNumberFormat;
+import net.minecraft.text.Text;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 import java.util.Collection;
+import java.util.Comparator;
+import java.util.List;
 
 /**
- * Mixin to render in-game HUD modules (FPS, Sprint, Potion Effects) at customizable positions.
+ * Mixin to render in-game HUD modules (FPS, Sprint, Potion Effects, Scoreboard) at customizable positions.
  */
 @Mixin(InGameHud.class)
 public class InGameHudMixin {
@@ -339,5 +349,125 @@ public class InGameHudMixin {
         }
         // Render waypoints BEFORE crosshair and main HUD so crosshair is always visible in front
         com.mooclient.waypoint.WaypointRenderer.renderHudWaypoints(context, client, tickCounter.getTickDelta(true));
+    }
+
+    @Inject(method = "renderScoreboardSidebar(Lnet/minecraft/client/gui/DrawContext;Lnet/minecraft/scoreboard/ScoreboardObjective;)V", at = @At("HEAD"), cancellable = true)
+    private void mooClient$renderScoreboardSidebar(DrawContext context, ScoreboardObjective objective, CallbackInfo ci) {
+        ci.cancel();
+        if (!ScoreboardModule.isScoreboardEnabled()) {
+            return;
+        }
+
+        renderCustomScoreboard(context, objective);
+    }
+
+    private void renderCustomScoreboard(DrawContext context, ScoreboardObjective objective) {
+        MinecraftClient client = MinecraftClient.getInstance();
+        if (client.options.hudHidden || client.getDebugHud().shouldShowDebugHud()) {
+            return;
+        }
+
+        Scoreboard scoreboard = objective.getScoreboard();
+        NumberFormat numberFormat = objective.getNumberFormatOr(StyledNumberFormat.RED);
+
+        Collection<ScoreboardEntry> rawEntries = scoreboard.getScoreboardEntries(objective);
+        List<ScoreboardEntry> filtered = rawEntries.stream()
+                .filter(e -> !e.hidden())
+                .sorted(Comparator.comparing(ScoreboardEntry::value).reversed().thenComparing(ScoreboardEntry::owner, String.CASE_INSENSITIVE_ORDER))
+                .limit(15)
+                .toList();
+
+        Text titleText = objective.getDisplayName();
+        int titleWidth = client.textRenderer.getWidth(titleText);
+        int maxEntryWidth = titleWidth;
+        int colonWidth = client.textRenderer.getWidth(": ");
+        boolean showScores = ScoreboardModule.isShowScores();
+
+        for (ScoreboardEntry entry : filtered) {
+            Team team = scoreboard.getScoreHolderTeam(entry.owner());
+            Text nameText = Team.decorateName(team, entry.name());
+            int nameWidth = client.textRenderer.getWidth(nameText);
+            int rowW = nameWidth;
+            if (showScores) {
+                Text scoreText = entry.formatted(numberFormat);
+                int scoreWidth = client.textRenderer.getWidth(scoreText);
+                if (scoreWidth > 0) {
+                    rowW += colonWidth + scoreWidth;
+                }
+            }
+            maxEntryWidth = Math.max(maxEntryWidth, rowW);
+        }
+
+        int totalWidth = maxEntryWidth;
+        int lineHeight = 9;
+        int entryCount = filtered.size();
+        int totalHeight = (entryCount + 1) * lineHeight;
+
+        int scaledWidth = context.getScaledWindowWidth();
+        int scaledHeight = context.getScaledWindowHeight();
+
+        int startX;
+        int startY;
+
+        if (ScoreboardModule.posX < 0 || ScoreboardModule.posY < 0) {
+            startX = scaledWidth - totalWidth - 6;
+            startY = scaledHeight / 2 - totalHeight / 2;
+        } else {
+            startX = ScoreboardModule.posX;
+            startY = ScoreboardModule.posY;
+        }
+
+        float hudScale = com.mooclient.util.MooClientSettings.getHudScaleFactor();
+        boolean customScale = (hudScale != 1.0f);
+
+        ScoreboardModule.width = (int) Math.round((totalWidth + 8) * hudScale);
+        ScoreboardModule.height = (int) Math.round((totalHeight + 4) * hudScale);
+
+        if (customScale) {
+            context.getMatrices().push();
+            context.getMatrices().translate(startX, startY, 0);
+            context.getMatrices().scale(hudScale, hudScale, 1.0f);
+            context.getMatrices().translate(-startX, -startY, 0);
+        }
+
+        boolean showBg = ScoreboardModule.isShowBackground();
+        int titleBg = client.options.getTextBackgroundColor(0.4F);
+        int bodyBg = client.options.getTextBackgroundColor(0.3F);
+
+        if (showBg) {
+            // Title background
+            context.fill(startX - 3, startY - 2, startX + totalWidth + 3, startY + lineHeight - 1, titleBg);
+            // Body background
+            if (entryCount > 0) {
+                context.fill(startX - 3, startY + lineHeight - 1, startX + totalWidth + 3, startY + totalHeight + 1, bodyBg);
+            }
+        }
+
+        boolean shadow = ScoreboardModule.isTextShadow();
+
+        // Draw title centered
+        int titleX = startX + (totalWidth - titleWidth) / 2;
+        context.drawText(client.textRenderer, titleText, titleX, startY, 0xFFFFFFFF, shadow);
+
+        // Draw entries
+        for (int i = 0; i < entryCount; i++) {
+            ScoreboardEntry entry = filtered.get(i);
+            Team team = scoreboard.getScoreHolderTeam(entry.owner());
+            Text nameText = Team.decorateName(team, entry.name());
+            int rowY = startY + (i + 1) * lineHeight;
+
+            context.drawText(client.textRenderer, nameText, startX, rowY, 0xFFFFFFFF, shadow);
+
+            if (showScores) {
+                Text scoreText = entry.formatted(numberFormat);
+                int scoreWidth = client.textRenderer.getWidth(scoreText);
+                int scoreX = startX + totalWidth - scoreWidth;
+                context.drawText(client.textRenderer, scoreText, scoreX, rowY, 0xFFFF5555, shadow);
+            }
+        }
+
+        if (customScale) {
+            context.getMatrices().pop();
+        }
     }
 }
