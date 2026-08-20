@@ -47,7 +47,8 @@ public class MooWaypointScreen extends Screen {
             0xFFFFFF  // White
     };
 
-    // State for creating a new waypoint
+    // State for creating or editing a waypoint
+    private String editingWaypointId = null; // null = create mode, non-null = edit mode
     private String newName = "";
     private String newX = "0";
     private String newY = "64";
@@ -71,21 +72,7 @@ public class MooWaypointScreen extends Screen {
     @Override
     protected void init() {
         super.init();
-        this.newName = "";
-        this.activeInput = 2;
-        this.draggingSlider = -1;
-        if (selectedColorIndex >= 0 && selectedColorIndex < COLOR_PRESETS.length) {
-            int c = COLOR_PRESETS[selectedColorIndex];
-            this.customR = (c >> 16) & 0xFF;
-            this.customG = (c >> 8) & 0xFF;
-            this.customB = c & 0xFF;
-        }
-        if (this.client != null && this.client.player != null) {
-            this.newX = String.valueOf((int) Math.round(this.client.player.getX()));
-            this.newY = String.valueOf((int) Math.round(this.client.player.getY()));
-            this.newZ = String.valueOf((int) Math.round(this.client.player.getZ()));
-            this.newDimension = WaypointManager.getCurrentDimension(this.client);
-        }
+        resetToCreateMode();
     }
 
     @Override
@@ -237,9 +224,10 @@ public class MooWaypointScreen extends Screen {
 
             if (cardY + cardH < listY || cardY > listY + listH) continue;
 
+            boolean isEditing = wp.getId().equals(editingWaypointId);
             boolean cardHover = mouseX >= x && mouseX <= x + w && mouseY >= cardY && mouseY <= cardY + cardH;
-            int cardBg = cardHover ? COLOR_CARD_HOVER : COLOR_CARD_BG;
-            int cardBorder = wp.isVisible() ? (cardHover ? 0x88FFFFFF : 0x33FFFFFF) : 0x22555566;
+            int cardBg = isEditing ? 0xDD252538 : (cardHover ? COLOR_CARD_HOVER : COLOR_CARD_BG);
+            int cardBorder = isEditing ? MooClientSettings.getAccentColor() : (wp.isVisible() ? (cardHover ? 0x88FFFFFF : 0x33FFFFFF) : 0x22555566);
 
             context.fill(x, cardY, x + w, cardY + cardH, cardBg);
             drawBorder(context, x, cardY, w, cardH, cardBorder);
@@ -305,7 +293,20 @@ public class MooWaypointScreen extends Screen {
      * Renders Right Panel: Form for creating a new waypoint with preset palette and custom RGB sliders.
      */
     private void renderCreateForm(DrawContext context, int x, int y, int w, int h, int mouseX, int mouseY) {
-        context.drawTextWithShadow(this.textRenderer, "+ NOWY WAYPOINT", x, y + 1, MooClientSettings.getAccentColor());
+        boolean isEditing = (editingWaypointId != null);
+        String headerTitle = isEditing ? "✎ EDYTUJ PUNKT" : "+ NOWY PUNKT";
+        context.drawTextWithShadow(this.textRenderer, headerTitle, x, y + 1, MooClientSettings.getAccentColor());
+
+        if (isEditing) {
+            int newBtnW = 74;
+            int newBtnH = 13;
+            int newBtnX = x + w - newBtnW;
+            int newBtnY = y;
+            boolean nHover = mouseX >= newBtnX && mouseX <= newBtnX + newBtnW && mouseY >= newBtnY && mouseY <= newBtnY + newBtnH;
+            context.fill(newBtnX, newBtnY, newBtnX + newBtnW, newBtnY + newBtnH, nHover ? 0xCC252535 : 0x66141420);
+            drawBorder(context, newBtnX, newBtnY, newBtnW, newBtnH, nHover ? 0xAAFFFFFF : 0x44FFFFFF);
+            drawCenteredText(context, "+ Nowy punkt", newBtnX + newBtnW / 2, newBtnY + 3, nHover ? COLOR_TEXT_WHITE : COLOR_TEXT_MUTED);
+        }
 
         int curY = y + 14;
 
@@ -437,13 +438,14 @@ public class MooWaypointScreen extends Screen {
         renderRgbSlider(context, x, sliderTrackX, curY, sliderTrackW, sliderH, "B:", customB, 0xFF4488FF, mouseX, mouseY);
         curY += 14;
 
-        // 6. Submit Button: [ + STWÓRZ WAYPOINT ]
+        // 6. Submit Button: [ + STWÓRZ WAYPOINT ] or [ ✓ ZAPISZ ZMIANY ]
         int subBtnH = 22;
         boolean subHover = mouseX >= x && mouseX <= x + w && mouseY >= curY && mouseY <= curY + subBtnH;
         int subBg = subHover ? MooClientSettings.getAccentHoverColor() : MooClientSettings.getAccentColor();
         context.fill(x, curY, x + w, curY + subBtnH, subBg);
         drawBorder(context, x, curY, w, subBtnH, 0xFFFFFFFF);
-        drawCenteredText(context, "+ STWÓRZ WAYPOINT", x + w / 2, curY + 6, 0xFF0A2514);
+        String btnText = isEditing ? "✓ ZAPISZ ZMIANY" : "+ STWÓRZ PUNKT";
+        drawCenteredText(context, btnText, x + w / 2, curY + 6, 0xFF0A2514);
     }
 
     private void renderRgbSlider(DrawContext context, int labelX, int trackX, int y, int trackW, int trackH, String label, int value, int colorBar, int mouseX, int mouseY) {
@@ -524,6 +526,19 @@ public class MooWaypointScreen extends Screen {
             int rightX = leftX + leftW + 12;
             int rightY = leftY;
 
+            // --- 0. Top Right "New Waypoint" Button in Edit Mode ---
+            if (editingWaypointId != null) {
+                int newBtnW = 74;
+                int newBtnH = 13;
+                int newBtnX = rightX + rightW - newBtnW;
+                int newBtnY = rightY;
+                if (mouseX >= newBtnX && mouseX <= newBtnX + newBtnW && mouseY >= newBtnY && mouseY <= newBtnY + newBtnH) {
+                    playClickSound();
+                    resetToCreateMode();
+                    return true;
+                }
+            }
+
             // --- 1. Filter Toggles Click (Above Search) ---
             int togH = 18;
             int togW = (leftW - 6) / 2;
@@ -551,7 +566,7 @@ public class MooWaypointScreen extends Screen {
                 return true;
             }
 
-            // --- 3. Left List Waypoint Action Clicks ---
+            // --- 3. Left List Waypoint Action Clicks & Card Selection ---
             int listY = searchY + searchH + 6;
             int listH = leftH - (listY - leftY);
 
@@ -589,7 +604,17 @@ public class MooWaypointScreen extends Screen {
                     // Delete Waypoint
                     if (mouseX >= delBtnX && mouseX <= delBtnX + btnSize && mouseY >= btnY && mouseY <= btnY + btnSize) {
                         playClickSound();
+                        if (wp.getId().equals(editingWaypointId)) {
+                            resetToCreateMode();
+                        }
                         WaypointManager.getInstance().removeWaypoint(wp.getId());
+                        return true;
+                    }
+
+                    // Select Waypoint for Editing (Clicking on card)
+                    if (mouseX >= leftX && mouseX < visBtnX && mouseY >= cardY && mouseY <= cardY + cardH) {
+                        playClickSound();
+                        loadWaypointForEditing(wp);
                         return true;
                     }
                 }
@@ -714,10 +739,14 @@ public class MooWaypointScreen extends Screen {
 
             curY += 24 + 14;
 
-            // Click Create Waypoint Button
+            // Click Create / Save Waypoint Button
             int subBtnH = 22;
             if (mouseX >= rightX && mouseX <= rightX + rightW && mouseY >= curY && mouseY <= curY + subBtnH) {
-                submitNewWaypoint();
+                if (editingWaypointId != null) {
+                    saveEditedWaypoint();
+                } else {
+                    submitNewWaypoint();
+                }
                 return true;
             }
 
@@ -751,6 +780,83 @@ public class MooWaypointScreen extends Screen {
         return super.mouseReleased(mouseX, mouseY, button);
     }
 
+    private void loadWaypointForEditing(Waypoint wp) {
+        if (wp == null) return;
+        this.editingWaypointId = wp.getId();
+        this.newName = wp.getName();
+        this.newX = String.format(java.util.Locale.ROOT, "%.0f", wp.getX());
+        this.newY = String.format(java.util.Locale.ROOT, "%.0f", wp.getY());
+        this.newZ = String.format(java.util.Locale.ROOT, "%.0f", wp.getZ());
+        this.newDimension = wp.getDimension() != null ? wp.getDimension() : "minecraft:overworld";
+
+        int color = wp.getColor();
+        this.customR = (color >> 16) & 0xFF;
+        this.customG = (color >> 8) & 0xFF;
+        this.customB = color & 0xFF;
+
+        this.selectedColorIndex = -1;
+        for (int i = 0; i < COLOR_PRESETS.length; i++) {
+            if ((COLOR_PRESETS[i] & 0xFFFFFF) == (color & 0xFFFFFF)) {
+                this.selectedColorIndex = i;
+                break;
+            }
+        }
+        this.activeInput = 2; // Focus name input
+    }
+
+    private void saveEditedWaypoint() {
+        if (editingWaypointId == null) return;
+
+        Waypoint wp = null;
+        for (Waypoint w : WaypointManager.getInstance().getAllWaypoints()) {
+            if (w.getId().equals(editingWaypointId)) {
+                wp = w;
+                break;
+            }
+        }
+
+        if (wp != null) {
+            String name = newName.trim().isEmpty() ? wp.getName() : newName.trim();
+            double x = wp.getX();
+            double y = wp.getY();
+            double z = wp.getZ();
+
+            try { x = Double.parseDouble(newX.trim()); } catch (Exception ignored) {}
+            try { y = Double.parseDouble(newY.trim()); } catch (Exception ignored) {}
+            try { z = Double.parseDouble(newZ.trim()); } catch (Exception ignored) {}
+
+            int color = getSelectedColor();
+
+            wp.setName(name);
+            wp.setX(x);
+            wp.setY(y);
+            wp.setZ(z);
+            wp.setDimension(newDimension);
+            wp.setColor(color);
+
+            WaypointManager.getInstance().invalidateCache();
+            WaypointManager.getInstance().save();
+            playClickSound();
+        }
+    }
+
+    private void resetToCreateMode() {
+        this.editingWaypointId = null;
+        this.newName = "";
+        if (this.client != null && this.client.player != null) {
+            this.newX = String.valueOf((int) Math.round(this.client.player.getX()));
+            this.newY = String.valueOf((int) Math.round(this.client.player.getY()));
+            this.newZ = String.valueOf((int) Math.round(this.client.player.getZ()));
+            this.newDimension = WaypointManager.getCurrentDimension(this.client);
+        }
+        this.selectedColorIndex = 2;
+        int c = COLOR_PRESETS[2];
+        this.customR = (c >> 16) & 0xFF;
+        this.customG = (c >> 8) & 0xFF;
+        this.customB = c & 0xFF;
+        this.activeInput = 2;
+    }
+
     private void submitNewWaypoint() {
         String name = newName.trim().isEmpty() ? "Punkt #" + (WaypointManager.getInstance().getAllWaypoints().size() + 1) : newName.trim();
         double x = 0;
@@ -769,7 +875,7 @@ public class MooWaypointScreen extends Screen {
 
         playClickSound();
 
-        // Clear name input for the next waypoint so user can type cleanly
+        // Reset input for the next waypoint
         this.newName = "";
         this.activeInput = 2;
     }
@@ -837,7 +943,11 @@ public class MooWaypointScreen extends Screen {
                 }
             } else if (keyCode == GLFW.GLFW_KEY_ENTER || keyCode == GLFW.GLFW_KEY_KP_ENTER) {
                 if (activeInput == 2 || activeInput == 3 || activeInput == 4 || activeInput == 5) {
-                    submitNewWaypoint();
+                    if (editingWaypointId != null) {
+                        saveEditedWaypoint();
+                    } else {
+                        submitNewWaypoint();
+                    }
                 } else {
                     activeInput = 0;
                 }
