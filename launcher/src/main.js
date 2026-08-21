@@ -547,11 +547,11 @@ function setupLauncherPresence() {
     sendCloudflareHeartbeat();
     fetchCloudflareCount();
 
-    // 2. Cykliczny Heartbeat dokładnie co 5 minut (300 sekund = 300 000 ms)
-    cfHeartbeatTimer = setInterval(sendCloudflareHeartbeat, 300 * 1000);
+    // 2. Cykliczny Heartbeat co 30 sekund (30 000 ms)
+    cfHeartbeatTimer = setInterval(sendCloudflareHeartbeat, 30 * 1000);
 
-    // 3. Cykliczne odpytywanie endpointu /count co 15 sekund dla płynnych aktualizacji UI
-    cfCountTimer = setInterval(fetchCloudflareCount, 15 * 1000);
+    // 3. Cykliczne odpytywanie endpointu /count co 10 sekund dla płynnych aktualizacji UI
+    cfCountTimer = setInterval(fetchCloudflareCount, 10 * 1000);
 }
 
 // Helper: send message to renderer
