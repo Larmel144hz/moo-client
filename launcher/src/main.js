@@ -547,11 +547,11 @@ function setupLauncherPresence() {
     sendCloudflareHeartbeat();
     fetchCloudflareCount();
 
-    // 2. Cykliczny Heartbeat co 15 sekund (15 000 ms)
-    cfHeartbeatTimer = setInterval(sendCloudflareHeartbeat, 15 * 1000);
+    // 2. Cykliczny Heartbeat co 5 sekund (5 000 ms)
+    cfHeartbeatTimer = setInterval(sendCloudflareHeartbeat, 5 * 1000);
 
-    // 3. Cykliczne odpytywanie endpointu /count co 5 sekund dla płynnych aktualizacji UI
-    cfCountTimer = setInterval(fetchCloudflareCount, 5 * 1000);
+    // 3. Cykliczne odpytywanie endpointu /count co 3 sekundy dla natychmiastowych aktualizacji UI
+    cfCountTimer = setInterval(fetchCloudflareCount, 3 * 1000);
 }
 
 // 4. Natychmiastowe usunięcie gracza przy zamykaniu aplikacji (GET /leave?uuid=...)

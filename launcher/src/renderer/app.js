@@ -238,29 +238,10 @@ function updateOnlineUsersDisplay(count) {
     countEl.textContent = formatOnlineUsers(onlineCount, currentLang);
 }
 
-const clientSessionUuid = (() => {
-    let id = localStorage.getItem('moo_presence_uuid');
-    if (!id) {
-        id = 'user_' + Math.random().toString(36).substring(2, 10) + '_' + Date.now().toString(36);
-        localStorage.setItem('moo_presence_uuid', id);
-    }
-    return id;
-})();
-
 function initOnlineUsersCounter() {
     updateOnlineUsersDisplay(1);
 
-    // 1. Wysyłanie Heartbeatu bezpośrednio z okna launchera
-    const sendPing = async () => {
-        try {
-            await fetch(`https://small-recipe-3cfd.karmelektokox.workers.dev/ping?uuid=${encodeURIComponent(clientSessionUuid)}`, {
-                cache: 'no-store',
-                mode: 'cors'
-            });
-        } catch (e) {}
-    };
-
-    // 2. Pobieranie stanu licznika
+    // Pobieranie aktualnego stanu licznika z Cloudflare
     const fetchCount = async () => {
         try {
             const res = await fetch('https://small-recipe-3cfd.karmelektokox.workers.dev/count', {
@@ -281,22 +262,9 @@ function initOnlineUsersCounter() {
         }).catch(() => {});
     };
 
-    // Natychmiastowy ping i odczyt
-    sendPing();
     fetchCount();
-
-    // Cykliczny ping co 10 sekund
-    setInterval(sendPing, 10 * 1000);
-
-    // Cykliczne sprawdzanie licznika co 4 sekundy
-    setInterval(fetchCount, 4000);
-
-    // Wysłanie /leave przy zamykaniu okna
-    window.addEventListener('beforeunload', () => {
-        try {
-            navigator.sendBeacon(`https://small-recipe-3cfd.karmelektokox.workers.dev/leave?uuid=${encodeURIComponent(clientSessionUuid)}`);
-        } catch (e) {}
-    });
+    // Sprawdzanie licznika co 3 sekundy
+    setInterval(fetchCount, 3000);
 
     // Nasłuchiwanie z procesu głównego
     window.mooAPI?.onOnlineUsersCount?.((count) => {
@@ -1914,7 +1882,7 @@ async function performClientCoreUpdate() {
                 showToast('Aktualizacja ukończona! Uruchamianie nowej wersji...', 'success');
                 // Process is restarting via external updater, keep modal showing 100% until termination
             } else {
-                const newVer = res.version || currentClientUpdateInfo?.latestVersion || '1.5.8';
+                const newVer = res.version || currentClientUpdateInfo?.latestVersion || '1.5.9';
                 currentClientUpdateInfo = null;
                 if (pill) pill.classList.remove('has-update');
                 if (label) label.textContent = `v${newVer} (${t('update_up_to_date')})`;
