@@ -4,6 +4,7 @@ const fs = require('fs');
 const os = require('os');
 const https = require('https');
 const http = require('http');
+const crypto = require('crypto');
 const discordRPC = require('./DiscordRPC');
 
 function downloadFile(url, destPath, onProgress) {
@@ -461,338 +462,96 @@ function getActualLauncherVersion() {
 }
 
 // =============================================
-// Dual-Layer Hybrid Presence Manager (HTTPS SSE Stream + TLS MQTT)
-// 100% firewall/ISP bypass, zero lag, instant discovery (<50ms)
+// Cloudflare Workers + D1 Database Presence Manager
+// Backend: https://small-recipe-3cfd.karmelektokox.workers.dev
 // =============================================
 let launcherOnlineCount = 1;
-const net = require('net');
-const tls = require('tls');
-const crypto = require('crypto');
-const launcherClientId = 'moo_launcher_' + crypto.randomBytes(6).toString('hex');
-const activeUsers = new Map(); // id -> timestamp
-
-const MQTT_BROKERS = [
-    { host: 'broker.hivemq.com', port: 8883, tls: true },
-    { host: 'broker.hivemq.com', port: 1883, tls: false },
-    { host: 'broker.emqx.io', port: 8883, tls: true },
-    { host: 'broker.emqx.io', port: 1883, tls: false }
-];
-let currentBrokerIndex = 0;
-let mqttSocket = null;
-let isMqttConnected = false;
-let reconnectTimer = null;
-let pingTimer = null;
-let presenceTimer = null;
-let ntfyStreamReq = null;
-
-class MqttStreamParser {
-    constructor(onPublish) {
-        this.onPublish = onPublish;
-        this.buffer = Buffer.alloc(0);
-    }
-
-    feed(chunk) {
-        this.buffer = Buffer.concat([this.buffer, chunk]);
-        while (this.buffer.length >= 2) {
-            const firstByte = this.buffer[0];
-            const packetType = (firstByte >> 4) & 0x0F;
-            const qos = (firstByte >> 1) & 0x03;
-
-            let multiplier = 1;
-            let value = 0;
-            let lenBytes = 0;
-            let complete = false;
-
-            for (let i = 1; i < this.buffer.length && i <= 4; i++) {
-                const encodedByte = this.buffer[i];
-                value += (encodedByte & 127) * multiplier;
-                multiplier *= 128;
-                lenBytes++;
-                if ((encodedByte & 128) === 0) {
-                    complete = true;
-                    break;
-                }
-            }
-            if (!complete) break;
-
-            const headerLen = 1 + lenBytes;
-            const totalPacketLen = headerLen + value;
-            if (this.buffer.length < totalPacketLen) break;
-
-            const packet = this.buffer.subarray(0, totalPacketLen);
-            this.buffer = this.buffer.subarray(totalPacketLen);
-
-            if (packetType === 3) { // PUBLISH
-                let offset = headerLen;
-                if (packet.length >= offset + 2) {
-                    const topicLen = packet.readUInt16BE(offset);
-                    offset += 2;
-                    if (packet.length >= offset + topicLen) {
-                        const topic = packet.subarray(offset, offset + topicLen).toString('utf8');
-                        offset += topicLen;
-                        if (qos > 0) offset += 2; // skip Packet Identifier
-                        const payload = packet.subarray(offset).toString('utf8');
-                        this.onPublish(topic, payload);
-                    }
-                }
-            }
-        }
-    }
-}
-
-function encodeMqttLength(len) {
-    const bytes = [];
-    do {
-        let byte = len % 128;
-        len = Math.floor(len / 128);
-        if (len > 0) byte |= 128;
-        bytes.push(byte);
-    } while (len > 0);
-    return Buffer.from(bytes);
-}
+const sessionUuid = crypto.randomUUID(); // Losowe UUID generowane per sesję launchera
+let cfHeartbeatTimer = null;
+let cfCountTimer = null;
 
 function setupLauncherPresence() {
-    function getActiveAccountName() {
+    console.log(`[Presence] Inicjalizacja Cloudflare Heartbeat. Sesja UUID: ${sessionUuid}`);
+
+    // 1. Wysłanie Heartbeatu (GET /ping?uuid=...)
+    function sendCloudflareHeartbeat() {
+        const pingUrl = `https://small-recipe-3cfd.karmelektokox.workers.dev/ping?uuid=${encodeURIComponent(sessionUuid)}`;
         try {
-            const acc = gameManager.getAccount();
-            if (acc && acc.name) return acc.name;
-        } catch (e) {}
-        return 'LauncherUser';
-    }
-
-    function recordUserPresence(userId, isNewCallback) {
-        if (!userId) return;
-        const isNew = !activeUsers.has(userId);
-        activeUsers.set(userId, Date.now());
-        updateCountAndBroadcast();
-        if (isNew && userId !== launcherClientId) {
-            if (isNewCallback) isNewCallback();
-        }
-    }
-
-    // --- Channel 1: Universal HTTPS SSE Stream via ntfy.sh (Port 443 HTTPS) ---
-    function startNtfyStream() {
-        if (ntfyStreamReq) {
-            try { ntfyStreamReq.destroy(); } catch (e) {}
-            ntfyStreamReq = null;
-        }
-
-        try {
-            const req = https.request({
-                hostname: 'ntfy.sh',
-                path: '/mooclient_presence_v4/json',
-                method: 'GET',
-                headers: { 'User-Agent': 'MooClient-Launcher' }
-            }, (res) => {
-                let buffer = '';
-                res.on('data', (chunk) => {
-                    buffer += chunk.toString();
-                    const lines = buffer.split('\n');
-                    buffer = lines.pop();
-                    for (const line of lines) {
-                        if (!line.trim()) continue;
-                        try {
-                            const event = JSON.parse(line);
-                            if (event.event === 'message' && event.message) {
-                                const data = JSON.parse(event.message);
-                                const uid = data.id || (data.uuid && data.uuid.length > 5 ? data.uuid : null) || (data.u && data.u.length > 0 ? 'mc_' + data.u.toLowerCase() : null);
-                                recordUserPresence(uid, () => {
-                                    sendPresencePing();
-                                });
-                            }
-                        } catch (e) {}
-                    }
-                });
-
-                res.on('end', () => {
-                    setTimeout(startNtfyStream, 2000);
-                });
+            const req = https.get(pingUrl, { timeout: 6000 }, (res) => {
+                if (res.statusCode === 200) {
+                    console.log('[Presence] Cloudflare Heartbeat wysłany pomyślnie (200 OK)');
+                } else {
+                    console.warn(`[Presence] Serwer Cloudflare zwrócił status: ${res.statusCode}`);
+                }
+                res.resume(); // Zwolnienie pamięci strumienia
+                // Zaraz po pingu odświeżamy licznik
+                fetchCloudflareCount();
             });
 
-            req.on('error', () => {
-                setTimeout(startNtfyStream, 3000);
+            req.on('timeout', () => {
+                req.destroy();
+                console.warn('[Presence] Timeout podczas wysyłania Heartbeatu.');
             });
 
-            req.end();
-            ntfyStreamReq = req;
+            req.on('error', (err) => {
+                console.warn('[Presence] Błąd sieci podczas Heartbeatu:', err.message);
+            });
         } catch (e) {
-            setTimeout(startNtfyStream, 3000);
+            console.warn('[Presence] Wyjątek podczas wysyłania Heartbeatu:', e.message);
         }
     }
 
-    function sendNtfyPing() {
+    // 2. Pobranie aktualnej liczby graczy (GET /count)
+    function fetchCloudflareCount() {
+        const countUrl = 'https://small-recipe-3cfd.karmelektokox.workers.dev/count';
         try {
-            const payload = JSON.stringify({
-                id: launcherClientId,
-                u: getActiveAccountName(),
-                t: Date.now()
-            });
-
-            const req = https.request({
-                hostname: 'ntfy.sh',
-                path: '/mooclient_presence_v4',
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' }
-            });
-            req.on('error', () => {});
-            req.write(payload);
-            req.end();
-        } catch (e) {}
-    }
-
-    // --- Channel 2: Global TLS MQTT Stream (broker.hivemq.com:8883) ---
-    function sendMqttPresence() {
-        if (!mqttSocket || !isMqttConnected) return;
-        try {
-            const topic = 'mooclient/presence_launcher';
-            const payload = JSON.stringify({
-                id: launcherClientId,
-                u: getActiveAccountName(),
-                t: Date.now()
-            });
-
-            const topicBytes = Buffer.from(topic);
-            const payloadBytes = Buffer.from(payload);
-            const remain = encodeMqttLength(2 + topicBytes.length + payloadBytes.length);
-            const pubPacket = Buffer.concat([
-                Buffer.from([0x30]),
-                remain,
-                Buffer.from([(topicBytes.length >> 8) & 0xFF, topicBytes.length & 0xFF]),
-                topicBytes,
-                payloadBytes
-            ]);
-            mqttSocket.write(pubPacket);
-        } catch (e) {}
-    }
-
-    function sendMqttPing() {
-        if (!mqttSocket || !isMqttConnected) return;
-        try {
-            mqttSocket.write(Buffer.from([0xC0, 0x00])); // PINGREQ
-        } catch (e) {}
-    }
-
-    function connectMqtt() {
-        if (mqttSocket) {
-            try { mqttSocket.destroy(); } catch (e) {}
-            mqttSocket = null;
-        }
-        isMqttConnected = false;
-
-        const broker = MQTT_BROKERS[currentBrokerIndex];
-
-        try {
-            const parser = new MqttStreamParser((topic, payload) => {
-                try {
-                    const data = JSON.parse(payload);
-                    const userId = data.id || (data.uuid && data.uuid.length > 5 ? data.uuid : null) || (data.u && data.u.length > 0 ? 'mc_' + data.u.toLowerCase() : null);
-                    recordUserPresence(userId, () => {
-                        sendPresencePing();
-                    });
-                } catch (e) {}
-            });
-
-            const connectOptions = { host: broker.host, port: broker.port, timeout: 6000 };
-            const socket = broker.tls
-                ? tls.connect(broker.port, broker.host, { rejectUnauthorized: false, timeout: 6000 })
-                : net.createConnection(connectOptions);
-
-            mqttSocket = socket;
-
-            socket.on('connect', () => {
-                const clientBytes = Buffer.from(launcherClientId);
-                const varHeader = Buffer.from([0x00, 0x04, 0x4D, 0x51, 0x54, 0x54, 0x04, 0x02, 0x00, 0x3C]); // Clean Session, 60s
-                const rem = encodeMqttLength(varHeader.length + 2 + clientBytes.length);
-                const packet = Buffer.concat([
-                    Buffer.from([0x10]),
-                    rem,
-                    varHeader,
-                    Buffer.from([(clientBytes.length >> 8) & 0xFF, clientBytes.length & 0xFF]),
-                    clientBytes
-                ]);
-                socket.write(packet);
-            });
-
-            let connAcked = false;
-            socket.on('data', (buf) => {
-                if (!connAcked && buf[0] === 0x20) {
-                    connAcked = true;
-                    isMqttConnected = true;
-
-                    const topicBytes = Buffer.from('mooclient/#');
-                    const subRem = encodeMqttLength(2 + 2 + topicBytes.length + 1);
-                    const subPacket = Buffer.concat([
-                        Buffer.from([0x82]),
-                        subRem,
-                        Buffer.from([0x00, 0x01]),
-                        Buffer.from([(topicBytes.length >> 8) & 0xFF, topicBytes.length & 0xFF]),
-                        topicBytes,
-                        Buffer.from([0x00]) // QoS 0
-                    ]);
-                    socket.write(subPacket);
-
-                    sendMqttPresence();
+            const req = https.get(countUrl, { timeout: 6000 }, (res) => {
+                if (res.statusCode !== 200) {
+                    console.warn(`[Presence] Serwer Cloudflare /count zwrócił status: ${res.statusCode}`);
+                    res.resume();
+                    return;
                 }
 
-                parser.feed(buf);
+                let rawData = '';
+                res.on('data', (chunk) => { rawData += chunk; });
+                res.on('end', () => {
+                    try {
+                        const data = JSON.parse(rawData);
+                        if (typeof data.online === 'number' && !isNaN(data.online)) {
+                            const newCount = Math.max(1, data.online);
+                            if (newCount !== launcherOnlineCount) {
+                                launcherOnlineCount = newCount;
+                                sendToRenderer('online-users-count', launcherOnlineCount);
+                            }
+                        }
+                    } catch (parseErr) {
+                        console.warn('[Presence] Błąd parsowania odpowiedzi JSON z /count:', parseErr.message);
+                    }
+                });
             });
 
-            socket.on('timeout', () => { socket.destroy(); });
-            socket.on('error', () => {});
-            socket.on('close', () => {
-                isMqttConnected = false;
-                currentBrokerIndex = (currentBrokerIndex + 1) % MQTT_BROKERS.length;
-                scheduleReconnect();
+            req.on('timeout', () => {
+                req.destroy();
+                console.warn('[Presence] Timeout podczas pobierania licznika z /count.');
+            });
+
+            req.on('error', (err) => {
+                console.warn('[Presence] Błąd sieci podczas pobierania licznika:', err.message);
             });
         } catch (e) {
-            scheduleReconnect();
+            console.warn('[Presence] Wyjątek podczas pobierania licznika:', e.message);
         }
     }
 
-    function scheduleReconnect() {
-        if (reconnectTimer) clearTimeout(reconnectTimer);
-        reconnectTimer = setTimeout(connectMqtt, 3000);
-    }
+    // 1. Natychmiastowy Heartbeat i odczyt przy uruchomieniu aplikacji
+    sendCloudflareHeartbeat();
+    fetchCloudflareCount();
 
-    function sendPresencePing() {
-        sendNtfyPing();
-        sendMqttPresence();
-    }
+    // 2. Cykliczny Heartbeat dokładnie co 5 minut (300 sekund = 300 000 ms)
+    cfHeartbeatTimer = setInterval(sendCloudflareHeartbeat, 300 * 1000);
 
-    function updateCountAndBroadcast() {
-        const now = Date.now();
-        // Purge inactive entries older than 12 seconds
-        for (const [id, lastSeen] of activeUsers.entries()) {
-            if (now - lastSeen > 12000) {
-                activeUsers.delete(id);
-            }
-        }
-        // Always include self
-        activeUsers.set(launcherClientId, now);
-
-        const newCount = Math.max(1, activeUsers.size);
-        if (newCount !== launcherOnlineCount) {
-            launcherOnlineCount = newCount;
-            sendToRenderer('online-users-count', launcherOnlineCount);
-        }
-    }
-
-    // Start both channels
-    startNtfyStream();
-    connectMqtt();
-
-    // Broadcast presence every 2.5 seconds
-    sendPresencePing();
-    presenceTimer = setInterval(() => {
-        sendPresencePing();
-        updateCountAndBroadcast();
-    }, 2500);
-
-    // MQTT Keepalive ping every 25 seconds
-    pingTimer = setInterval(sendMqttPing, 25000);
-
-    // Refresh & cleanup active users every 1.5 seconds
-    setInterval(updateCountAndBroadcast, 1500);
+    // 3. Cykliczne odpytywanie endpointu /count co 15 sekund dla płynnych aktualizacji UI
+    cfCountTimer = setInterval(fetchCloudflareCount, 15 * 1000);
 }
 
 // Helper: send message to renderer

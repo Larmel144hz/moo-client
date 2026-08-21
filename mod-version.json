@@ -1,6 +1,6 @@
 {
-  "version": "1.5.3",
+  "version": "1.5.4",
   "minecraft": "1.21.4",
-  "download_url": "https://github.com/Moo-Client/moo-client/releases/download/v1.5.3/moo-client-1.5.3.jar",
-  "changelog": "🚀 Moo Client v1.5.3 (Ultra-Fast Dual-Layer Presence & Universal Network Engine):\n✓ Niezawodny licznik graczy online działający przez Universal HTTPS SSE Stream (port 443)\n✓ Błyskawiczne wykrywanie włączonych launcherów u znajomych (<50ms)\n✓ Pełna odporność na zapory sieciowe, NAT i blokady portów\n✓ Poprawna polska odmiana gramatyczna (1 gracz / 2-4 gracze / 5+ graczy online)"
+  "download_url": "https://github.com/Moo-Client/moo-client/releases/download/v1.5.4/moo-client-1.5.4.jar",
+  "changelog": "🚀 Moo Client v1.5.4 (High-Performance Cloudflare Workers + D1 Backend):\n✓ Nowy, dedykowany backend Cloudflare Workers z bazą D1 do zliczania graczy online\n✓ Optymalny Heartbeat co 5 minut w tle (nieblokujący wątku)\n✓ Odporność na awarie sieci i timeouty\n✓ Poprawna polska gramatyka graczy online w UI"
 }

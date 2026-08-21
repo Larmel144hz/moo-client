@@ -3,7 +3,7 @@ const https = require('https');
 const fs = require('fs');
 const path = require('path');
 
-const VERSION = '1.5.3';
+const VERSION = '1.5.4';
 
 function getGitHubToken() {
     try {
@@ -80,7 +80,7 @@ function uploadAsset(uploadUrl, token, filePath, fileName, contentType) {
         res = await apiRequest('POST', '/repos/Moo-Client/moo-client/releases', token, {
             tag_name: `v${VERSION}`,
             name: `Moo Client v${VERSION}`,
-            body: '🚀 **Moo Client v1.5.3 (Ultra-Fast Dual-Layer Presence & Universal Network Engine)**\n\n✓ Niezawodny licznik graczy online działający przez Universal HTTPS SSE Stream (port 443)\n✓ Błyskawiczne wykrywanie włączonych launcherów u znajomych (<50ms)\n✓ Pełna odporność na zapory sieciowe, NAT i blokady portów\n✓ Poprawna polska odmiana gramatyczna (1 gracz / 2-4 gracze / 5+ graczy online)',
+            body: '🚀 **Moo Client v1.5.4 (High-Performance Cloudflare Workers + D1 Backend)**\n\n✓ Dedykowany backend Cloudflare Workers z bazą D1 do zliczania graczy online\n✓ Optymalny Heartbeat co 5 minut w tle (nieblokujący wątku)\n✓ Niezawodna obsługa błędów sieci i timeoutów\n✓ Poprawna polska gramatyka graczy online w UI',
             draft: false,
             prerelease: false
         });
