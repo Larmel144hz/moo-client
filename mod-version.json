@@ -1,6 +1,6 @@
 {
-  "version": "1.5.7",
+  "version": "1.5.8",
   "minecraft": "1.21.4",
-  "download_url": "https://github.com/Moo-Client/moo-client/releases/download/v1.5.7/moo-client-1.5.7.jar",
-  "changelog": "🚀 Moo Client v1.5.7 (Instant Leave & Real-Time Presence Drop):\n✓ Natychmiastowe usuwanie gracza z licznika przy wyłączeniu launchera (/leave)\n✓ Szybki Heartbeat co 15 sekund z automatycznym wygaszaniem po 25 sekundach\n✓ Błyskawiczne odświeżanie licznika graczy online w czasie rzeczywistym"
+  "download_url": "https://github.com/Moo-Client/moo-client/releases/download/v1.5.8/moo-client-1.5.8.jar",
+  "changelog": "🚀 Moo Client v1.5.8 (Dual-Engine Live Presence & Real-Time Counter):\n✓ Bezpośredni Heartbeat z UI co 10 sekund z odpornością na zakłócenia\n✓ Natychmiastowe usuwanie sesji przy wyłączeniu okna (/leave)\n✓ Bezproblemowa synchronizacja liczby graczy online"
 }
