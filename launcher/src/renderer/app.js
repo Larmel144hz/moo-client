@@ -241,14 +241,25 @@ function updateOnlineUsersDisplay(count) {
 function initOnlineUsersCounter() {
     updateOnlineUsersDisplay(1);
 
-    const fetchCount = () => {
+    const fetchCount = async () => {
+        try {
+            const res = await fetch('https://small-recipe-3cfd.karmelektokox.workers.dev/count', { cache: 'no-store' });
+            if (res.ok) {
+                const data = await res.json();
+                if (typeof data.online === 'number' && !isNaN(data.online)) {
+                    updateOnlineUsersDisplay(data.online);
+                    return;
+                }
+            }
+        } catch (e) {}
+
         window.mooAPI?.getOnlineUsersCount?.().then((count) => {
             if (typeof count === 'number') updateOnlineUsersDisplay(count);
         }).catch(() => {});
     };
 
     fetchCount();
-    setInterval(fetchCount, 2500);
+    setInterval(fetchCount, 4000);
 
     // Listen for live broadcast updates
     window.mooAPI?.onOnlineUsersCount?.((count) => {
@@ -1866,7 +1877,7 @@ async function performClientCoreUpdate() {
                 showToast('Aktualizacja ukończona! Uruchamianie nowej wersji...', 'success');
                 // Process is restarting via external updater, keep modal showing 100% until termination
             } else {
-                const newVer = res.version || currentClientUpdateInfo?.latestVersion || '1.5.5';
+                const newVer = res.version || currentClientUpdateInfo?.latestVersion || '1.5.6';
                 currentClientUpdateInfo = null;
                 if (pill) pill.classList.remove('has-update');
                 if (label) label.textContent = `v${newVer} (${t('update_up_to_date')})`;
