@@ -3,7 +3,7 @@ const https = require('https');
 const fs = require('fs');
 const path = require('path');
 
-const VERSION = '1.5.6';
+const VERSION = '1.5.7';
 
 function getGitHubToken() {
     try {
@@ -80,7 +80,7 @@ function uploadAsset(uploadUrl, token, filePath, fileName, contentType) {
         res = await apiRequest('POST', '/repos/Moo-Client/moo-client/releases', token, {
             tag_name: `v${VERSION}`,
             name: `Moo Client v${VERSION}`,
-            body: '🚀 **Moo Client v1.5.6 (Direct High-Speed Cloudflare Presence Engine)**\n\n✓ Bezpośrednie pobieranie stanu licznika z Cloudflare w UI co 4 sekundy\n✓ Błyskawiczny Heartbeat co 15 sekund\n✓ Poprawiona responsywność i niezawodność zliczania graczy online',
+            body: '🚀 **Moo Client v1.5.7 (Instant Leave & Real-Time Presence Drop)**\n\n✓ Natychmiastowe usuwanie gracza z licznika przy wyłączeniu launchera (/leave)\n✓ Szybki Heartbeat co 15 sekund z automatycznym wygaszaniem po 25 sekundach\n✓ Błyskawiczne odświeżanie licznika graczy online w czasie rzeczywistym',
             draft: false,
             prerelease: false
         });

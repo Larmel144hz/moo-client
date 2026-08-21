@@ -1,6 +1,6 @@
 {
-  "version": "1.5.6",
+  "version": "1.5.7",
   "minecraft": "1.21.4",
-  "download_url": "https://github.com/Moo-Client/moo-client/releases/download/v1.5.6/moo-client-1.5.6.jar",
-  "changelog": "🚀 Moo Client v1.5.6 (Direct High-Speed Cloudflare Presence Engine):\n✓ Bezpośrednie pobieranie stanu licznika z Cloudflare w UI co 4 sekundy\n✓ Błyskawiczny Heartbeat co 15 sekund\n✓ Poprawiona responsywność i niezawodność zliczania graczy online"
+  "download_url": "https://github.com/Moo-Client/moo-client/releases/download/v1.5.7/moo-client-1.5.7.jar",
+  "changelog": "🚀 Moo Client v1.5.7 (Instant Leave & Real-Time Presence Drop):\n✓ Natychmiastowe usuwanie gracza z licznika przy wyłączeniu launchera (/leave)\n✓ Szybki Heartbeat co 15 sekund z automatycznym wygaszaniem po 25 sekundach\n✓ Błyskawiczne odświeżanie licznika graczy online w czasie rzeczywistym"
 }

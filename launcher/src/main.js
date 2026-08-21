@@ -554,6 +554,15 @@ function setupLauncherPresence() {
     cfCountTimer = setInterval(fetchCloudflareCount, 5 * 1000);
 }
 
+// 4. Natychmiastowe usunięcie gracza przy zamykaniu aplikacji (GET /leave?uuid=...)
+function sendCloudflareLeave() {
+    try {
+        const leaveUrl = `https://small-recipe-3cfd.karmelektokox.workers.dev/leave?uuid=${encodeURIComponent(sessionUuid)}`;
+        const req = https.get(leaveUrl, { timeout: 2500 }, (res) => { res.resume(); });
+        req.on('error', () => {});
+    } catch (e) {}
+}
+
 // Helper: send message to renderer
 function sendToRenderer(channel, data) {
     if (mainWindow && !mainWindow.isDestroyed()) {
@@ -644,7 +653,12 @@ if (!gotTheLock) {
         discordRPC.init();
     });
 
+    app.on('before-quit', () => {
+        sendCloudflareLeave();
+    });
+
     app.on('window-all-closed', () => {
+        sendCloudflareLeave();
         app.quit();
     });
 
