@@ -211,68 +211,7 @@ function t(key) {
     return translations[currentLang][key] || key;
 }
 
-// =============================================
-// Real-Time Online Players Counter (Live Presence)
-// =============================================
-let onlineCount = 1;
-
-function formatOnlineUsers(count, lang = currentLang) {
-    if (lang === 'pl') {
-        if (count === 1) return '1 gracz online';
-        const rem10 = count % 10;
-        const rem100 = count % 100;
-        if (rem10 >= 2 && rem10 <= 4 && (rem100 < 10 || rem100 >= 20)) {
-            return `${count} gracze online`;
-        }
-        return `${count} graczy online`;
-    }
-    return count === 1 ? '1 player online' : `${count} players online`;
-}
-
-function updateOnlineUsersDisplay(count) {
-    if (typeof count === 'number' && !isNaN(count)) {
-        onlineCount = Math.max(1, count);
-    }
-    const countEl = document.getElementById('online-users-count');
-    if (!countEl) return;
-    countEl.textContent = formatOnlineUsers(onlineCount, currentLang);
-}
-
-function initOnlineUsersCounter() {
-    updateOnlineUsersDisplay(1);
-
-    // Pobieranie aktualnego stanu licznika z Cloudflare
-    const fetchCount = async () => {
-        try {
-            const res = await fetch('https://small-recipe-3cfd.karmelektokox.workers.dev/count', {
-                cache: 'no-store',
-                mode: 'cors'
-            });
-            if (res.ok) {
-                const data = await res.json();
-                if (typeof data.online === 'number' && !isNaN(data.online)) {
-                    updateOnlineUsersDisplay(data.online);
-                    return;
-                }
-            }
-        } catch (e) {}
-
-        window.mooAPI?.getOnlineUsersCount?.().then((count) => {
-            if (typeof count === 'number') updateOnlineUsersDisplay(count);
-        }).catch(() => {});
-    };
-
-    fetchCount();
-    // Sprawdzanie licznika co 3 sekundy
-    setInterval(fetchCount, 3000);
-
-    // Nasłuchiwanie z procesu głównego
-    window.mooAPI?.onOnlineUsersCount?.((count) => {
-        updateOnlineUsersDisplay(count);
-    });
-}
-
-// =============================================
+// Animated Video Background (Momomo)
 // =============================================
 // Animated Video Background (Momomo)
 // =============================================
@@ -1882,7 +1821,7 @@ async function performClientCoreUpdate() {
                 showToast('Aktualizacja ukończona! Uruchamianie nowej wersji...', 'success');
                 // Process is restarting via external updater, keep modal showing 100% until termination
             } else {
-                const newVer = res.version || currentClientUpdateInfo?.latestVersion || '1.5.9';
+                const newVer = res.version || currentClientUpdateInfo?.latestVersion || '1.6.0';
                 currentClientUpdateInfo = null;
                 if (pill) pill.classList.remove('has-update');
                 if (label) label.textContent = `v${newVer} (${t('update_up_to_date')})`;
@@ -1952,7 +1891,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const savedLang = localStorage.getItem('moo-lang') || 'pl';
     setLanguage(savedLang);
     initVideoBackground();
-    initOnlineUsersCounter();
     loadAccount();
     loadSettings();
     checkClientCoreUpdate(false);

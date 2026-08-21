@@ -456,111 +456,6 @@ function getActualLauncherVersion() {
             return { success: false, error: e.message };
         }
     });
-
-    // --- Live Online Players Counter ---
-    ipcMain.handle('get-online-users-count', () => launcherOnlineCount);
-}
-
-// =============================================
-// Cloudflare Workers + D1 Database Presence Manager
-// Backend: https://small-recipe-3cfd.karmelektokox.workers.dev
-// =============================================
-let launcherOnlineCount = 1;
-const sessionUuid = crypto.randomUUID(); // Losowe UUID generowane per sesję launchera
-let cfHeartbeatTimer = null;
-let cfCountTimer = null;
-
-function setupLauncherPresence() {
-    console.log(`[Presence] Inicjalizacja Cloudflare Heartbeat. Sesja UUID: ${sessionUuid}`);
-
-    // 1. Wysłanie Heartbeatu (GET /ping?uuid=...)
-    function sendCloudflareHeartbeat() {
-        const pingUrl = `https://small-recipe-3cfd.karmelektokox.workers.dev/ping?uuid=${encodeURIComponent(sessionUuid)}`;
-        try {
-            const req = https.get(pingUrl, { timeout: 6000 }, (res) => {
-                if (res.statusCode === 200) {
-                    console.log('[Presence] Cloudflare Heartbeat wysłany pomyślnie (200 OK)');
-                } else {
-                    console.warn(`[Presence] Serwer Cloudflare zwrócił status: ${res.statusCode}`);
-                }
-                res.resume(); // Zwolnienie pamięci strumienia
-                // Zaraz po pingu odświeżamy licznik
-                fetchCloudflareCount();
-            });
-
-            req.on('timeout', () => {
-                req.destroy();
-                console.warn('[Presence] Timeout podczas wysyłania Heartbeatu.');
-            });
-
-            req.on('error', (err) => {
-                console.warn('[Presence] Błąd sieci podczas Heartbeatu:', err.message);
-            });
-        } catch (e) {
-            console.warn('[Presence] Wyjątek podczas wysyłania Heartbeatu:', e.message);
-        }
-    }
-
-    // 2. Pobranie aktualnej liczby graczy (GET /count)
-    function fetchCloudflareCount() {
-        const countUrl = 'https://small-recipe-3cfd.karmelektokox.workers.dev/count';
-        try {
-            const req = https.get(countUrl, { timeout: 6000 }, (res) => {
-                if (res.statusCode !== 200) {
-                    console.warn(`[Presence] Serwer Cloudflare /count zwrócił status: ${res.statusCode}`);
-                    res.resume();
-                    return;
-                }
-
-                let rawData = '';
-                res.on('data', (chunk) => { rawData += chunk; });
-                res.on('end', () => {
-                    try {
-                        const data = JSON.parse(rawData);
-                        if (typeof data.online === 'number' && !isNaN(data.online)) {
-                            const newCount = Math.max(1, data.online);
-                            if (newCount !== launcherOnlineCount) {
-                                launcherOnlineCount = newCount;
-                                sendToRenderer('online-users-count', launcherOnlineCount);
-                            }
-                        }
-                    } catch (parseErr) {
-                        console.warn('[Presence] Błąd parsowania odpowiedzi JSON z /count:', parseErr.message);
-                    }
-                });
-            });
-
-            req.on('timeout', () => {
-                req.destroy();
-                console.warn('[Presence] Timeout podczas pobierania licznika z /count.');
-            });
-
-            req.on('error', (err) => {
-                console.warn('[Presence] Błąd sieci podczas pobierania licznika:', err.message);
-            });
-        } catch (e) {
-            console.warn('[Presence] Wyjątek podczas pobierania licznika:', e.message);
-        }
-    }
-
-    // 1. Natychmiastowy Heartbeat i odczyt przy uruchomieniu aplikacji
-    sendCloudflareHeartbeat();
-    fetchCloudflareCount();
-
-    // 2. Cykliczny Heartbeat co 5 sekund (5 000 ms)
-    cfHeartbeatTimer = setInterval(sendCloudflareHeartbeat, 5 * 1000);
-
-    // 3. Cykliczne odpytywanie endpointu /count co 3 sekundy dla natychmiastowych aktualizacji UI
-    cfCountTimer = setInterval(fetchCloudflareCount, 3 * 1000);
-}
-
-// 4. Natychmiastowe usunięcie gracza przy zamykaniu aplikacji (GET /leave?uuid=...)
-function sendCloudflareLeave() {
-    try {
-        const leaveUrl = `https://small-recipe-3cfd.karmelektokox.workers.dev/leave?uuid=${encodeURIComponent(sessionUuid)}`;
-        const req = https.get(leaveUrl, { timeout: 2500 }, (res) => { res.resume(); });
-        req.on('error', () => {});
-    } catch (e) {}
 }
 
 // Helper: send message to renderer
@@ -648,17 +543,11 @@ if (!gotTheLock) {
     app.whenReady().then(() => {
         createWindow();
         setupIPC();
-        setupLauncherPresence();
         startLocalApiServer();
         discordRPC.init();
     });
 
-    app.on('before-quit', () => {
-        sendCloudflareLeave();
-    });
-
     app.on('window-all-closed', () => {
-        sendCloudflareLeave();
         app.quit();
     });
 

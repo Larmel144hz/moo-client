@@ -1,6 +1,6 @@
 {
-  "version": "1.5.9",
+  "version": "1.6.0",
   "minecraft": "1.21.4",
-  "download_url": "https://github.com/Moo-Client/moo-client/releases/download/v1.5.9/moo-client-1.5.9.jar",
-  "changelog": "🚀 Moo Client v1.5.9 (Precision 15s Presence Sync):\n✓ Wyeliminowano podwójne zliczanie graczy (pojedynczy kanał pingów z procesu głównego)\n✓ Super szybki Heartbeat co 5 sekund z 15-sekundowym wygaszaniem po stronie Cloudflare\n✓ Natychmiastowe zliczanie graczy w czasie rzeczywistym"
+  "download_url": "https://github.com/Moo-Client/moo-client/releases/download/v1.6.0/moo-client-1.6.0.jar",
+  "changelog": "🚀 Moo Client v1.6.0 (Clean Interface & Performance Optimization):\n✓ Całkowite usunięcie licznika graczy online i zbędnych zapytań sieciowych w tle\n✓ Zoptymalizowany, lekki interfejs użytkownika\n✓ Maksymalna wydajność launchera i klienta"
 }

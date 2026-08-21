@@ -54,10 +54,6 @@ contextBridge.exposeInMainWorld('mooAPI', {
     checkClientUpdate: () => ipcRenderer.invoke('check-client-update'),
     performClientUpdate: () => ipcRenderer.invoke('perform-client-update'),
 
-    // Live Online Players Presence
-    getOnlineUsersCount: () => ipcRenderer.invoke('get-online-users-count'),
-    onOnlineUsersCount: (callback) => ipcRenderer.on('online-users-count', (_, count) => callback(count)),
-
     // Event listeners
     onLaunchStatus: (callback) => ipcRenderer.on('launch-status', (_, data) => callback(data)),
     onLaunchProgress: (callback) => ipcRenderer.on('launch-progress', (_, data) => callback(data)),

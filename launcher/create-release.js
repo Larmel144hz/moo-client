@@ -3,7 +3,7 @@ const https = require('https');
 const fs = require('fs');
 const path = require('path');
 
-const VERSION = '1.5.9';
+const VERSION = '1.6.0';
 
 function getGitHubToken() {
     try {
@@ -80,7 +80,7 @@ function uploadAsset(uploadUrl, token, filePath, fileName, contentType) {
         res = await apiRequest('POST', '/repos/Moo-Client/moo-client/releases', token, {
             tag_name: `v${VERSION}`,
             name: `Moo Client v${VERSION}`,
-            body: '🚀 **Moo Client v1.5.9 (Precision 15s Presence Sync)**\n\n✓ Wyeliminowano podwójne zliczanie graczy (pojedynczy kanał pingów z procesu głównego)\n✓ Super szybki Heartbeat co 5 sekund z 15-sekundowym wygaszaniem po stronie Cloudflare\n✓ Natychmiastowe zliczanie graczy w czasie rzeczywistym',
+            body: '🚀 **Moo Client v1.6.0 (Clean Interface & Performance Optimization)**\n\n✓ Całkowite usunięcie licznika graczy online i zbędnych zapytań sieciowych w tle\n✓ Zoptymalizowany, lekki interfejs użytkownika\n✓ Maksymalna wydajność launchera i klienta',
             draft: false,
             prerelease: false
         });
