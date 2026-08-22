@@ -1,6 +1,6 @@
 {
-  "version": "1.6.1",
+  "version": "1.6.2",
   "minecraft": "1.21.4",
-  "download_url": "https://github.com/Moo-Client/moo-client/releases/download/v1.6.1/moo-client-1.6.1.jar",
-  "changelog": "🚀 Moo Client v1.6.1 (Infinite Microsoft Session & Auto-Refresh Engine):\n✓ Automatyczne, bezgłośne odświeżanie tokenów Microsoft w tle na starcie i w trakcie działania\n✓ Trwałe utrzymywanie sesji logowania bez konieczności ponownego wpisywania haseł\n✓ Udoskonalona synchronizacja konta między launcherem a grą"
+  "download_url": "https://github.com/Moo-Client/moo-client/releases/download/v1.6.2/moo-client-1.6.2.jar",
+  "changelog": "🚀 Moo Client v1.6.2 (Persistent Login & Startup Reliability Patch):\n✓ Naprawiono inicjalizację konta przy ponownym uruchomieniu launchera\n✓ Natychmiastowe przywracanie profilu użytkownika po ponownym otwarciu aplikacji\n✓ Wyeliminowano błędy startowe blokujące ładowanie aktywnej sesji"
 }

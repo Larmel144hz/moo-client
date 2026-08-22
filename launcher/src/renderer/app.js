@@ -79,7 +79,6 @@ const translations = {
         btn_update_later: 'Przypomnij później',
         update_downloading: 'Pobieranie aktualizacji...',
         update_success_msg: 'Moo Client został pomyślnie zaktualizowany!',
-        online_users_suffix: 'graczy online',
         bg_theme_label: 'TŁO:',
         accounts_title: 'Konta Premium',
         btn_add_account: 'Dodaj konto',
@@ -171,7 +170,6 @@ const translations = {
         version_modal_subtitle: 'Select a version from Modrinth for Fabric 1.21.4',
         no_updates_found: 'All mods are up to date! ✓',
         btn_pick_install: 'Install this version',
-        online_users_suffix: 'players online',
         bg_theme_label: 'BG:',
         accounts_title: 'Premium Accounts',
         btn_add_account: 'Add Account',
@@ -204,7 +202,6 @@ function setLanguage(lang) {
     });
 
     localStorage.setItem('moo-lang', lang);
-    updateOnlineUsersDisplay();
 }
 
 function t(key) {
@@ -1818,7 +1815,7 @@ async function performClientCoreUpdate() {
                 showToast('Aktualizacja ukończona! Uruchamianie nowej wersji...', 'success');
                 // Process is restarting via external updater, keep modal showing 100% until termination
             } else {
-                const newVer = res.version || currentClientUpdateInfo?.latestVersion || '1.6.1';
+                const newVer = res.version || currentClientUpdateInfo?.latestVersion || '1.6.2';
                 currentClientUpdateInfo = null;
                 if (pill) pill.classList.remove('has-update');
                 if (label) label.textContent = `v${newVer} (${t('update_up_to_date')})`;
