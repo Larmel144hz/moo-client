@@ -545,6 +545,18 @@ if (!gotTheLock) {
         setupIPC();
         startLocalApiServer();
         discordRPC.init();
+
+        // Silent background session auto-refresh (never loses Microsoft session)
+        gameManager.autoRefreshActiveAccount().then((acc) => {
+            if (acc) sendToRenderer('account-updated', acc);
+        }).catch(() => {});
+
+        // Periodic check every 2 hours
+        setInterval(() => {
+            gameManager.autoRefreshActiveAccount().then((acc) => {
+                if (acc) sendToRenderer('account-updated', acc);
+            }).catch(() => {});
+        }, 2 * 60 * 60 * 1000);
     });
 
     app.on('window-all-closed', () => {

@@ -3,7 +3,7 @@ const https = require('https');
 const fs = require('fs');
 const path = require('path');
 
-const VERSION = '1.6.0';
+const VERSION = '1.6.1';
 
 function getGitHubToken() {
     try {
@@ -80,7 +80,7 @@ function uploadAsset(uploadUrl, token, filePath, fileName, contentType) {
         res = await apiRequest('POST', '/repos/Moo-Client/moo-client/releases', token, {
             tag_name: `v${VERSION}`,
             name: `Moo Client v${VERSION}`,
-            body: '🚀 **Moo Client v1.6.0 (Clean Interface & Performance Optimization)**\n\n✓ Całkowite usunięcie licznika graczy online i zbędnych zapytań sieciowych w tle\n✓ Zoptymalizowany, lekki interfejs użytkownika\n✓ Maksymalna wydajność launchera i klienta',
+            body: '🚀 **Moo Client v1.6.1 (Infinite Microsoft Session & Auto-Refresh Engine)**\n\n✓ Automatyczne, bezgłośne odświeżanie tokenów Microsoft w tle na starcie i w trakcie działania\n✓ Trwałe utrzymywanie sesji logowania bez konieczności ponownego wpisywania haseł\n✓ Udoskonalona synchronizacja konta między launcherem a grą',
             draft: false,
             prerelease: false
         });

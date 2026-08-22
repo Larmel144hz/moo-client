@@ -55,6 +55,7 @@ contextBridge.exposeInMainWorld('mooAPI', {
     performClientUpdate: () => ipcRenderer.invoke('perform-client-update'),
 
     // Event listeners
+    onAccountUpdated: (callback) => ipcRenderer.on('account-updated', (_, data) => callback(data)),
     onLaunchStatus: (callback) => ipcRenderer.on('launch-status', (_, data) => callback(data)),
     onLaunchProgress: (callback) => ipcRenderer.on('launch-progress', (_, data) => callback(data)),
     onUpdaterStatus: (callback) => ipcRenderer.on('updater-status', (_, data) => callback(data)),

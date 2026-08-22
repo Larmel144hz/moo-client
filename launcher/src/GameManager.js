@@ -217,6 +217,31 @@ class GameManager {
     }
 
     /**
+     * Proactively validates and refreshes the active account in background
+     */
+    async autoRefreshActiveAccount() {
+        const account = this.getAccount();
+        if (!account || !account.refreshToken) return null;
+
+        try {
+            const isValid = await this.validateSession(account);
+            const fourHours = 4 * 60 * 60 * 1000;
+            const isStale = !account.lastValidated || (Date.now() - account.lastValidated > fourHours);
+
+            if (!isValid || isStale) {
+                console.log(`[Auth] Ciche odświeżanie tokena w tle dla ${account.name}...`);
+                const res = await this.refreshAccount(account);
+                if (res.success && res.account) {
+                    return res.account;
+                }
+            }
+        } catch (e) {
+            console.warn('[Auth] Błąd podczas auto-odświeżania konta:', e.message);
+        }
+        return account;
+    }
+
+    /**
      * Ensures active session is 100% valid before launching, auto-refreshing in background if needed
      */
     async ensureValidSession(onProgress = () => {}) {

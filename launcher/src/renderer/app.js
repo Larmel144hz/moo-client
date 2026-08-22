@@ -304,27 +304,24 @@ const btnPopupAdd = document.getElementById('btn-popup-add');
 let currentAccount = null;
 
 async function checkAccountSession(account) {
-    if (!account) return;
+    if (!account || !account.name) return;
     try {
         const val = await window.mooAPI?.validateSession?.();
         if (val && !val.isValid && currentAccount) {
-            if (playerStatus) {
-                playerStatus.textContent = '⚠️ Sesja wygasła (Odświeżanie...)';
-                playerStatus.style.color = '#fbbf24';
-            }
-            // Auto refresh attempt
+            console.log('[Auth] Sesja wygasła w tle. Ciche odświeżanie tokena...');
             const ref = await window.mooAPI?.refreshSession?.();
             if (ref?.success && ref.account) {
                 updateAccountUI(ref.account);
-                showToast(`Sesja konta ${ref.account.name} została pomyślnie odświeżona!`, 'success');
+                console.log(`[Auth] Sesja konta ${ref.account.name} została pomyślnie odświeżona!`);
             } else {
                 if (playerStatus) {
-                    playerStatus.textContent = '⚠️ Sesja wygasła — Zaloguj ponownie';
-                    playerStatus.style.color = '#ef4444';
+                    playerStatus.textContent = t('require_login_status');
                 }
             }
         }
-    } catch (e) {}
+    } catch (e) {
+        console.warn('[Auth] Błąd weryfikacji sesji:', e);
+    }
 }
 
 function updateAccountUI(account) {
@@ -1821,7 +1818,7 @@ async function performClientCoreUpdate() {
                 showToast('Aktualizacja ukończona! Uruchamianie nowej wersji...', 'success');
                 // Process is restarting via external updater, keep modal showing 100% until termination
             } else {
-                const newVer = res.version || currentClientUpdateInfo?.latestVersion || '1.6.0';
+                const newVer = res.version || currentClientUpdateInfo?.latestVersion || '1.6.1';
                 currentClientUpdateInfo = null;
                 if (pill) pill.classList.remove('has-update');
                 if (label) label.textContent = `v${newVer} (${t('update_up_to_date')})`;
@@ -1893,6 +1890,9 @@ document.addEventListener('DOMContentLoaded', () => {
     initVideoBackground();
     loadAccount();
     loadSettings();
+    window.mooAPI?.onAccountUpdated?.((acc) => {
+        if (acc) updateAccountUI(acc);
+    });
     checkClientCoreUpdate(false);
     refreshInstalledMods().then(() => {
         checkAndApplyUpdatesSilently(true);
